@@ -60,7 +60,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WTypeTag {
                 10 => TypeTag::U256,
                 _ => panic!("ValueRef has a wrong tag: {}", data.tag()),
             }),
-            _ => panic!("ValueRef is not a lancer.rpc.Owner"),
+            _ => panic!("ValueRef is not a lancer.rpc.TypeTag"),
         }
     }
 }
@@ -160,7 +160,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WStructTag {
                     type_params: type_params.into_iter().map(|x| x.0).collect(),
                 })
             }
-            _ => panic!("ValueRef is not a lancer.rpc.Owner"),
+            _ => panic!("ValueRef is not a lancer.rpc.StructTag"),
         }
     }
 }

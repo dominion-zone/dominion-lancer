@@ -244,6 +244,14 @@ impl<'vm> Pushable<'vm> for WOwner {
                 initial_shared_version,
             } => {
                 initial_shared_version.value().vm_push(context)?;
+                let env = context.thread().global_env();
+                context.context().push_new_record(
+                    1,
+                    &["initial_shared_version"]
+                        .into_iter()
+                        .map(|s| env.intern(s))
+                        .collect::<vm::Result<Vec<_>>>()?,
+                )?;
                 context.context().push_new_data(2, 1)?;
             }
             Owner::Immutable => {

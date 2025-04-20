@@ -1,6 +1,7 @@
+use fastcrypto::encoding::{Base58, Encoding, Hex};
 use gluon::{
     Thread,
-    import::add_extern_module,
+    import::{add_extern_module, add_extern_module_with_deps},
     primitive, record,
     vm::{
         self, ExternModule,
@@ -11,11 +12,13 @@ use gluon::{
 use gluon_codegen::{Trace, Userdata, VmType};
 use std::{fmt, ops::Deref, str::FromStr};
 use sui_move_build::{BuildConfig, CompiledPackage};
-use sui_types::{base_types::{ObjectID, SuiAddress}, digests::Digest};
-use fastcrypto::encoding::{Base58, Encoding, Hex};
+use sui_types::{
+    base_types::{ObjectID, SuiAddress},
+    digests::Digest,
+};
 type ExecResult<T> = std::result::Result<T, String>;
 
-#[derive(Debug, Clone, VmType)]
+#[derive(Debug, Clone, VmType, PartialEq, Eq)]
 #[gluon(vm_type = "lancer.sui.prim.object_id.ObjectID")]
 pub struct WObjectId(pub ObjectID);
 
@@ -64,7 +67,7 @@ impl WObjectId {
     }
 }
 
-#[derive(Debug, Clone, VmType)]
+#[derive(Debug, Clone, VmType, PartialEq, Eq)]
 #[gluon(vm_type = "lancer.sui.prim.digest.Digest")]
 pub struct WDigest(pub Digest);
 
@@ -111,9 +114,7 @@ impl WDigest {
                 }
                 IO::Value(WDigest(Digest::new(buffer.try_into().unwrap())))
             }
-            Err(err) => {
-               IO::Exception(err.to_string())
-            }
+            Err(err) => IO::Exception(err.to_string()),
         }
     }
 
@@ -122,7 +123,7 @@ impl WDigest {
     }
 }
 
-#[derive(Debug, Clone, VmType)]
+#[derive(Debug, Clone, VmType, PartialEq, Eq)]
 #[gluon(vm_type = "lancer.sui.prim.sui_address.SuiAddress")]
 pub struct WSuiAddress(pub SuiAddress);
 
@@ -178,16 +179,19 @@ fn load_sui(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 type ObjectID => WObjectId,
                 from_string => primitive!(1, "lancer.sui.prim.object_id.from_string", WObjectId::from_str),
                 to_string => primitive!(1, "lancer.sui.prim.object_id.to_string", WObjectId::to_string),
+                eq => primitive!(2, "lancer.sui.prim.object_id.eq", |a: WObjectId, b: WObjectId| a == b),
             ),
             digest => record!(
                 type Digest => WDigest,
                 from_string => primitive!(1, "lancer.sui.prim.digest_.from_string", WDigest::from_str),
                 to_string => primitive!(1, "lancer.sui.prim.digest.to_string", WDigest::to_string),
+                eq => primitive!(2, "lancer.sui.prim.digest.eq", |a: WDigest, b: WDigest| a == b),
             ),
             sui_address => record!(
                 type SuiAddress => WSuiAddress,
                 from_string => primitive!(1, "lancer.sui.prim.sui_address.from_string", WSuiAddress::from_str),
                 to_string => primitive!(1, "lancer.sui.prim.sui_address.to_string", WSuiAddress::to_string),
+                eq => primitive!(2, "lancer.sui.prim.sui_address.eq", |a: WSuiAddress, b: WSuiAddress| a == b),
             ),
         ),
     )
@@ -198,6 +202,11 @@ pub fn install_sui(vm: &Thread) -> vm::Result<()> {
     vm.register_type::<WDigest>("lancer.sui.prim.digest.Digest", &[])?;
     vm.register_type::<WSuiAddress>("lancer.sui.prim.sui_address.SuiAddress", &[])?;
 
-    add_extern_module(vm, "lancer.sui.prim", load_sui);
+    add_extern_module_with_deps(
+        vm,
+        "lancer.sui.prim",
+        load_sui,
+        vec!["std.types".to_string()],
+    );
     Ok(())
 }

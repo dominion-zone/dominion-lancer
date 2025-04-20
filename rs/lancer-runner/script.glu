@@ -1,10 +1,14 @@
 let io @ { ? } = import! std.io
 let { ? } = import! lancer.sui.object_id
 let { ? } = import! lancer.sui.digest
-let { ? } = import! lancer.rpc
+let { object_change_owner, ? } = import! lancer.rpc
+let { ? } = import! std.byte
+let array = import! std.array
 let tx = import! lancer.transaction
 let c = import! lancer.compiler
 let { start, execute } = import! lancer
+let { map } = import! std.functor
+
 do p = c.compile "../../sui/dummy_pool"
 do b = tx.builder
 tx.publish_immutable b (c.bytes p) (c.dep_ids p)

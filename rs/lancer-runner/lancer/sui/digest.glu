@@ -10,10 +10,15 @@ let parse : Parse digest.Digest = {
     parse = digest.from_string
 }
 
+let eq : Eq digest.Digest = {
+    (==) = digest.eq
+}
+
 type Digest = digest.Digest
 
 {
     Digest,
     show,
     parse,
+    eq,
 }

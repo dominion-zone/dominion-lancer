@@ -10,10 +10,15 @@ let parse : Parse sui_address.SuiAddress = {
     parse = sui_address.from_string
 }
 
+let eq : Eq sui_address.SuiAddress = {
+    (==) = sui_address.eq
+}
+
 type SuiAddress = sui_address.SuiAddress
 
 {
     SuiAddress,
     show,
     parse,
+    eq,
 }
