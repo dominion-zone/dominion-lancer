@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "rs/lancer-runner"]
+
+# Dependencies that should be kept in sync through the whole workspace
+[workspace.dependencies]
+anyhow = "1.0.71"
+clap = { version = "4.4", features = ["derive", "wrap_help"] }

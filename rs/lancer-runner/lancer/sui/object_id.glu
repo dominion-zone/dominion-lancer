@@ -1,0 +1,19 @@
+let { object_id } = import! lancer.sui.prim
+
+let { Parse } = import! lancer.parse
+
+let show : Show object_id.ObjectID = {
+    show = object_id.to_string
+}
+
+let parse : Parse object_id.ObjectID = {
+    parse = object_id.from_string
+}
+
+type ObjectID = object_id.ObjectID
+
+{
+    ObjectID,
+    show,
+    parse,
+}

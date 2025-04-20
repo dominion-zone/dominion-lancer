@@ -1,0 +1,19 @@
+let { sui_address } = import! lancer.sui.prim
+
+let { Parse } = import! lancer.parse
+
+let show : Show sui_address.SuiAddress = {
+    show = sui_address.to_string
+}
+
+let parse : Parse sui_address.SuiAddress = {
+    parse = sui_address.from_string
+}
+
+type SuiAddress = sui_address.SuiAddress
+
+{
+    SuiAddress,
+    show,
+    parse,
+}

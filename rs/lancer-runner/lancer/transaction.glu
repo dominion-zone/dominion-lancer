@@ -1,0 +1,10 @@
+let prim @ { Builder, Transaction, builder, publish_upgradeable, publish_immutable, finish } = import! lancer.transaction.prim
+
+type Argument =
+  | GasCoin
+  | Input Int
+  | Result Int
+  | NestedResult Int Int
+
+
+{ Argument, Builder, Transaction, builder, publish_upgradeable, publish_immutable, finish }

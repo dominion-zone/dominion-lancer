@@ -1,0 +1,5 @@
+let prim @ { Lancer, lancer, start, commit, execute } = import! lancer.prim
+
+{
+    start = start lancer, commit = commit lancer, execute = execute lancer
+}

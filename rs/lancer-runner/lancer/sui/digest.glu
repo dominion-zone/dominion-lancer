@@ -1,0 +1,19 @@
+let { digest } = import! lancer.sui.prim
+
+let { Parse } = import! lancer.parse
+
+let show : Show digest.Digest = {
+    show = digest.to_string
+}
+
+let parse : Parse digest.Digest = {
+    parse = digest.from_string
+}
+
+type Digest = digest.Digest
+
+{
+    Digest,
+    show,
+    parse,
+}

@@ -1,0 +1,11 @@
+#[implicit]
+type Parse a = {
+    parse : String -> IO a
+}
+
+let parse ?s : [Parse a] -> String -> IO a = s.parse
+
+{
+    Parse,
+    parse
+}

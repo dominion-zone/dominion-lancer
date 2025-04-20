@@ -1,0 +1,3 @@
+let { Package, compile, bytes, dep_ids } = import! lancer.compiler.prim
+
+{ Package, compile, bytes, dep_ids }

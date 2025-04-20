@@ -1,0 +1,156 @@
+let { Digest, ? } = import! lancer.sui.digest
+let { SuiAddress, ? } = import! lancer.sui.sui_address
+let { ObjectID, ? } = import! lancer.sui.object_id
+let { ? } = import! std.byte
+
+type SequenceNumber = Int
+type ObjectDigest = Digest
+type AccountAddress = SuiAddress
+
+#[derive(Show)]
+type Shared = {
+    // The version at which the object became shared
+    initial_shared_version: SequenceNumber,
+}
+
+#[derive(Show)]
+type ConsensusV2 = {
+    // The version at which the object most recently became a consensus object.
+    // This serves the same function as `initial_shared_version`, except it may change
+    // if the object's Owner type changes.
+    start_version: SequenceNumber,
+    // The authentication mode of the object
+    authenticator: SuiAddress,
+}
+
+#[derive(Show)]
+type Owner =
+    // Object is exclusively owned by a single address, and is mutable.
+    | AddressOwner SuiAddress
+    // Object is exclusively owned by a single object, and is mutable.
+    // The object ID is converted to SuiAddress as SuiAddress is universal.
+    | ObjectOwner SuiAddress
+    // Object is shared, can be used by any address, and is mutable.
+    | Shared Shared
+    // Object is immutable, and hence ownership doesn't matter.
+    | Immutable
+    // Object is sequenced via consensus. Ownership is managed by the configured authenticator.
+    | ConsensusV2 ConsensusV2
+rec
+    #[derive(Show)]
+    type StructTag = {
+        address: AccountAddress,
+        module: Identifier,
+        name: Identifier,
+        type_params: Array TypeTag,
+    }
+    #[derive(Show)]
+    type TypeTag =
+        | Bool
+        | U8
+        | U64
+        | U128
+        | Address
+        | Signer
+        | Vector TypeTag
+        | Struct StructTag
+        | U16
+        | U32
+        | U256
+
+type Identifier = String
+
+#[derive(Show)]
+type Published = {
+    package_id: ObjectID,
+    version: SequenceNumber,
+    digest: ObjectDigest,
+    modules: Array String,
+}
+
+#[derive(Show)]
+type Transferred = {
+    sender: SuiAddress,
+    recipient: Owner,
+    object_type: StructTag,
+    object_id: ObjectID,
+    version: SequenceNumber,
+    digest: ObjectDigest,
+}
+
+#[derive(Show)]
+type Mutated = {
+    sender: SuiAddress,
+    owner: Owner,
+    object_type: StructTag,
+    object_id: ObjectID,
+    version: SequenceNumber,
+    previous_version: SequenceNumber,
+    digest: ObjectDigest,
+}
+
+#[derive(Show)]
+type Deleted = {
+    sender: SuiAddress,
+    object_type: StructTag,
+    object_id: ObjectID,
+    version: SequenceNumber,
+}
+
+#[derive(Show)]
+type Wrapped = {
+    sender: SuiAddress,
+    object_type: StructTag,
+    object_id: ObjectID,
+    version: SequenceNumber,
+}
+
+#[derive(Show)]
+type Created = {
+    sender: SuiAddress,
+    owner: Owner,
+    object_type: StructTag,
+    object_id: ObjectID,
+    version: SequenceNumber,
+    digest: ObjectDigest,
+}
+
+#[derive(Show)]
+type ObjectChange =
+    // Module published
+    | Published Published
+    // Transfer objects to new address / wrap in another object
+    | Transferred Transferred
+    // Object mutated.
+    | Mutated Mutated
+    // Delete object
+    | Deleted Deleted
+    // Wrapped object
+    | Wrapped Wrapped
+    // New object creation
+    | Created Created
+
+#[derive(Show)]
+type TransactionBlockResponse = {
+    digest: Digest,
+    raw_transaction: Array Byte,
+    object_changes: Array ObjectChange,
+}
+
+{
+    TransactionBlockResponse,
+    ObjectChange,
+    show_Shared,
+    show_ConsensusV2,
+    show_Owner,
+    show_StructTag,
+    show_TypeTag,
+    show_Published,
+    show_Transferred,
+    show_Mutated,
+    show_Deleted,
+    show_Wrapped,
+    show_Created,
+    show_ObjectChange,
+    show_TransactionBlockResponse,
+}
