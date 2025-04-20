@@ -24,7 +24,7 @@ let { Digest, ? } = import! lancer.sui.digest
 let { SuiAddress, ? } = import! lancer.sui.sui_address
 let { ObjectID, ? } = import! lancer.sui.object_id
 
-#[derive(Show)]
+#[derive(Show, Eq)]
 type ObjectChangeKind =
     // Module published
     | PublishedKind
@@ -104,6 +104,7 @@ let object_change_owner c : ObjectChange -> Option Owner =
     ObjectChangeKind,
     object_change_kind,
     show_ObjectChangeKind,
+    eq_ObjectChangeKind,
     object_change_id,
     object_change_version,
     object_change_digest,

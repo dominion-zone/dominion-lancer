@@ -1,13 +1,15 @@
 let io @ { ? } = import! std.io
 let { ? } = import! lancer.sui.object_id
 let { ? } = import! lancer.sui.digest
-let { object_change_owner, ? } = import! lancer.rpc
+let { object_change_kind, ObjectChange, ? } = import! lancer.rpc
 let { ? } = import! std.byte
 let array = import! std.array
 let tx = import! lancer.transaction
 let c = import! lancer.compiler
 let { start, execute } = import! lancer
-let { map } = import! std.functor
+let { find_map } = import! std.foldable
+let { unwrap } = import! std.option
+let { is_empty } = import! std.array
 
 do p = c.compile "../../sui/dummy_pool"
 do b = tx.builder
@@ -17,4 +19,19 @@ start
 io.print "Started\n"
 do r = execute t
 io.print "Executed\n"
-io.print (show r)
+let package_id = unwrap (find_map (\x ->
+    match x with
+    | Published { package_id, ? } -> Some package_id
+    | _ -> None) r.object_changes)
+let state_id = unwrap (find_map (\x ->
+    match x with
+    | Created {
+        object_id,
+        object_type = { 
+            address = package_id,
+            module = "dummy_pool",
+            name = "DummyPool",
+            type_params,
+        }, ? } -> if is_empty type_params then Some object_id else None
+    | _ -> None) r.object_changes)
+io.print (show state_id)
