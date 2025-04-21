@@ -4395,6 +4395,7 @@ dependencies = [
  "gluon",
  "gluon_codegen",
  "move-core-types",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "sui-framework",

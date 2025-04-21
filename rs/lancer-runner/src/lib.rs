@@ -1,7 +1,7 @@
 #![allow(non_local_definitions)]
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     f32::consts::E,
     fmt,
     mem::{self, MaybeUninit},
@@ -11,17 +11,23 @@ use std::{
 use anyhow::bail;
 use compiler::install_compiler;
 use gluon::{
-    import::{add_extern_module, add_extern_module_with_deps}, primitive, record, vm::{
-        self, api::{Getable, Opaque, OpaqueRef, OpaqueValue, IO}, ExternModule
-    }, Thread
+    Thread,
+    import::{add_extern_module, add_extern_module_with_deps},
+    primitive, record,
+    vm::{
+        self, ExternModule,
+        api::{Getable, IO, Opaque, OpaqueRef, OpaqueValue},
+    },
 };
 use gluon_codegen::{Trace, Userdata, VmType};
+use move_core_types::parsing::address;
 use rpc::{WTransactionBlockResponse, install_rpc};
 use std::fmt::Debug;
-use sui::install_sui;
+use sui::{WSuiAddress, install_sui};
 use sui_json_rpc_types::SuiTransactionBlockResponse;
 use sui_types::{
-    base_types::ObjectID,
+    base_types::{ObjectID, SuiAddress},
+    crypto::{SuiKeyPair, get_key_pair_from_rng},
     object::Object,
     transaction::{Transaction, TransactionData},
 };
@@ -87,11 +93,13 @@ enum Lancer {
     Prepare {
         test_cluster: TestClusterStage,
         affected_objects: HashSet<ObjectID>,
+        keys: HashMap<SuiAddress, SuiKeyPair>,
     },
     Run {
         prepared_objects: Vec<Object>,
         test_cluster: TestCluster,
         reported_objects: HashSet<ObjectID>,
+        keys: HashMap<SuiAddress, SuiKeyPair>,
     },
 }
 
@@ -109,6 +117,7 @@ impl Default for Lancer {
         Lancer::Prepare {
             test_cluster: TestClusterStage::Builder(TestClusterBuilder::new()),
             affected_objects: HashSet::new(),
+            keys: HashMap::new(),
         }
     }
 }
@@ -121,6 +130,17 @@ impl Lancer {
         }
     }
 
+    fn keypair(&self, address: SuiAddress) -> ExecResult<&SuiKeyPair> {
+        match self {
+            Lancer::Prepare { keys, .. } => keys
+                .get(&address)
+                .ok_or_else(|| format!("Keypair not found for address: {}", address)),
+            Lancer::Run { keys, .. } => keys
+                .get(&address)
+                .ok_or_else(|| format!("Keypair not found for address: {}", address)),
+        }
+    }
+
     async fn start(&mut self) -> ExecResult<()> {
         if let Lancer::Prepare { test_cluster, .. } = self {
             test_cluster.start().await
@@ -129,16 +149,37 @@ impl Lancer {
         }
     }
 
-    async fn execute(&mut self, pt: &WTransaction) -> ExecResult<WTransactionBlockResponse> {
+    async fn execute(
+        &mut self,
+        pt: &WTransaction,
+        sender: Option<WSuiAddress>,
+    ) -> ExecResult<WTransactionBlockResponse> {
         let test_cluster = self.test_cluster().await?;
         let gas_budget = 500_000_000;
         let gas_price = test_cluster.get_reference_gas_price().await;
-        let (sender, gas) = test_cluster
-            .wallet()
-            .get_one_gas_object()
-            .await
-            .map_err(|e| e.to_string())?
-            .ok_or("No gas object".to_string())?;
+        let sender_provided = sender.is_some();
+        let (sender, gas) = if let Some(sender) = sender {
+            let gas = test_cluster
+                .wallet()
+                .get_one_gas_object_owned_by_address(sender.0)
+                .await
+                .map_err(|e| e.to_string())?;
+            let gas = if let Some(gas) = gas {
+                gas
+            } else {
+                test_cluster
+                    .fund_address_and_return_gas(gas_price, Some(gas_budget), sender.0)
+                    .await
+            };
+            (sender.0, gas)
+        } else {
+            test_cluster
+                .wallet()
+                .get_one_gas_object()
+                .await
+                .map_err(|e| e.to_string())?
+                .ok_or("No gas object".to_string())?
+        };
         // create the transaction data that will be sent to the network
         let tx_data = TransactionData::new_programmable(
             sender,
@@ -147,7 +188,16 @@ impl Lancer {
             gas_budget,
             gas_price,
         );
-        let r = test_cluster.sign_and_execute_transaction(&tx_data).await;
+        let tx = if sender_provided {
+            let keypair = self.keypair(sender)?;
+            Transaction::from_data_and_signer(tx_data, vec![keypair])
+        } else {
+            self.test_cluster()
+                .await?
+                .wallet()
+                .sign_transaction(&tx_data)
+        };
+        let r = self.test_cluster().await?.execute_transaction(tx).await;
         if r.status_ok().unwrap() {
             Ok(WTransactionBlockResponse(r))
         } else {
@@ -159,6 +209,7 @@ impl Lancer {
         let prepared_objects = if let Lancer::Prepare {
             test_cluster,
             affected_objects,
+            ..
         } = self
         {
             let test_cluster = test_cluster.start_if_needed().await?;
@@ -179,12 +230,27 @@ impl Lancer {
                     prepared_objects,
                     test_cluster: test_cluster.into_inner().unwrap(),
                     reported_objects: HashSet::new(),
+                    keys: HashMap::new(),
                 }
             } else {
                 unreachable!()
             }
         });
         Ok(())
+    }
+
+    async fn generate_keypair(&mut self) -> ExecResult<WSuiAddress> {
+        let (address, keypair) = get_key_pair_from_rng(&mut rand::rngs::OsRng);
+        let keypair = SuiKeyPair::Ed25519(keypair);
+        match self {
+            Lancer::Prepare { keys, .. } => {
+                keys.insert(address, keypair);
+            }
+            Lancer::Run { keys, .. } => {
+                keys.insert(address, keypair);
+            }
+        }
+        Ok(WSuiAddress(address))
     }
 }
 
@@ -203,8 +269,16 @@ impl LancerRef {
         self.0.write().await.commit().await.into()
     }
 
-    async fn execute(&self, pt: &WTransaction) -> IO<WTransactionBlockResponse> {
-        self.0.write().await.execute(pt).await.into()
+    async fn execute(
+        &self,
+        pt: &WTransaction,
+        sender: Option<WSuiAddress>,
+    ) -> IO<WTransactionBlockResponse> {
+        self.0.write().await.execute(pt, sender).await.into()
+    }
+
+    async fn generate_keypair(&self) -> IO<WSuiAddress> {
+        self.0.write().await.generate_keypair().await.into()
     }
 }
 
@@ -223,9 +297,13 @@ fn load_lancer(vm: &Thread) -> vm::Result<vm::ExternModule> {
             start => primitive!(1, "lancer.prim.start", async fn LancerRef::start),
             commit => primitive!(1, "lancer.prim.commit", async fn LancerRef::commit),
             execute => primitive!(
-                2,
+                3,
                 "lancer.prim.execute",
                 async fn LancerRef::execute),
+            generate_keypair => primitive!(
+                1,
+                "lancer.prim.generate_keypair",
+                async fn LancerRef::generate_keypair),
         ),
     )
 }

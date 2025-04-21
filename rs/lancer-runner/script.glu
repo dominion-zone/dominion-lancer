@@ -1,11 +1,12 @@
 let io @ { ? } = import! std.io
 let { ? } = import! lancer.sui.digest
+let { ? } = import! lancer.sui.sui_address
 let { object_change_kind, ObjectChange, ? } = import! lancer.rpc
 let { ? } = import! std.byte
 let array = import! std.array
 let tx = import! lancer.transaction
 let c = import! lancer.compiler
-let { start, execute } = import! lancer
+let { start, execute, generate_keypair } = import! lancer
 let { find_map } = import! std.foldable
 let { unwrap } = import! std.option
 let { is_empty } = import! std.array
@@ -18,7 +19,7 @@ tx.publish_immutable b (c.bytes p) (c.dep_ids p)
 do t = tx.finish b
 start
 io.print "Started\n"
-do r = execute t
+do r = execute t None
 io.print "Executed\n"
 let package_id = unwrap (find_map (\x ->
     match x with
@@ -57,5 +58,8 @@ tx.move_call b package_id "dummy_pool" "create_vault" [ some_coin_type ] [
     price
 ]
 do t = tx.finish b
-do r = execute t
+do r = execute t None
 io.print (show r.object_changes)
+
+do user = generate_keypair
+io.print (show user)
