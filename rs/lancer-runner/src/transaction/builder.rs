@@ -1,22 +1,25 @@
 use std::{fmt, str::FromStr};
 
 use gluon::{
-    base::types::ArcType, vm::{
+    Thread,
+    base::types::ArcType,
+    vm::{
         self,
-        api::{Getable, Pushable, ValueRef, VmType, IO},
+        api::{Getable, IO, Pushable, ValueRef, VmType},
         impl_getable_simple,
-    }, Thread
+    },
 };
 use gluon_codegen::{Trace, Userdata, VmType};
 use serde::Serialize;
-use sui_types::{programmable_transaction_builder::ProgrammableTransactionBuilder, Identifier};
+use sui_types::{
+    Identifier, base_types::SequenceNumber, digests::ObjectDigest,
+    programmable_transaction_builder::ProgrammableTransactionBuilder,
+};
 use tokio::sync::RwLock;
 
-use crate::sui::{types::WTypeTag, WSuiAddress};
+use crate::sui::{WDigest, WSuiAddress, types::WTypeTag};
 
 use super::{argument::WArgument, object_arg::WObjectArg, transaction::WTransaction};
-
-
 
 #[derive(Trace, VmType, Userdata)]
 #[gluon(vm_type = "lancer.transaction.prim.Builder")]
@@ -30,29 +33,23 @@ impl WBuilder {
     }
 
     pub async fn pure<T: Serialize>(&self, value: T) -> IO<WArgument> {
-        self.0
-            .write()
-            .await
-            .as_mut()
-            .map_or(IO::Exception("Already built".to_string()), |b| {
-                match b.pure(value) {
-                    Ok(r) => IO::Value(WArgument(r)),
-                    Err(e) => return IO::Exception(e.to_string()),
-                }
-            })
+        self.0.write().await.as_mut().map_or(
+            IO::Exception("Already built".to_string()),
+            |b| match b.pure(value) {
+                Ok(r) => IO::Value(WArgument(r)),
+                Err(e) => return IO::Exception(e.to_string()),
+            },
+        )
     }
 
     pub async fn object_ref(&self, arg: WObjectArg) -> IO<WArgument> {
-        self.0
-            .write()
-            .await
-            .as_mut()
-            .map_or(IO::Exception("Already built".to_string()), |b| {
-                match b.obj(arg.0) {
-                    Ok(r) => IO::Value(WArgument(r)),
-                    Err(e) => return IO::Exception(e.to_string()),
-                }
-            })
+        self.0.write().await.as_mut().map_or(
+            IO::Exception("Already built".to_string()),
+            |b| match b.obj(arg.0) {
+                Ok(r) => IO::Value(WArgument(r)),
+                Err(e) => return IO::Exception(e.to_string()),
+            },
+        )
     }
 
     pub async fn publish_upgradeable(
@@ -72,7 +69,11 @@ impl WBuilder {
             })
     }
 
-    pub async fn publish_immutable(&self, modules: Vec<Vec<u8>>, dep_ids: Vec<WSuiAddress>) -> IO<()> {
+    pub async fn publish_immutable(
+        &self,
+        modules: Vec<Vec<u8>>,
+        dep_ids: Vec<WSuiAddress>,
+    ) -> IO<()> {
         self.0
             .write()
             .await
@@ -80,6 +81,37 @@ impl WBuilder {
             .map_or(IO::Exception("Already built".to_string()), |b| {
                 b.publish_immutable(modules, dep_ids.into_iter().map(|id| id.0.into()).collect());
                 IO::Value(())
+            })
+    }
+
+    pub async fn pay(
+        &self,
+        coins: Vec<(WSuiAddress, u64, WDigest)>,
+        amounts: Vec<u64>,
+        recipients: Vec<WSuiAddress>,
+    ) -> IO<()> {
+        self.0
+            .write()
+            .await
+            .as_mut()
+            .map_or(IO::Exception("Already built".to_string()), |b| {
+                match b.pay(
+                    coins
+                        .into_iter()
+                        .map(|(id, version, digest)| {
+                            (
+                                id.0.into(),
+                                SequenceNumber::from_u64(version),
+                                ObjectDigest::new(digest.0.into_inner()),
+                            )
+                        })
+                        .collect(),
+                    recipients.into_iter().map(|r| r.0.into()).collect(),
+                    amounts,
+                ) {
+                    Ok(_) => IO::Value(()),
+                    Err(e) => IO::Exception(e.to_string()),
+                }
             })
     }
 

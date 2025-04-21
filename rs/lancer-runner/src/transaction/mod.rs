@@ -39,6 +39,7 @@ fn load_transaction(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 "lancer.transaction.prim.publish_immutable",
                 async fn WBuilder::publish_immutable),
             move_call => primitive!(6, "lancer.transaction.prim.move_call", async fn WBuilder::move_call),
+            pay => primitive!(4, "lancer.transaction.prim.pay", async fn WBuilder::pay),
             finish => primitive!(1, "lancer.transaction.prim.finish", async fn WBuilder::finish),
         ),
     )

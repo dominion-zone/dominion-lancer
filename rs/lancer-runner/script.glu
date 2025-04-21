@@ -12,6 +12,8 @@ let { unwrap } = import! std.option
 let { is_empty } = import! std.array
 let { TypeTag } = import! lancer.sui.types
 let { ObjectRef, ObjectArg, ? } = import! lancer.transaction.types
+let { ? } = import! lancer.sui.types
+let { parse } = import! lancer.parse
 
 do p = c.compile "../../sui/dummy_pool"
 do b = tx.builder
@@ -46,6 +48,22 @@ let some_coin_type: TypeTag = Struct {
     type_params = [],
 }
 
+do sui_framework = parse "0x0000000000000000000000000000000000000000000000000000000000000002"
+
+let some_coin_object_ref: ObjectRef = unwrap (find_map (\x ->
+    match x with
+    | Created {
+        object_id,
+        version,
+        digest,
+        object_type = { 
+            address,
+            module = "coin",
+            name = "Coin",
+            type_params,
+        }, ? } -> if address == sui_framework && type_params == [some_coin_type] then Some (object_id, version, digest) else None
+    | _ -> None) r.object_changes)
+
 do b = tx.builder
 do state_ref = tx.object_ref b (SharedObject {
     id = state_id,
@@ -59,7 +77,11 @@ tx.move_call b package_id "dummy_pool" "create_vault" [ some_coin_type ] [
 ]
 do t = tx.finish b
 do r = execute t None
-io.print (show r.object_changes)
+// io.print (show r.object_changes)
 
 do user = generate_keypair
-io.print (show user)
+do b = tx.builder
+tx.pay b [some_coin_object_ref] [10000000] [user]
+do t = tx.finish b
+do r = execute t None
+io.print (show r)
