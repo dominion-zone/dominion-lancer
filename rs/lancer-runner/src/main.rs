@@ -7,7 +7,7 @@ use gluon::{
     new_vm_async, primitive,
     vm::{self, api::IO},
 };
-use lancer_runner::{install_lancer, rpc::WTransactionBlockResponse, sui::WObjectId, transaction::WArgument};
+use lancer_runner::{install_lancer, rpc::WTransactionBlockResponse, transaction::WArgument};
 use sui_framework::BuiltInFramework;
 use sui_move_build::BuildConfig;
 use sui_types::{base_types::ObjectID, digests::Digest, object::Object};

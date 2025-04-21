@@ -22,7 +22,7 @@ use sui_types::{
 };
 use sui_types::{digests::TransactionDigest, object::Authenticator};
 
-use crate::sui::{WDigest, WObjectId, WSuiAddress};
+use crate::sui::{WDigest, WSuiAddress};
 
 #[derive(Debug, Clone)]
 pub struct WTypeTag(pub TypeTag);
@@ -30,7 +30,7 @@ pub struct WTypeTag(pub TypeTag);
 impl VmType for WTypeTag {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.rpc.types.TypeTag")
+        vm.find_type_info("lancer.sui.types.TypeTag")
             .unwrap()
             .clone()
             .into_type()
@@ -60,7 +60,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WTypeTag {
                 10 => TypeTag::U256,
                 _ => panic!("ValueRef has a wrong tag: {}", data.tag()),
             }),
-            _ => panic!("ValueRef is not a lancer.rpc.TypeTag"),
+            _ => panic!("ValueRef is not a lancer.rpc.types.TypeTag"),
         }
     }
 }
@@ -121,7 +121,7 @@ pub struct WStructTag(pub StructTag);
 impl VmType for WStructTag {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.rpc.types.StructTag")
+        vm.find_type_info("lancer.sui.types.StructTag")
             .unwrap()
             .clone()
             .into_type()
@@ -160,7 +160,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WStructTag {
                     type_params: type_params.into_iter().map(|x| x.0).collect(),
                 })
             }
-            _ => panic!("ValueRef is not a lancer.rpc.StructTag"),
+            _ => panic!("ValueRef is not a lancer.sui.types.StructTag"),
         }
     }
 }

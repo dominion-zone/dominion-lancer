@@ -1,0 +1,35 @@
+let { SuiAddress, ? } = import! lancer.sui.sui_address
+
+type AccountAddress = SuiAddress
+type Identifier = String
+
+rec
+    #[derive(Show, Eq)]
+    type StructTag = {
+        address: AccountAddress,
+        module: Identifier,
+        name: Identifier,
+        type_params: Array TypeTag,
+    }
+    #[derive(Show, Eq)]
+    type TypeTag =
+        | Bool
+        | U8
+        | U64
+        | U128
+        | Address
+        | Signer
+        | Vector TypeTag
+        | Struct StructTag
+        | U16
+        | U32
+        | U256
+in {
+    AccountAddress,
+    StructTag,
+    TypeTag,
+    show_StructTag,
+    show_TypeTag,
+    eq_StructTag,
+    eq_TypeTag,
+}

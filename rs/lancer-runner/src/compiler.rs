@@ -8,7 +8,7 @@ use gluon_codegen::{Trace, Userdata, VmType};
 use std::{fmt, ops::Deref};
 use sui_move_build::{BuildConfig, CompiledPackage};
 
-use crate::sui::WObjectId;
+use crate::sui::WSuiAddress;
 
 type ExecResult<T> = std::result::Result<T, String>;
 
@@ -39,9 +39,9 @@ impl WPackage {
         self.0.get_package_bytes(false)
     }
 
-    fn dep_ids(&self) -> Vec<WObjectId> {
+    fn dep_ids(&self) -> Vec<WSuiAddress> {
         self.0.get_published_dependencies_ids().into_iter()
-            .map(|id| WObjectId(id))
+            .map(|id| WSuiAddress(id.into()))
             .collect()
     }
 }

@@ -61,6 +61,34 @@ public entry fun withdraw<T>(
 
 // === Public Functions ===
 
+public entry fun create_vault<T>(
+    self: &mut DummyPool,
+    price_bp: u128,
+    ctx: &mut TxContext
+) {
+    let vault = Vault<T> {
+        id: object::new(ctx),
+        pool_id: self.id.to_inner(),
+        balance: balance::zero(),
+        price_bp,
+    };
+    let vault_admin_cap = VaultAdminCap<T> {
+        id: object::new(ctx),
+        vault_id: vault.id.to_inner(),
+    };
+    self.vault_count = self.vault_count + 1;
+    transfer::share_object(vault);
+    transfer::transfer(vault_admin_cap, ctx.sender());
+}
+
+public entry fun set_vault_price<T>(
+    self: &VaultAdminCap<T>,
+    vault: &mut Vault<T>,
+    price_bp: u128,
+) {
+    assert!(vault.pool_id == self.vault_id);
+    vault.price_bp = price_bp;
+}
 
 public fun deposit_balance<T>(
     self: &mut DummyPool,
@@ -103,35 +131,6 @@ fun init(witness: DUMMY_POOL, ctx: &mut TxContext) {
         vault_count: 0,
     };
     transfer::share_object(self);
-}
-
-public fun create_vault<T>(
-    self: &mut DummyPool,
-    price_bp: u128,
-    ctx: &mut TxContext
-): VaultAdminCap<T> {
-    let vault = Vault<T> {
-        id: object::new(ctx),
-        pool_id: self.id.to_inner(),
-        balance: balance::zero(),
-        price_bp,
-    };
-    let vault_admin_cap = VaultAdminCap {
-        id: object::new(ctx),
-        vault_id: vault.id.to_inner(),
-    };
-    self.vault_count = self.vault_count + 1;
-    transfer::freeze_object(vault);
-    vault_admin_cap
-}
-
-public fun set_vault_price<T>(
-    self: &VaultAdminCap<T>,
-    vault: &mut Vault<T>,
-    price_bp: u128,
-) {
-    assert!(vault.pool_id == self.vault_id);
-    vault.price_bp = price_bp;
 }
 
 // === Package Functions ===

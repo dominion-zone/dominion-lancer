@@ -1,5 +1,4 @@
 let io @ { ? } = import! std.io
-let { ? } = import! lancer.sui.object_id
 let { ? } = import! lancer.sui.digest
 let { object_change_kind, ObjectChange, ? } = import! lancer.rpc
 let { ? } = import! std.byte
@@ -10,6 +9,8 @@ let { start, execute } = import! lancer
 let { find_map } = import! std.foldable
 let { unwrap } = import! std.option
 let { is_empty } = import! std.array
+let { StructTag } = import! lancer.sui.types
+let { ObjectRef, ? } = import! lancer.transaction.types
 
 do p = c.compile "../../sui/dummy_pool"
 do b = tx.builder
@@ -23,15 +24,25 @@ let package_id = unwrap (find_map (\x ->
     match x with
     | Published { package_id, ? } -> Some package_id
     | _ -> None) r.object_changes)
-let state_id = unwrap (find_map (\x ->
+let state_ref: ObjectRef = unwrap (find_map (\x ->
     match x with
     | Created {
         object_id,
+        version,
+        digest,
         object_type = { 
             address = package_id,
             module = "dummy_pool",
             name = "DummyPool",
             type_params,
-        }, ? } -> if is_empty type_params then Some object_id else None
+        }, ? } -> if is_empty type_params then Some (object_id, version, digest) else None
     | _ -> None) r.object_changes)
-io.print (show state_id)
+
+let some_coin_type: StructTag = {
+    address = package_id,
+    module = "some_coin",
+    name = "SOME_COIN",
+    type_params = [],
+}
+
+io.print (show state_ref)

@@ -18,54 +18,7 @@ use sui_types::{
 };
 type ExecResult<T> = std::result::Result<T, String>;
 
-#[derive(Debug, Clone, VmType, PartialEq, Eq)]
-#[gluon(vm_type = "lancer.sui.prim.object_id.ObjectID")]
-pub struct WObjectId(pub ObjectID);
-
-impl<'vm, 'value> Getable<'vm, 'value> for WObjectId {
-    impl_getable_simple!();
-
-    fn from_value(vm: &'vm Thread, value: vm::Variants<'value>) -> Self {
-        match value.as_ref() {
-            ValueRef::Array(data) => Self(ObjectID::new(
-                data.iter()
-                    .map(|v| u8::from_value(vm, v))
-                    .collect::<Vec<u8>>()
-                    .try_into()
-                    .unwrap(),
-            )),
-            _ => panic!("ValueRef is not a lancer.sui.ObjectID"),
-        }
-    }
-}
-
-impl<'vm> Pushable<'vm> for WObjectId {
-    fn vm_push(self, context: &mut vm::api::ActiveThread<'vm>) -> vm::Result<()> {
-        context.context().push_new_alloc(self.0.as_slice())?;
-        Ok(())
-    }
-}
-
-impl Deref for WObjectId {
-    type Target = ObjectID;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl WObjectId {
-    fn from_str(s: &str) -> IO<Self> {
-        match ObjectID::from_str(s) {
-            Ok(id) => IO::Value(WObjectId(id)),
-            Err(err) => IO::Exception(err.to_string()),
-        }
-    }
-
-    fn to_string(self) -> String {
-        self.0.to_hex_literal()
-    }
-}
+pub mod types;
 
 #[derive(Debug, Clone, VmType, PartialEq, Eq)]
 #[gluon(vm_type = "lancer.sui.prim.digest.Digest")]
@@ -175,12 +128,6 @@ fn load_sui(vm: &Thread) -> vm::Result<vm::ExternModule> {
     ExternModule::new(
         vm,
         record!(
-            object_id => record!(
-                type ObjectID => WObjectId,
-                from_string => primitive!(1, "lancer.sui.prim.object_id.from_string", WObjectId::from_str),
-                to_string => primitive!(1, "lancer.sui.prim.object_id.to_string", WObjectId::to_string),
-                eq => primitive!(2, "lancer.sui.prim.object_id.eq", |a: WObjectId, b: WObjectId| a == b),
-            ),
             digest => record!(
                 type Digest => WDigest,
                 from_string => primitive!(1, "lancer.sui.prim.digest_.from_string", WDigest::from_str),
@@ -198,7 +145,6 @@ fn load_sui(vm: &Thread) -> vm::Result<vm::ExternModule> {
 }
 
 pub fn install_sui(vm: &Thread) -> vm::Result<()> {
-    vm.register_type::<WObjectId>("lancer.sui.prim.object_id.ObjectID", &[])?;
     vm.register_type::<WDigest>("lancer.sui.prim.digest.Digest", &[])?;
     vm.register_type::<WSuiAddress>("lancer.sui.prim.sui_address.SuiAddress", &[])?;
 

@@ -1,6 +1,7 @@
 use gluon::{
     Thread,
-    import::add_extern_module,
+    base::types::ArcType,
+    import::{add_extern_module, add_extern_module_with_deps},
     primitive, record,
     vm::{
         self, ExternModule,
@@ -12,13 +13,14 @@ use gluon_codegen::{Trace, Userdata, VmType};
 use serde::de;
 use std::{fmt, str::FromStr, sync::Arc};
 use sui_types::{
+    Identifier,
     base_types::ObjectID,
     programmable_transaction_builder::ProgrammableTransactionBuilder,
     transaction::{Argument, ProgrammableTransaction},
 };
 use tokio::sync::RwLock;
 
-use crate::sui::WObjectId;
+use crate::sui::{types::WTypeTag, WSuiAddress};
 
 type ExecResult<T> = std::result::Result<T, String>;
 
@@ -33,9 +35,18 @@ pub struct WTransaction(pub ProgrammableTransaction);
 #[gluon_trace(skip)]
 pub struct WBuilder(RwLock<Option<ProgrammableTransactionBuilder>>);
 
-#[derive(Clone, Debug, VmType)]
-#[gluon(vm_type = "lancer.transaction.Argument")]
+#[derive(Clone, Debug)]
 pub struct WArgument(Argument);
+
+impl VmType for WArgument {
+    type Type = Self;
+    fn make_type(vm: &Thread) -> ArcType {
+        vm.find_type_info("lancer.transaction.types.Argument")
+            .unwrap()
+            .clone()
+            .into_type()
+    }
+}
 
 impl<'vm, 'value> Getable<'vm, 'value> for WArgument {
     impl_getable_simple!();
@@ -93,10 +104,21 @@ impl WBuilder {
         IO::Value(WBuilder(RwLock::new(Some(builder))))
     }
 
+    /*
+    async fn object(&self, id: WObjectId) -> IO<WArgument> {
+        self.0
+            .write()
+            .await
+            .as_mut()
+            .map_or(IO::Exception("Already built".to_string()), |b| {
+                IO::Value(b.obj(*id))
+            })
+    }*/
+
     async fn publish_upgradeable(
         &self,
         modules: Vec<Vec<u8>>,
-        dep_ids: Vec<WObjectId>,
+        dep_ids: Vec<WSuiAddress>,
     ) -> IO<WArgument> {
         self.0
             .write()
@@ -105,25 +127,41 @@ impl WBuilder {
             .map_or(IO::Exception("Already built".to_string()), |b| {
                 IO::Value(WArgument(b.publish_upgradeable(
                     modules,
-                    dep_ids.into_iter().map(|id| *id).collect(),
+                    dep_ids.into_iter().map(|id| id.0.into()).collect(),
                 )))
             })
     }
 
-    async fn publish_immutable(
-        &self,
-        modules: Vec<Vec<u8>>,
-        dep_ids: Vec<WObjectId>,
-    ) -> IO<
-    ()> {
+    async fn publish_immutable(&self, modules: Vec<Vec<u8>>, dep_ids: Vec<WSuiAddress>) -> IO<()> {
         self.0
             .write()
             .await
             .as_mut()
             .map_or(IO::Exception("Already built".to_string()), |b| {
-                b.publish_immutable(
-                    modules,
-                    dep_ids.into_iter().map(|id| *id).collect(),
+                b.publish_immutable(modules, dep_ids.into_iter().map(|id| id.0.into()).collect());
+                IO::Value(())
+            })
+    }
+
+    async fn move_call(
+        &self,
+        package: WSuiAddress,
+        module: String,
+        function: String,
+        type_args: Vec<WTypeTag>,
+        args: Vec<WArgument>,
+    ) -> IO<()> {
+        self.0
+            .write()
+            .await
+            .as_mut()
+            .map_or(IO::Exception("Already built".to_string()), |b| {
+                b.programmable_move_call(
+                    package.0.into(),
+                    Identifier::from_str(&module).unwrap(),
+                    Identifier::from_str(&function).unwrap(),
+                    type_args.into_iter().map(|t| t.0).collect(),
+                    args.into_iter().map(|arg| arg.0).collect(),
                 );
                 IO::Value(())
             })
@@ -161,6 +199,7 @@ fn load_transaction(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 3,
                 "lancer.transaction.prim.publish_immutable",
                 async fn WBuilder::publish_immutable),
+            move_call => primitive!(6, "lancer.transaction.prim.move_call", async fn WBuilder::move_call),
             finish => primitive!(1, "lancer.transaction.prim.finish", async fn WBuilder::finish),
         ),
     )
@@ -168,9 +207,16 @@ fn load_transaction(vm: &Thread) -> vm::Result<vm::ExternModule> {
 
 pub fn install_transaction(vm: &Thread) -> vm::Result<()> {
     vm.register_type::<WBuilder>("lancer.transaction.prim.Builder", &[])?;
-    vm.register_type::<WArgument>("lancer.transaction.Argument", &[])?;
     vm.register_type::<WTransaction>("lancer.transaction.prim.Transaction", &[])?;
 
-    add_extern_module(vm, "lancer.transaction.prim", load_transaction);
+    add_extern_module_with_deps(
+        vm,
+        "lancer.transaction.prim",
+        load_transaction,
+        vec![
+            "lancer.transaction.types".to_string(),
+            "lancer.sui.types".to_string(),
+        ],
+    );
     Ok(())
 }

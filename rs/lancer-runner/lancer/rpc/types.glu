@@ -1,11 +1,11 @@
 let { Digest, ? } = import! lancer.sui.digest
 let { SuiAddress, ? } = import! lancer.sui.sui_address
-let { ObjectID, ? } = import! lancer.sui.object_id
 let { ? } = import! std.byte
+let { StructTag, AccountAddress, ? } = import! lancer.sui.types
 
 type SequenceNumber = Int
 type ObjectDigest = Digest
-type AccountAddress = SuiAddress
+type ObjectID = SuiAddress
 
 #[derive(Show, Eq)]
 type Shared = {
@@ -36,29 +36,6 @@ type Owner =
     | Immutable
     // Object is sequenced via consensus. Ownership is managed by the configured authenticator.
     | ConsensusV2 ConsensusV2
-rec
-    #[derive(Show, Eq)]
-    type StructTag = {
-        address: AccountAddress,
-        module: Identifier,
-        name: Identifier,
-        type_params: Array TypeTag,
-    }
-    #[derive(Show, Eq)]
-    type TypeTag =
-        | Bool
-        | U8
-        | U64
-        | U128
-        | Address
-        | Signer
-        | Vector TypeTag
-        | Struct StructTag
-        | U16
-        | U32
-        | U256
-
-type Identifier = String
 
 #[derive(Show, Eq)]
 type Published = {
@@ -143,8 +120,6 @@ type TransactionBlockResponse = {
     show_Shared,
     show_ConsensusV2,
     show_Owner,
-    show_StructTag,
-    show_TypeTag,
     show_Published,
     show_Transferred,
     show_Mutated,
@@ -158,4 +133,5 @@ type TransactionBlockResponse = {
     ObjectDigest,
     AccountAddress,
     Owner,
+    ObjectID,
 }

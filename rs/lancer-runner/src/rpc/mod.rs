@@ -19,11 +19,8 @@ use sui_types::{
     object::{self, Owner},
 };
 use sui_types::{digests::TransactionDigest, object::Authenticator};
-use types::WStructTag;
 
-use crate::sui::{WDigest, WObjectId, WSuiAddress};
-
-pub mod types;
+use crate::sui::{WDigest, WSuiAddress, types::WStructTag};
 
 type ExecResult<T> = std::result::Result<T, String>;
 
@@ -303,13 +300,13 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                 };
                 Self(match data.tag() {
                     0 => {
-                        let package_id = WObjectId::from_value(
+                        let package_id = ObjectID::from(WSuiAddress::from_value(
                             vm,
                             inner
                                 .lookup_field(vm, "package_id")
                                 .expect("package_id is missing"),
                         )
-                        .0;
+                        .0);
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -355,13 +352,13 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = WObjectId::from_value(
+                        let object_id = ObjectID::from(WSuiAddress::from_value(
                             vm,
                             inner
                                 .lookup_field(vm, "object_id")
                                 .expect("object_id is missing"),
                         )
-                        .0;
+                        .0);
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -404,13 +401,13 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = WObjectId::from_value(
+                        let object_id = ObjectID::from(WSuiAddress::from_value(
                             vm,
                             inner
                                 .lookup_field(vm, "object_id")
                                 .expect("object_id is missing"),
                         )
-                        .0;
+                        .0);
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -454,13 +451,13 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = WObjectId::from_value(
+                        let object_id = ObjectID::from(WSuiAddress::from_value(
                             vm,
                             inner
                                 .lookup_field(vm, "object_id")
                                 .expect("object_id is missing"),
                         )
-                        .0;
+                        .0);
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -488,13 +485,13 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = WObjectId::from_value(
+                        let object_id = ObjectID::from(WSuiAddress::from_value(
                             vm,
                             inner
                                 .lookup_field(vm, "object_id")
                                 .expect("object_id is missing"),
                         )
-                        .0;
+                        .0);
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -526,13 +523,13 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = WObjectId::from_value(
+                        let object_id = ObjectID::from(WSuiAddress::from_value(
                             vm,
                             inner
                                 .lookup_field(vm, "object_id")
                                 .expect("object_id is missing"),
                         )
-                        .0;
+                        .0);
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -581,7 +578,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
                 digest,
                 modules,
             } => {
-                WObjectId(package_id).vm_push(context)?;
+                WSuiAddress(package_id.into()).vm_push(context)?;
                 version.value().vm_push(context)?;
                 WDigest(Digest::new(digest.into_inner())).vm_push(context)?;
                 modules.vm_push(context)?;
@@ -605,7 +602,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
                 WSuiAddress(sender).vm_push(context)?;
                 WOwner(recipient).vm_push(context)?;
                 WStructTag(object_type).vm_push(context)?;
-                WObjectId(object_id).vm_push(context)?;
+                WSuiAddress(object_id.into()).vm_push(context)?;
                 version.value().vm_push(context)?;
                 WDigest(Digest::new(digest.into_inner())).vm_push(context)?;
                 context.context().push_new_record(
@@ -636,7 +633,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
                 WSuiAddress(sender).vm_push(context)?;
                 WOwner(owner).vm_push(context)?;
                 WStructTag(object_type).vm_push(context)?;
-                WObjectId(object_id).vm_push(context)?;
+                WSuiAddress(object_id.into()).vm_push(context)?;
                 version.value().vm_push(context)?;
                 previous_version.value().vm_push(context)?;
                 WDigest(Digest::new(digest.into_inner())).vm_push(context)?;
@@ -656,7 +653,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
                     .collect::<vm::Result<Vec<_>>>()?,
                 )?;
                 context.context().push_new_data(2, 1)?;
-            },
+            }
             ObjectChange::Deleted {
                 sender,
                 object_type,
@@ -665,7 +662,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
             } => {
                 WSuiAddress(sender).vm_push(context)?;
                 WStructTag(object_type).vm_push(context)?;
-                WObjectId(object_id).vm_push(context)?;
+                WSuiAddress(object_id.into()).vm_push(context)?;
                 version.value().vm_push(context)?;
                 context.context().push_new_record(
                     4,
@@ -675,7 +672,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
                         .collect::<vm::Result<Vec<_>>>()?,
                 )?;
                 context.context().push_new_data(3, 1)?;
-            },
+            }
             ObjectChange::Wrapped {
                 sender,
                 object_type,
@@ -684,7 +681,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
             } => {
                 WSuiAddress(sender).vm_push(context)?;
                 WStructTag(object_type).vm_push(context)?;
-                WObjectId(object_id).vm_push(context)?;
+                WSuiAddress(object_id.into()).vm_push(context)?;
                 version.value().vm_push(context)?;
                 context.context().push_new_record(
                     4,
@@ -694,7 +691,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
                         .collect::<vm::Result<Vec<_>>>()?,
                 )?;
                 context.context().push_new_data(4, 1)?;
-            },
+            }
             ObjectChange::Created {
                 sender,
                 owner,
@@ -706,7 +703,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
                 WSuiAddress(sender).vm_push(context)?;
                 WOwner(owner).vm_push(context)?;
                 WStructTag(object_type).vm_push(context)?;
-                WObjectId(object_id).vm_push(context)?;
+                WSuiAddress(object_id.into()).vm_push(context)?;
                 version.value().vm_push(context)?;
                 WDigest(Digest::new(digest.into_inner())).vm_push(context)?;
                 context.context().push_new_record(
@@ -724,7 +721,7 @@ impl<'vm> Pushable<'vm> for WObjectChange {
                     .collect::<vm::Result<Vec<_>>>()?,
                 )?;
                 context.context().push_new_data(5, 1)?;
-            },
+            }
         }
         Ok(())
     }
@@ -753,7 +750,10 @@ pub fn install_rpc(vm: &Thread) -> vm::Result<()> {
         vm,
         "lancer.rpc.prim",
         load_rpc,
-        vec!["lancer.rpc.types".to_string()],
+        vec![
+            "lancer.rpc.types".to_string(),
+            "lancer.sui.types".to_string(),
+        ],
     );
     Ok(())
 }

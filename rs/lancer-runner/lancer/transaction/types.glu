@@ -1,0 +1,57 @@
+let { Digest, ? } = import! lancer.sui.digest
+let { SuiAddress, ? } = import! lancer.sui.sui_address
+let { ? } = import! std.byte
+
+type SequenceNumber = Int
+type ObjectID = SuiAddress
+
+#[derive(Show, Eq)]
+type Argument =
+    // The gas coin. The gas coin can only be used by-ref, except for with
+    // `TransferObjects`, which can use it by-value.
+    | GasCoin
+    // One of the input objects or primitive values (from
+    // `ProgrammableTransaction` inputs)
+    | Input Int
+    // The result of another command (from `ProgrammableTransaction` commands)
+    | Result Int
+    // Like a `Result` but it accesses a nested result. Currently, the only usage
+    // of this is to access a value from a Move call with multiple return values.
+    | NestedResult Int Int
+
+#[derive(Show, Eq)]
+type ObjectRef = (ObjectID, SequenceNumber, Digest)
+
+#[derive(Show, Eq)]
+type SharedObject = {
+    id: ObjectID,
+    initial_shared_version: SequenceNumber,
+    mutable: Bool,
+}
+
+#[derive(Show, Eq)]
+type ObjectArg =
+    // A Move object from fastpath.
+    | ImmOrOwnedObject ObjectRef
+    // A Move object from consensus (historically consensus objects were always shared).
+    // SharedObject::mutable controls whether caller asks for a mutable reference to shared object.
+    | SharedObject SharedObject
+    // A Move object that can be received in this transaction.
+    | Receiving ObjectRef
+
+#[derive(Show, Eq)]
+type CallArg =
+    // contains no structs or objects
+    | Pure (Array Byte)
+    // an object
+    | Object ObjectArg
+
+{
+    Argument,
+    ObjectRef,
+    SharedObject,
+    ObjectArg,
+    CallArg,
+
+    show_ObjectRef,
+}
