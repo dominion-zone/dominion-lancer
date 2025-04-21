@@ -90,29 +90,26 @@ impl WBuilder {
         amounts: Vec<u64>,
         recipients: Vec<WSuiAddress>,
     ) -> IO<()> {
-        self.0
-            .write()
-            .await
-            .as_mut()
-            .map_or(IO::Exception("Already built".to_string()), |b| {
-                match b.pay(
-                    coins
-                        .into_iter()
-                        .map(|(id, version, digest)| {
-                            (
-                                id.0.into(),
-                                SequenceNumber::from_u64(version),
-                                ObjectDigest::new(digest.0.into_inner()),
-                            )
-                        })
-                        .collect(),
-                    recipients.into_iter().map(|r| r.0.into()).collect(),
-                    amounts,
-                ) {
-                    Ok(_) => IO::Value(()),
-                    Err(e) => IO::Exception(e.to_string()),
-                }
-            })
+        self.0.write().await.as_mut().map_or(
+            IO::Exception("Already built".to_string()),
+            |b| match b.pay(
+                coins
+                    .into_iter()
+                    .map(|(id, version, digest)| {
+                        (
+                            id.0.into(),
+                            SequenceNumber::from_u64(version),
+                            ObjectDigest::new(digest.0.into_inner()),
+                        )
+                    })
+                    .collect(),
+                recipients.into_iter().map(|r| r.0.into()).collect(),
+                amounts,
+            ) {
+                Ok(_) => IO::Value(()),
+                Err(e) => IO::Exception(e.to_string()),
+            },
+        )
     }
 
     pub async fn move_call(
@@ -122,20 +119,19 @@ impl WBuilder {
         function: String,
         type_args: Vec<WTypeTag>,
         args: Vec<WArgument>,
-    ) -> IO<()> {
+    ) -> IO<WArgument> {
         self.0
             .write()
             .await
             .as_mut()
             .map_or(IO::Exception("Already built".to_string()), |b| {
-                b.programmable_move_call(
+                IO::Value(WArgument(b.programmable_move_call(
                     package.0.into(),
                     Identifier::from_str(&module).unwrap(),
                     Identifier::from_str(&function).unwrap(),
                     type_args.into_iter().map(|t| t.0).collect(),
                     args.into_iter().map(|arg| arg.0).collect(),
-                );
-                IO::Value(())
+                )))
             })
     }
 
