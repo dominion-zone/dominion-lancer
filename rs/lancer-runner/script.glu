@@ -6,7 +6,7 @@ let { ? } = import! std.byte
 let array = import! std.array
 let tx = import! lancer.transaction
 let c = import! lancer.compiler
-let { start, execute, generate_keypair, get_coins } = import! lancer
+let { current_wallet, start, execute, generate_keypair, get_coins, commit } = import! lancer
 let { find_map } = import! std.foldable
 let { unwrap } = import! std.option
 let { is_empty } = import! std.array
@@ -21,9 +21,8 @@ do b = tx.builder
 tx.publish_immutable b (c.bytes p) (c.dep_ids p)
 do t = tx.finish b
 start
-io.print "Started\n"
+io.print ("Preparation: " ++ (show (unwrap (current_wallet ()))) ++ "\n")
 do r = execute t None
-io.print "Executed\n"
 let package_id = unwrap (find_map (\x ->
     match x with
     | Published { package_id, ? } -> Some package_id
@@ -130,4 +129,6 @@ tx.move_call b package_id "dummy_pool" "deposit" [ some_coin_type ] [
 ]
 do t = tx.finish b
 do r = execute t (Some user)
-io.print (show r)
+// io.print (show r)
+commit
+io.print ("Hacking: " ++ (show (unwrap (current_wallet ()))) ++ "\n")

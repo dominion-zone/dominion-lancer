@@ -1,34 +1,18 @@
+#![allow(non_local_definitions)]
+
 use anyhow::Result;
-use gluon::{ThreadExt, new_vm_async};
-use lancer_runner::install_lancer;
+use gluon::{new_vm_async, vm::api::UserdataValue, ThreadExt};
+use lancer_runner::{LancerRef, install_lancer};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let vm = new_vm_async().await;
     vm.run_io(true);
     install_lancer(&vm)?;
-    /*
-    vm.run_expr_async::<IO<()>>(
-        "test",
-        r#"
-        let l = import! lancer.prim 
-        l.start l.lancer"#,
-    ).await?;
-    */
 
     vm.load_file_async("script.glu").await?;
-    /*
-    let (r, _) = vm
-        .run_expr_async::<IO<WObjectId>>(
-            "test",
-            r#"
-        let { from_str } = import! lancer.sui
-        from_str "0xaabf0856070391df81fad9240049d69c5a51c3d376cc0885eeedd516526cc79b"
-        "#,
-        )
-        .await?;
-    println!("Result: {:?}", r);
-    */
+    let lancer: UserdataValue<LancerRef> = vm.get_global("lancer.prim.lancer")?;
+    lancer.0.stop().await;
     Ok(())
 }
 

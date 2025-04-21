@@ -43,7 +43,7 @@ pub mod transaction;
 
 type ExecResult<T> = std::result::Result<T, String>;
 
-enum TestClusterStage {
+pub enum TestClusterStage {
     Builder(TestClusterBuilder),
     Pending,
     Running(TestCluster),
@@ -89,7 +89,7 @@ impl TestClusterStage {
     }
 }
 
-enum Lancer {
+pub enum Lancer {
     Prepare {
         test_cluster: TestClusterStage,
         affected_objects: HashSet<ObjectID>,
@@ -101,6 +101,7 @@ enum Lancer {
         reported_objects: HashSet<ObjectID>,
         keys: HashMap<SuiAddress, SuiKeyPair>,
     },
+    Dropped,
 }
 
 impl Debug for Lancer {
@@ -108,6 +109,7 @@ impl Debug for Lancer {
         match self {
             Lancer::Prepare { .. } => write!(f, "Lancer::Prepare"),
             Lancer::Run { .. } => write!(f, "Lancer::Run"),
+            Lancer::Dropped => write!(f, "Lancer::Dropped"),
         }
     }
 }
@@ -123,10 +125,19 @@ impl Default for Lancer {
 }
 
 impl Lancer {
+    fn wallet_index(&self) -> usize {
+        match self {
+            Lancer::Prepare { .. } => 1,
+            Lancer::Run { .. } => 2,
+            Lancer::Dropped => unreachable!(),
+        }
+    }
+
     async fn test_cluster(&mut self) -> ExecResult<&mut TestCluster> {
         match self {
             Lancer::Prepare { test_cluster, .. } => test_cluster.start_if_needed().await,
             Lancer::Run { test_cluster, .. } => Ok(test_cluster),
+            Lancer::Dropped => Err("Lancer is dropped".to_string()),
         }
     }
 
@@ -138,6 +149,25 @@ impl Lancer {
             Lancer::Run { keys, .. } => keys
                 .get(&address)
                 .ok_or_else(|| format!("Keypair not found for address: {}", address)),
+            Lancer::Dropped => Err("Lancer is dropped".to_string()),
+        }
+    }
+
+    fn current_wallet(&self) -> Option<WSuiAddress> {
+        match self {
+            Lancer::Prepare { test_cluster, .. } => {
+                match test_cluster {
+                    TestClusterStage::Builder(_) => None,
+                    TestClusterStage::Pending => None,
+                    TestClusterStage::Running(test_cluster) => Some(WSuiAddress(
+                        test_cluster.get_addresses()[self.wallet_index()],
+                    )),
+                }
+            }
+            Lancer::Run { test_cluster, .. } => Some(WSuiAddress(
+                test_cluster.get_addresses()[self.wallet_index()],
+            )),
+            Lancer::Dropped => None,
         }
     }
 
@@ -154,6 +184,8 @@ impl Lancer {
         pt: &WTransaction,
         sender: Option<WSuiAddress>,
     ) -> ExecResult<WTransactionBlockResponse> {
+        let wallet_index = self.wallet_index();
+        // let is_preparing = matches!(self, Lancer::Prepare { .. });
         let test_cluster = self.test_cluster().await?;
         let gas_budget = 500_000_000;
         let gas_price = test_cluster.get_reference_gas_price().await;
@@ -173,12 +205,16 @@ impl Lancer {
             };
             (sender.0, gas)
         } else {
-            test_cluster
-                .wallet()
-                .get_one_gas_object()
-                .await
-                .map_err(|e| e.to_string())?
-                .ok_or("No gas object".to_string())?
+            let sender = test_cluster.get_addresses()[wallet_index];
+            (
+                sender,
+                test_cluster
+                    .wallet()
+                    .get_one_gas_object_owned_by_address(sender)
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .ok_or("No gas object".to_string())?,
+            )
         };
         // create the transaction data that will be sent to the network
         let tx_data = TransactionData::new_programmable(
@@ -248,6 +284,9 @@ impl Lancer {
             }
             Lancer::Run { keys, .. } => {
                 keys.insert(address, keypair);
+            },
+            Lancer::Dropped => {
+                return Err("Lancer is dropped".to_string());
             }
         }
         Ok(WSuiAddress(address))
@@ -277,17 +316,35 @@ impl Lancer {
         }
         Ok(coins.into_iter().map(|x| WCoin(x)).collect())
     }
+
+    async fn stop(&mut self) -> ExecResult<()> {
+        match self {
+            Lancer::Prepare { test_cluster, .. } => {
+                return Err("Test cluster is not running".to_string());
+            }
+            Lancer::Run { test_cluster, .. } => {
+                test_cluster.stop_all_validators().await;
+            }
+            Lancer::Dropped => {}
+        }
+        *self = Lancer::Dropped;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Trace, VmType, Userdata)]
 #[gluon(vm_type = "lancer.prim.Lancer")]
 #[gluon_trace(skip)]
 #[gluon_userdata(clone)]
-struct LancerRef(Arc<RwLock<Lancer>>);
+pub struct LancerRef(Arc<RwLock<Lancer>>);
 
 impl LancerRef {
     async fn start(&self) -> IO<()> {
         self.0.write().await.start().await.into()
+    }
+
+    async fn current_wallet(&self) -> Option<WSuiAddress> {
+        self.0.read().await.current_wallet()
     }
 
     async fn commit(&self) -> IO<()> {
@@ -307,7 +364,16 @@ impl LancerRef {
     }
 
     async fn get_coins(&self, coin_type: WStructTag, owner: WSuiAddress) -> IO<Vec<WCoin>> {
-        self.0.write().await.get_coins(coin_type, owner).await.into()
+        self.0
+            .write()
+            .await
+            .get_coins(coin_type, owner)
+            .await
+            .into()
+    }
+
+    pub async fn stop(&self) -> IO<()> {
+        self.0.write().await.stop().await.into()
     }
 }
 
@@ -323,6 +389,10 @@ fn load_lancer(vm: &Thread) -> vm::Result<vm::ExternModule> {
         record!(
             type Lancer => LancerRef,
             lancer => LancerRef::default(),
+            current_wallet => primitive!(
+                1,
+                "lancer.prim.current_wallet",
+                async fn LancerRef::current_wallet),
             start => primitive!(1, "lancer.prim.start", async fn LancerRef::start),
             commit => primitive!(1, "lancer.prim.commit", async fn LancerRef::commit),
             execute => primitive!(

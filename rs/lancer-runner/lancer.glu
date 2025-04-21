@@ -1,6 +1,7 @@
 let prim @ {
     Lancer,
     lancer,
+    current_wallet,
     start,
     commit,
     execute,
@@ -8,7 +9,10 @@ let prim @ {
     get_coins,
 } = import! lancer.prim
 
+let current_wallet _ = prim.current_wallet lancer in
+
 {
+    current_wallet,
     start = start lancer,
     commit = commit lancer,
     execute = execute lancer,
