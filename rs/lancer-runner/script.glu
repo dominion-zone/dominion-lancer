@@ -9,8 +9,8 @@ let { start, execute } = import! lancer
 let { find_map } = import! std.foldable
 let { unwrap } = import! std.option
 let { is_empty } = import! std.array
-let { StructTag } = import! lancer.sui.types
-let { ObjectRef, ? } = import! lancer.transaction.types
+let { TypeTag } = import! lancer.sui.types
+let { ObjectRef, ObjectArg, ? } = import! lancer.transaction.types
 
 do p = c.compile "../../sui/dummy_pool"
 do b = tx.builder
@@ -24,7 +24,7 @@ let package_id = unwrap (find_map (\x ->
     match x with
     | Published { package_id, ? } -> Some package_id
     | _ -> None) r.object_changes)
-let state_ref: ObjectRef = unwrap (find_map (\x ->
+let (state_id, state_version) = unwrap (find_map (\x ->
     match x with
     | Created {
         object_id,
@@ -35,14 +35,27 @@ let state_ref: ObjectRef = unwrap (find_map (\x ->
             module = "dummy_pool",
             name = "DummyPool",
             type_params,
-        }, ? } -> if is_empty type_params then Some (object_id, version, digest) else None
+        }, ? } -> if is_empty type_params then Some (object_id, version) else None
     | _ -> None) r.object_changes)
 
-let some_coin_type: StructTag = {
+let some_coin_type: TypeTag = Struct {
     address = package_id,
     module = "some_coin",
     name = "SOME_COIN",
     type_params = [],
 }
 
-io.print (show state_ref)
+do b = tx.builder
+do state_ref = tx.object_ref b (SharedObject {
+    id = state_id,
+    initial_shared_version = state_version,
+    mutable = True,
+})
+do price = tx.u64 b 10000
+tx.move_call b package_id "dummy_pool" "create_vault" [ some_coin_type ] [
+    state_ref,
+    price
+]
+do t = tx.finish b
+do r = execute t
+io.print (show r.object_changes)

@@ -10,6 +10,7 @@ use gluon::{
     },
 };
 use gluon_codegen::{Trace, Userdata, VmType};
+use serde::Serialize;
 use std::{fmt, ops::Deref, str::FromStr};
 use sui_move_build::{BuildConfig, CompiledPackage};
 use sui_types::{
@@ -76,8 +77,9 @@ impl WDigest {
     }
 }
 
-#[derive(Debug, Clone, VmType, PartialEq, Eq)]
+#[derive(Debug, Clone, VmType, PartialEq, Eq, Serialize)]
 #[gluon(vm_type = "lancer.sui.prim.sui_address.SuiAddress")]
+#[serde(transparent)]
 pub struct WSuiAddress(pub SuiAddress);
 
 impl<'vm, 'value> Getable<'vm, 'value> for WSuiAddress {

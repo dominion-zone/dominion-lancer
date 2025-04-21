@@ -1,3 +1,5 @@
+#![allow(non_local_definitions)]
+
 use std::{
     collections::HashSet,
     f32::consts::E,
@@ -26,7 +28,7 @@ use sui_types::{
 use take_mut::take;
 use test_cluster::{TestCluster, TestClusterBuilder};
 use tokio::sync::{Mutex, RwLock};
-use transaction::{WTransaction, install_transaction};
+use transaction::{install_transaction, transaction::WTransaction};
 
 pub mod compiler;
 pub mod rpc;

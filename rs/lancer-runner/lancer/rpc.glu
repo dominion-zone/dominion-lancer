@@ -1,4 +1,4 @@
-let {
+let types @ {
     TransactionBlockResponse,
     ObjectChange,
     SequenceNumber,
@@ -72,9 +72,6 @@ let object_change_owner c : ObjectChange -> Option Owner =
     | Created c -> Some c.owner
 
 {
-    TransactionBlockResponse,
-    ObjectChange,
-
     ObjectChangeKind,
     object_change_kind,
     show_ObjectChangeKind,
@@ -83,4 +80,6 @@ let object_change_owner c : ObjectChange -> Option Owner =
     object_change_version,
     object_change_digest,
     object_change_owner,
+
+    .. types
 }

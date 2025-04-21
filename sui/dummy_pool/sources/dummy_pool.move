@@ -23,7 +23,7 @@ public struct Vault<phantom T> has key {
     id: UID,
     pool_id: ID,
     balance: Balance<T>,
-    price_bp: u128,
+    price_bp: u64,
 }
 
 public struct VaultAdminCap<phantom T> has key {
@@ -63,7 +63,7 @@ public entry fun withdraw<T>(
 
 public entry fun create_vault<T>(
     self: &mut DummyPool,
-    price_bp: u128,
+    price_bp: u64,
     ctx: &mut TxContext
 ) {
     let vault = Vault<T> {
@@ -84,7 +84,7 @@ public entry fun create_vault<T>(
 public entry fun set_vault_price<T>(
     self: &VaultAdminCap<T>,
     vault: &mut Vault<T>,
-    price_bp: u128,
+    price_bp: u64,
 ) {
     assert!(vault.pool_id == self.vault_id);
     vault.price_bp = price_bp;
@@ -97,7 +97,7 @@ public fun deposit_balance<T>(
 ): Balance<DUMMY_POOL> {
     let value = balance.value();
     vault.balance.join(balance);
-    self.treasury_cap.mint_balance((value as u128 * vault.price_bp / 10000) as u64)
+    self.treasury_cap.mint_balance(((value as u128) * (vault.price_bp as u128) / 10000) as u64)
 }
 
 public fun withdraw_balance<T>(
@@ -107,7 +107,7 @@ public fun withdraw_balance<T>(
 ): Balance<T> {
     let value = balance.value();
     self.treasury_cap.supply_mut().decrease_supply(balance);
-    vault.balance.split((value as u128 * 10000 / vault.price_bp) as u64)
+    vault.balance.split(((value as u128) * 10000 / (vault.price_bp as u128)) as u64)
 }
 
 // === View Functions ===

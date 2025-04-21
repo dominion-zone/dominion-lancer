@@ -1,18 +1,6 @@
-use std::{borrow::Cow, path::Path, str::FromStr, sync::Mutex, u64};
-
-use anyhow::{Context, Result};
-use gluon::{
-    Thread, ThreadExt,
-    import::add_extern_module,
-    new_vm_async, primitive,
-    vm::{self, api::IO},
-};
-use lancer_runner::{install_lancer, rpc::WTransactionBlockResponse, transaction::WArgument};
-use sui_framework::BuiltInFramework;
-use sui_move_build::BuildConfig;
-use sui_types::{base_types::ObjectID, digests::Digest, object::Object};
-use test_cluster::TestClusterBuilder;
-use tokio::fs::{File, read};
+use anyhow::Result;
+use gluon::{ThreadExt, new_vm_async};
+use lancer_runner::install_lancer;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,7 +15,7 @@ async fn main() -> Result<()> {
         l.start l.lancer"#,
     ).await?;
     */
-    
+
     vm.load_file_async("script.glu").await?;
     /*
     let (r, _) = vm
