@@ -5,6 +5,7 @@ let { StructTag, AccountAddress, ? } = import! lancer.sui.types
 
 type SequenceNumber = Int
 type ObjectDigest = Digest
+type TransactionDigest = Digest
 type ObjectID = SuiAddress
 
 #[derive(Show, Eq)]
@@ -114,6 +115,16 @@ type TransactionBlockResponse = {
     object_changes: Array ObjectChange,
 }
 
+#[derive(Show, Eq)]
+type Coin = {
+    coin_type: StructTag,
+    coin_object_id: ObjectID,
+    version: SequenceNumber,
+    digest: ObjectDigest,
+    balance: Int,
+    previous_transaction: TransactionDigest,
+}
+
 {
     TransactionBlockResponse,
     ObjectChange,
@@ -128,10 +139,13 @@ type TransactionBlockResponse = {
     show_Created,
     show_ObjectChange,
     show_TransactionBlockResponse,
+    show_Coin,
+    eq_Coin,
 
     SequenceNumber,
     ObjectDigest,
     AccountAddress,
     Owner,
     ObjectID,
+    Coin,
 }

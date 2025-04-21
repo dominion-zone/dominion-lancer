@@ -22,6 +22,8 @@ use sui_types::{digests::TransactionDigest, object::Authenticator};
 
 use crate::sui::{WDigest, WSuiAddress, types::WStructTag};
 
+pub mod coin;
+
 type ExecResult<T> = std::result::Result<T, String>;
 
 #[derive(Debug, Clone)]

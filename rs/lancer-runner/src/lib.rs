@@ -21,9 +21,9 @@ use gluon::{
 };
 use gluon_codegen::{Trace, Userdata, VmType};
 use move_core_types::parsing::address;
-use rpc::{WTransactionBlockResponse, install_rpc};
+use rpc::{WTransactionBlockResponse, coin::WCoin, install_rpc};
 use std::fmt::Debug;
-use sui::{WSuiAddress, install_sui};
+use sui::{WSuiAddress, install_sui, types::WStructTag};
 use sui_json_rpc_types::SuiTransactionBlockResponse;
 use sui_types::{
     base_types::{ObjectID, SuiAddress},
@@ -252,6 +252,31 @@ impl Lancer {
         }
         Ok(WSuiAddress(address))
     }
+
+    async fn get_coins(
+        &mut self,
+        coin_type: WStructTag,
+        owner: WSuiAddress,
+    ) -> ExecResult<Vec<WCoin>> {
+        let coin_type = coin_type.0.to_canonical_string(true);
+        let test_cluster = self.test_cluster().await.unwrap();
+        let mut coins = vec![];
+        let mut cursor = None;
+        loop {
+            let page = test_cluster
+                .sui_client()
+                .coin_read_api()
+                .get_coins(owner.0, Some(coin_type.clone()), cursor, None)
+                .await
+                .map_err(|e| e.to_string())?;
+            coins.extend(page.data);
+            if !page.has_next_page {
+                break;
+            }
+            cursor = page.next_cursor;
+        }
+        Ok(coins.into_iter().map(|x| WCoin(x)).collect())
+    }
 }
 
 #[derive(Clone, Debug, Trace, VmType, Userdata)]
@@ -280,6 +305,10 @@ impl LancerRef {
     async fn generate_keypair(&self) -> IO<WSuiAddress> {
         self.0.write().await.generate_keypair().await.into()
     }
+
+    async fn get_coins(&self, coin_type: WStructTag, owner: WSuiAddress) -> IO<Vec<WCoin>> {
+        self.0.write().await.get_coins(coin_type, owner).await.into()
+    }
 }
 
 impl Default for LancerRef {
@@ -304,6 +333,10 @@ fn load_lancer(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 1,
                 "lancer.prim.generate_keypair",
                 async fn LancerRef::generate_keypair),
+            get_coins => primitive!(
+                3,
+                "lancer.prim.get_coins",
+                async fn LancerRef::get_coins),
         ),
     )
 }

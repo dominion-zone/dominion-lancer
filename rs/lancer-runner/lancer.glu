@@ -4,7 +4,8 @@ let prim @ {
     start,
     commit,
     execute,
-    generate_keypair
+    generate_keypair,
+    get_coins,
 } = import! lancer.prim
 
 {
@@ -12,4 +13,5 @@ let prim @ {
     commit = commit lancer,
     execute = execute lancer,
     generate_keypair = generate_keypair lancer,
+    get_coins = get_coins lancer,
 }
