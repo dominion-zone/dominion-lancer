@@ -1,18 +1,61 @@
 #![allow(non_local_definitions)]
 
+use std::time::Duration;
+
 use anyhow::Result;
-use gluon::{new_vm_async, vm::api::UserdataValue, ThreadExt};
-use lancer_runner::{LancerRef, install_lancer};
+use gluon::RootedThread;
+use gluon::vm::api::Hole;
+use gluon::vm::api::OpaqueValue;
+use gluon::vm::api::Pushable;
+use gluon::vm::api::VmType;
+use gluon::{
+    ThreadExt, new_vm_async,
+    vm::{
+        api::{FunctionRef, FutureResult, IO, UserdataValue},
+        thread::ThreadInternal,
+    },
+};
+use lancer_runner::PreparationDump;
+use lancer_runner::{LancerInitializeArgs, LancerRef, install_lancer};
+use tokio::fs;
+use tokio::{sync::mpsc, time::sleep};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let vm = new_vm_async().await;
     vm.run_io(true);
     install_lancer(&vm)?;
-
-    vm.load_file_async("script.glu").await?;
+    vm.run_expr_async::<OpaqueValue<RootedThread, Hole>>("import", "import! lancer.prim")
+        .await?;
+    let (preparation_dump_sender, mut preparation_dump_receiver) = mpsc::channel::<PreparationDump>(1);
+    let preparation_dump_uploader = tokio::spawn(async move {
+        let dump = preparation_dump_receiver.recv().await.unwrap();
+        fs::write("/tmp/preparation.sql", dump.sql.as_bytes())
+            .await
+            .unwrap();
+    });
     let lancer: UserdataValue<LancerRef> = vm.get_global("lancer.prim.lancer")?;
-    lancer.0.stop().await;
+    {
+        let mut initialize: FunctionRef<fn(LancerRef, LancerInitializeArgs) -> IO<()>> =
+            vm.get_global("lancer.prim.initialize")?;
+        initialize
+            .call_async(
+                lancer.0.clone(),
+                LancerInitializeArgs {
+                    dump_sender: preparation_dump_sender,
+                },
+            )
+            .await?;
+    }
+    vm.load_file_async("script.glu").await?;
+    // let lancer: UserdataValue<LancerRef> = vm.get_global("lancer.prim.lancer")?;
+    // sleep(Duration::from_secs(100000)).await;
+    if let IO::Value(final_report) = lancer.0.stop().await {
+        fs::write("/tmp/final.sql", final_report.private_sql.as_bytes())
+            .await
+            .unwrap();
+    }
+    preparation_dump_uploader.await?;
     Ok(())
 }
 

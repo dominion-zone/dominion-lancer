@@ -6,7 +6,7 @@ let { ? } = import! std.byte
 let array = import! std.array
 let tx = import! lancer.transaction
 let c = import! lancer.compiler
-let { current_wallet, start, execute, generate_keypair, get_coins, commit } = import! lancer
+let { current_wallet, start, execute, generate_keypair, get_coins, commit, report_owner_by } = import! lancer
 let { find_map } = import! std.foldable
 let { unwrap } = import! std.option
 let { is_empty } = import! std.array
@@ -233,3 +233,4 @@ tx.move_call b sui_framework "transfer" "public_freeze_object" [Struct {
 do t = tx.finish b
 do r = execute t None
 io.print (show r)
+report_owner_by None

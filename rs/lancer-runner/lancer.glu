@@ -7,6 +7,10 @@ let prim @ {
     execute,
     generate_keypair,
     get_coins,
+    report_public,
+    report_owner_by,
+    report_objects,
+    hiding_objects,
 } = import! lancer.prim
 
 let current_wallet _ = prim.current_wallet lancer in
@@ -18,4 +22,8 @@ let current_wallet _ = prim.current_wallet lancer in
     execute = execute lancer,
     generate_keypair = generate_keypair lancer,
     get_coins = get_coins lancer,
+    report_public = report_public lancer,
+    report_owner_by = report_owner_by lancer,
+    report_objects = report_objects lancer,
+    hiding_objects = hiding_objects lancer,
 }
