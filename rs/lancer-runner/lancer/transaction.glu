@@ -1,3 +1,57 @@
-let prim @ { ? } = import! lancer.transaction.prim
+let prim @ { Transaction, new_builder } = import! lancer.transaction.prim
+let types @ { Argument, ObjectRef, ObjectArg, ? } = import! lancer.transaction.types
+let { Result } = import! std.result
+let { SuiAddress } = import! lancer.sui.sui_address
+let { TypeTag } = import! lancer.sui.types
 
-{ .. prim }
+type TransactionBuilder = {
+    u8: Byte -> Result String Argument,
+    u16: Int -> Result String Argument,
+    u32: Int -> Result String Argument,
+    u64: Int -> Result String Argument,
+    bool: Bool -> Result String Argument,
+    address: SuiAddress -> Result String Argument,
+    object_ref: ObjectArg -> Result String Argument,
+    publish_upgradeable: Array (Array Byte) -> Array SuiAddress -> Result String Argument,
+    publish_immutable: Array (Array Byte) -> Array SuiAddress -> Result String (),
+    move_call: SuiAddress -> String -> String -> Array TypeTag -> Array Argument -> Result String Argument,
+    pay: Array ObjectRef -> Array Int -> Array SuiAddress -> Result String (),
+    finish: () -> Result String Transaction
+}
+
+let new_builder _ : () -> TransactionBuilder =
+    let builder = prim.new_builder ()
+    let u8 = prim.u8 builder
+    let u16 = prim.u16 builder
+    let u32 = prim.u32 builder
+    let u64 = prim.u64 builder
+    let bool = prim.bool builder
+    let address = prim.address builder
+    let object_ref = prim.object_ref builder
+    let publish_upgradeable = prim.publish_upgradeable builder
+    let publish_immutable = prim.publish_immutable builder
+    let move_call = prim.move_call builder
+    let pay = prim.pay builder
+    let finish _ = prim.finish builder
+    {
+        u8,
+        u16,
+        u32,
+        u64,
+        bool,
+        address,
+        object_ref,
+        publish_upgradeable,
+        publish_immutable,
+        move_call,
+        pay,
+        finish
+    }    
+
+{ 
+    new_builder,
+    TransactionBuilder,
+    Transaction,
+    ..
+    types
+}

