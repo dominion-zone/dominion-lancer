@@ -1,5 +1,6 @@
 #![allow(non_local_definitions)]
 
+use std::collections::HashSet;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -16,9 +17,23 @@ use gluon::{
     },
 };
 use lancer_runner::PreparationDump;
+use lancer_runner::Reporting;
 use lancer_runner::{LancerInitializeArgs, LancerRef, install_lancer};
+use serde::Deserialize;
+use serde::Serialize;
+use sui_types::base_types::SuiAddress;
 use tokio::fs;
-use tokio::{sync::mpsc, time::sleep};
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReportManifest {
+    pub preparation_sender: SuiAddress,
+    pub preparation_available_keys: HashSet<SuiAddress>,
+    pub execution_sender: SuiAddress,
+    pub execution_available_keys: HashSet<SuiAddress>,
+    pub reporting: Reporting,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,16 +42,27 @@ async fn main() -> Result<()> {
     install_lancer(&vm)?;
     vm.run_expr_async::<OpaqueValue<RootedThread, Hole>>("import", "import! lancer.prim")
         .await?;
-    let (preparation_dump_sender, mut preparation_dump_receiver) = mpsc::channel::<PreparationDump>(1);
-    let preparation_dump_uploader = tokio::spawn(async move {
+    let (preparation_dump_sender, mut preparation_dump_receiver) =
+        mpsc::channel::<PreparationDump>(1);
+    let mut public_tar = tar::Builder::new(Vec::<u8>::new());
+    let preparation_dump_uploader: JoinHandle<anyhow::Result<_>> = tokio::spawn(async move {
         let dump = preparation_dump_receiver.recv().await.unwrap();
-        fs::write("/tmp/preparation.sql", dump.sql.as_bytes())
-            .await
-            .unwrap();
+
+        {
+            let data = dump.sql.as_bytes();
+
+            let mut header = tar::Header::new_gnu();
+            header.set_size(data.len() as u64);
+            header.set_cksum();
+
+            public_tar.append_data(&mut header, "preparation.sql", data)?;
+        }
+
+        Ok((public_tar, dump.sender, dump.available_private_keys))
     });
     let lancer: UserdataValue<LancerRef> = vm.get_global("lancer.prim.lancer")?;
     {
-        let mut initialize: FunctionRef<fn(LancerRef, LancerInitializeArgs) -> IO<()>> =
+        let mut initialize: FunctionRef<'_, fn(LancerRef, LancerInitializeArgs) -> IO<()>> =
             vm.get_global("lancer.prim.initialize")?;
         initialize
             .call_async(
@@ -50,12 +76,64 @@ async fn main() -> Result<()> {
     vm.load_file_async("script.glu").await?;
     // let lancer: UserdataValue<LancerRef> = vm.get_global("lancer.prim.lancer")?;
     // sleep(Duration::from_secs(100000)).await;
-    if let IO::Value(final_report) = lancer.0.stop().await {
-        fs::write("/tmp/final.sql", final_report.private_sql.as_bytes())
-            .await
-            .unwrap();
+
+    let final_report = lancer
+        .0
+        .stop()
+        .await
+        .into_result()
+        .expect("Failed to stop Lancer");
+
+    let (mut public_tar, preparation_sender, preparation_available_keys) =
+        preparation_dump_uploader.await??;
+
+    let report_manifest = ReportManifest {
+        preparation_sender,
+        preparation_available_keys,
+        execution_sender: final_report.sender,
+        execution_available_keys: final_report.available_private_keys,
+        reporting: final_report.reporting.clone(),
+    };
+
+    {
+        let manifest_data = serde_json::to_vec(&report_manifest)?;
+        let mut manifest_header = tar::Header::new_gnu();
+        manifest_header.set_size(manifest_data.len() as u64);
+        manifest_header.set_cksum();
+
+        public_tar.append_data(
+            &mut manifest_header,
+            "manifest.json",
+            manifest_data.as_slice(),
+        )?;
     }
-    preparation_dump_uploader.await?;
+
+    let private_tar = {
+        let final_dump_data = final_report.sql.as_bytes();
+
+        let mut final_dump_header = tar::Header::new_gnu();
+        final_dump_header.set_size(final_dump_data.len() as u64);
+        final_dump_header.set_cksum();
+
+        match final_report.reporting {
+            Reporting::Public => {
+                public_tar.append_data(&mut final_dump_header, "final.sql", final_dump_data)?;
+                None
+            }
+            Reporting::Partial { .. } => {
+                let mut private_tar = tar::Builder::new(Vec::<u8>::new());
+                private_tar.append_data(&mut final_dump_header, "final.sql", final_dump_data)?;
+                Some(private_tar)
+            }
+            Reporting::HidingObjects(_hash_set) => todo!(),
+        }
+    };
+
+    fs::write("/tmp/public.tar", &public_tar.into_inner()?).await?;
+    if let Some(private_tar) = private_tar {
+        fs::write("/tmp/private.tar", &private_tar.into_inner()?).await?;
+    }
+
     Ok(())
 }
 

@@ -23,6 +23,7 @@ use gluon::{
 use gluon_codegen::{Trace, Userdata, VmType};
 use move_core_types::parsing::address;
 use rpc::{WTransactionBlockResponse, coin::WCoin, install_rpc};
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use sui::{WSuiAddress, install_sui, types::WStructTag};
 use sui_json_rpc_types::SuiTransactionBlockResponse;
@@ -92,6 +93,7 @@ impl TestClusterStage {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Reporting {
     Public,
     Partial {
@@ -490,7 +492,7 @@ impl Lancer {
                 FinalReport {
                     reporting: Reporting::Public,
                     public_report,
-                    private_sql,
+                    sql: private_sql,
                     sender: current_wallet.unwrap().0,
                     available_private_keys: HashSet::from_iter(keys.keys().cloned()),
                 }
@@ -507,7 +509,7 @@ impl Lancer {
 pub struct FinalReport {
     pub reporting: Reporting,
     pub public_report: Vec<Object>,
-    pub private_sql: String,
+    pub sql: String,
     pub sender: SuiAddress,
     pub available_private_keys: HashSet<SuiAddress>,
 }
