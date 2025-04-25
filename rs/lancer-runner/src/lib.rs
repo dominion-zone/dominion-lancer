@@ -382,6 +382,19 @@ impl Lancer {
         Ok(coins.into_iter().map(|x| WCoin(x)).collect())
     }
 
+    async fn get_balance(&mut self, coin_type: WStructTag, owner: WSuiAddress) -> ExecResult<u64> {
+        let coin_type = coin_type.0.to_canonical_string(true);
+        let test_cluster = self.test_cluster().await.unwrap();
+        let balance = test_cluster
+            .fullnode_handle
+            .sui_client
+            .coin_read_api()
+            .get_balance(owner.0, Some(coin_type))
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(balance.total_balance as u64)
+    }
+
     fn set_reporting(&mut self, reporting: Reporting) -> ExecResult<()> {
         match self {
             Lancer::Unintialized => {
@@ -570,6 +583,15 @@ impl LancerRef {
             .into()
     }
 
+    async fn get_balance(&self, coin_type: WStructTag, owner: WSuiAddress) -> IO<u64> {
+        self.0
+            .write()
+            .await
+            .get_balance(coin_type, owner)
+            .await
+            .into()
+    }
+
     pub async fn report_public(&self) -> IO<()> {
         self.0.write().await.set_reporting(Reporting::Public).into()
     }
@@ -664,6 +686,10 @@ fn load_lancer(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 3,
                 "lancer.prim.get_coins",
                 async fn LancerRef::get_coins),
+            get_balance => primitive!(
+                3,
+                "lancer.prim.get_balance",
+                async fn LancerRef::get_balance),
             report_public => primitive!(
                 1,
                 "lancer.prim.report_public",
