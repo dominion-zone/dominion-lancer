@@ -15,7 +15,7 @@ pub struct WArgument(pub Argument);
 impl VmType for WArgument {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.transaction.types.Argument")
+        vm.find_type_info("lancer.transaction.builder.types.Argument")
             .unwrap()
             .clone()
             .into_type()
@@ -43,7 +43,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WArgument {
                 )),
                 _ => panic!("ValueRef has a wrong tag: {}", data.tag()),
             },
-            _ => panic!("ValueRef is not a lancer.transaction.Argument"),
+            _ => panic!("ValueRef is not a lancer.transaction.builder.types.Argument"),
         }
     }
 }

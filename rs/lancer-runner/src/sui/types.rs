@@ -5,7 +5,7 @@ use gluon::{
     primitive, record,
     vm::{
         self, ExternModule,
-        api::{Collect, Getable, IO, Pushable, ValueRef, VmType},
+        api::{Collect, Getable, Pushable, ValueRef, VmType},
         impl_getable_simple,
     },
 };

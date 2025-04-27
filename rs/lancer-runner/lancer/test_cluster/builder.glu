@@ -1,0 +1,13 @@
+let prim @ { TestClusterBuilder } = import! lancer.test_cluster.builder.prim
+let effect @ { Eff, ? } = import! std.effect
+let { Lift, lift, ? } = import! std.effect.lift
+let { SuiAddress } = import! lancer.sui.sui_address
+let { TestCluster } = import! lancer.test_cluster
+
+let build self: TestClusterBuilder -> Eff [| lift : Lift IO | r |] TestCluster
+    = lift <| prim.build self
+
+{
+    TestClusterBuilder,
+    build,
+}

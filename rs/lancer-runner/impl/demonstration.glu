@@ -1,0 +1,18 @@
+let make test_cluster r : TestCluster -> ReportBuilder -> Demonstration = 
+    let wallet = TempWallet.new ()
+    let generate_keypair _ = temp_wallet.generate_keypair wallet
+    let finalize _ =
+        do test_cluster = prim.take test_cluster
+        do sql = prim.dump_db test_cluster
+        let keys = get_keys wallet
+        r.demonstration <- Some {
+            sql,
+            keys,
+        }
+        prim.stop ()
+    let cluster = prim.make 2 wallet cluster
+    {
+        generate_keypair,
+        finalize,
+        .. cluster
+    }

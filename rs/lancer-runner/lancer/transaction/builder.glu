@@ -1,0 +1,59 @@
+let prim @ { TransactionBuilder, new } = import! lancer.transaction.builder.prim
+let { Transaction } = import! lancer.transaction
+let types @ { Argument, ObjectRef, ObjectArg, ? } = import! lancer.transaction.builder.types
+let { SuiAddress } = import! lancer.sui.sui_address
+let { TypeTag } = import! lancer.sui.types
+let effect @ { Eff, ? } = import! std.effect
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { (<|), (<<) } = import! std.function
+
+type TransactionBuilder = {
+    u8: Byte -> Eff [| lift : Lift IO | r |] Argument,
+    u16: Int -> Eff [| lift : Lift IO | r |] Argument,
+    u32: Int -> Eff [| lift : Lift IO | r |] Argument,
+    u64: Int -> Eff [| lift : Lift IO | r |] Argument,
+    bool: Bool -> Eff [| lift : Lift IO | r |] Argument,
+    address: SuiAddress -> Eff [| lift : Lift IO | r |] Argument,
+    object_ref: ObjectArg -> Eff [| lift : Lift IO | r |] Argument,
+    publish_upgradeable: Array (Array Byte) -> Array SuiAddress -> Eff [| lift : Lift IO | r |] Argument,
+    publish_immutable: Array (Array Byte) -> Array SuiAddress -> Eff [| lift : Lift IO | r |] (),
+    move_call: SuiAddress -> String -> String -> Array TypeTag -> Array Argument -> Eff [| lift : Lift IO | r |] Argument,
+    pay: Array ObjectRef -> Array Int -> Array SuiAddress -> Eff [| lift : Lift IO | r |] (),
+    finish: () -> Eff [| lift : Lift IO | r |] Transaction
+}
+
+let new _ : () -> Eff [| lift : Lift IO | r |] TransactionBuilder =
+    do builder = lift <| prim.new
+    let u8 = lift << prim.u8 builder
+    let u16 = lift << prim.u16 builder
+    let u32 = lift << prim.u32 builder
+    let u64 = lift << prim.u64 builder
+    let bool = lift << prim.bool builder
+    let address = lift << prim.address builder
+    let object_ref = lift << prim.object_ref builder
+    let publish_upgradeable modules dep_ids = lift <| prim.publish_upgradeable builder modules dep_ids
+    let publish_immutable modules dep_ids = lift <| prim.publish_immutable builder modules dep_ids
+    let move_call package module function type_args args = lift <| prim.move_call builder package module function type_args args
+    let pay coins amounts recipients = lift <| prim.pay builder coins amounts recipients
+    let finish _ = lift <| prim.finish builder
+    {
+        u8,
+        u16,
+        u32,
+        u64,
+        bool,
+        address,
+        object_ref,
+        publish_upgradeable,
+        publish_immutable,
+        move_call,
+        pay,
+        finish
+    }    
+
+{ 
+    new,
+    TransactionBuilder,
+    ..
+    types
+}

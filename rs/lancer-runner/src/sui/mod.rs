@@ -5,7 +5,7 @@ use gluon::{
     primitive, record,
     vm::{
         self, ExternModule,
-        api::{Collect, Getable, IO, Pushable, ValueRef},
+        api::{Collect, Getable, Pushable, ValueRef},
         impl_getable_simple,
     },
 };
@@ -60,15 +60,15 @@ impl Deref for WDigest {
 }
 
 impl WDigest {
-    fn from_str(s: &str) -> IO<Self> {
+    fn from_str(s: &str) -> Result<Self, String> {
         match Base58::decode(s) {
             Ok(buffer) => {
                 if buffer.len() != 32 {
-                    return IO::Exception("Invalid digest length. Expected 32 bytes".to_string());
+                    return Err("Invalid digest length. Expected 32 bytes".to_string());
                 }
-                IO::Value(WDigest(Digest::new(buffer.try_into().unwrap())))
+                Ok(WDigest(Digest::new(buffer.try_into().unwrap())))
             }
-            Err(err) => IO::Exception(err.to_string()),
+            Err(err) => Err(err.to_string()),
         }
     }
 
@@ -114,10 +114,10 @@ impl Deref for WSuiAddress {
     }
 }
 impl WSuiAddress {
-    fn from_str(s: &str) -> IO<Self> {
+    fn from_str(s: &str) -> Result<Self, String> {
         match SuiAddress::from_str(s) {
-            Ok(id) => IO::Value(WSuiAddress(id)),
-            Err(err) => IO::Exception(err.to_string()),
+            Ok(id) => Ok(WSuiAddress(id)),
+            Err(err) => Err(err.to_string()),
         }
     }
 

@@ -1,0 +1,58 @@
+let { SuiAddress } = import! lancer.sui.sui_address
+
+type PreparationReport = {
+    sql: String,
+    keys: Array SuiAddress,
+}
+
+type DemonstrationReport = {
+    sql: String,
+    keys: Array SuiAddress,
+}
+
+type FinalReport = {
+    preparation: PreparationReport,
+    demonstration: DemonstrationReport,
+}
+
+/*
+type ReportBuilder = {
+    preparation: Option PreparationReport,
+    demonstration:  Option DemonstrationReport,
+}
+
+let default_builder : ReportBuilder = {
+    preparation = None,
+    demonstration = None,
+}
+
+let put_preparation r p : ReportBuilder -> PreparationReport -> ReportBuilder = 
+    {
+        preparation = Some p,
+        .. r
+    }
+
+let put_demonstration r d : ReportBuilder -> PreparationReport -> ReportBuilder = 
+    {
+        demonstration = Some d,
+        .. r
+    }
+
+let finalize r : ReportBuilder -> FinalReport = 
+    let preparation = unwrap (load r.preparation)
+    let demonstration = unwrap (load r.demonstration)
+    {
+        preparation,
+        demonstration,
+    }
+*/
+{
+    // ReportBuilder,
+    // default_builder,
+    PreparationReport,
+    DemonstrationReport,
+    FinalReport,
+    // put_preparation,
+    // put_demonstration,
+    // finalize
+}

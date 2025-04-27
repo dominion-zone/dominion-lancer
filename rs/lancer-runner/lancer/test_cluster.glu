@@ -1,0 +1,19 @@
+let effect @ { Eff, ? } = import! std.effect
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { (<|), (<<) } = import! std.function
+let { Transaction } = import! lancer.transaction
+let { TransactionBlockResponse } = import! lancer.rpc
+let { SuiAddress } = import! lancer.sui.sui_address
+let { TempWallet } = import! lancer.temp_wallet
+let prim @ { TestCluster } = import! lancer.test_cluster.prim
+
+let execute_tx cluster wallet_index temp_wallet tx sender
+  : TestCluster -> Int -> TempWallet ->  Transaction
+  -> Option SuiAddress -> Eff [| lift : Lift IO | r |] TransactionBlockResponse
+    = lift <| prim.execute_tx cluster wallet_index temp_wallet tx sender
+
+
+{
+    TestCluster,
+    execute_tx,
+}

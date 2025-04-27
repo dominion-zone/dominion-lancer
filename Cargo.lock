@@ -4401,9 +4401,9 @@ dependencies = [
  "sui-framework",
  "sui-json-rpc-types",
  "sui-move-build",
+ "sui-swarm-config",
  "sui-types",
  "take_mut",
- "tar",
  "test-cluster",
  "tokio",
 ]
@@ -9914,17 +9914,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
-name = "tar"
-version = "0.4.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d863878d212c87a19c1a610eb53bb01fe12951c0501cf5a0d65f724914a667a"
-dependencies = [
- "filetime",
- "libc",
- "xattr",
-]
-
-[[package]]
 name = "telemetry-subscribers"
 version = "0.2.0"
 source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb652346cbf62dc68b45bcff036ffc4749"
@@ -11845,16 +11834,6 @@ dependencies = [
  "rusticata-macros",
  "thiserror 2.0.12",
  "time",
-]
-
-[[package]]
-name = "xattr"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d65cbf2f12c15564212d48f4e3dfb87923d25d611f2aed18f4cb23f0413d89e"
-dependencies = [
- "libc",
- "rustix",
 ]
 
 [[package]]

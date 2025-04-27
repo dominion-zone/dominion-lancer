@@ -1,0 +1,21 @@
+
+let make cluster wallet : prim.TestCluster -> TempWallet -> Eff [| state: State ReportBuilder Preparation | r |] =
+    let generate_keypair _ = temp_wallet.generate_keypair wallet
+    let commit _ =
+        do cluster = prim.take cluster
+        do sql = prim.dump_db cluster
+        let keys = get_keys wallet
+        r.preparation <- Some {
+            sql,
+            keys,
+        }
+        d.make cluster {
+            sql,
+            keys,
+        }
+    let cluster = prim.make 1 wallet cluster
+    {
+        generate_keypair,
+        commit,
+        .. cluster
+    }

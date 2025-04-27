@@ -27,7 +27,7 @@ let { unwrap_ok, ? } = import! std.result
 
 start
 io.print ("Preparation: " ++ (show (unwrap (current_wallet ()))) ++ "\n")
-do p = c.compile "../../sui/dummy_pool"
+let p = unwrap_ok (c.compile "../../sui/dummy_pool")
 let tx =
     let b = new_builder ()
     b.publish_immutable (c.bytes p) (c.dep_ids p)
@@ -73,7 +73,7 @@ let dummy_pool_coin_struct: StructTag = {
 
 let dummy_pool_coin_type: TypeTag = Struct dummy_pool_coin_struct
 
-do sui_framework = parse "0x0000000000000000000000000000000000000000000000000000000000000002"
+let sui_framework = unwrap_ok (parse "0x0000000000000000000000000000000000000000000000000000000000000002")
 
 let some_coin_object_ref: ObjectRef = unwrap (find_map (\x ->
     match x with

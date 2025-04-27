@@ -1,0 +1,18 @@
+let prim @ { TempWallet, get_keys } = import! lancer.temp_wallet.prim
+let effect @ { Eff, ? } = import! std.effect
+let { Lift, lift, ? } = import! std.effect.lift
+let { (<|), (<<) } = import! std.function
+let { SuiAddress } = import! lancer.sui.sui_address
+
+let new _ : () -> Eff [| lift : Lift IO | r |] TempWallet
+    = lift <| prim.new ()
+
+let generate_keypair : TempWallet -> Eff [| lift : Lift IO | r |] SuiAddress
+    = lift << prim.generate_keypair
+
+{
+    TempWallet,
+    new,
+    generate_keypair,
+    get_keys,
+}

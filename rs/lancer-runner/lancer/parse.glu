@@ -1,9 +1,11 @@
+let { Result } = import! std.result
+
 #[implicit]
 type Parse a = {
-    parse : String -> IO a
+    parse : String -> Result String a
 }
 
-let parse ?s : [Parse a] -> String -> IO a = s.parse
+let parse ?s : [Parse a] -> String -> Result String a = s.parse
 
 {
     Parse,

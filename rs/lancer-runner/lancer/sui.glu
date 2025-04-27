@@ -1,9 +1,5 @@
 let prim @ { object_id, digest } = import! lancer.sui.prim
-
-#[implicit]
-type Parse a = {
-    parse : string -> IO a
-}
+let { Parse } = import! lancer.parse
 
 let object_id : {
     show: Show object_id.ObjectID,

@@ -1,30 +1,26 @@
 use gluon::{
-    Thread, ThreadExt,
+    Thread,
     base::types::ArcType,
-    import::{add_extern_module, add_extern_module_with_deps},
-    primitive, record,
+    import::add_extern_module_with_deps,
+    record,
     vm::{
         self, ExternModule,
-        api::{Collect, Getable, IO, Pushable, ValueRef, VmType},
+        api::{Collect, Getable, Pushable, ValueRef, VmType},
         impl_getable_simple,
     },
 };
-use gluon_codegen::{Trace, Userdata, VmType};
-use std::{fmt, ops::Deref, str::FromStr};
+use std::ops::Deref;
 use sui_json_rpc_types::{ObjectChange, SuiTransactionBlockResponse};
-use sui_move_build::{BuildConfig, CompiledPackage};
 use sui_types::{
     base_types::{ObjectID, SequenceNumber},
     digests::{Digest, ObjectDigest},
-    object::{self, Owner},
+    object::Owner,
 };
 use sui_types::{digests::TransactionDigest, object::Authenticator};
 
 use crate::sui::{WDigest, WSuiAddress, types::WStructTag};
 
 pub mod coin;
-
-type ExecResult<T> = std::result::Result<T, String>;
 
 #[derive(Debug, Clone)]
 pub struct WTransactionBlockResponse(pub SuiTransactionBlockResponse);
@@ -302,13 +298,15 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                 };
                 Self(match data.tag() {
                     0 => {
-                        let package_id = ObjectID::from(WSuiAddress::from_value(
-                            vm,
-                            inner
-                                .lookup_field(vm, "package_id")
-                                .expect("package_id is missing"),
-                        )
-                        .0);
+                        let package_id = ObjectID::from(
+                            WSuiAddress::from_value(
+                                vm,
+                                inner
+                                    .lookup_field(vm, "package_id")
+                                    .expect("package_id is missing"),
+                            )
+                            .0,
+                        );
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -354,13 +352,15 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = ObjectID::from(WSuiAddress::from_value(
-                            vm,
-                            inner
-                                .lookup_field(vm, "object_id")
-                                .expect("object_id is missing"),
-                        )
-                        .0);
+                        let object_id = ObjectID::from(
+                            WSuiAddress::from_value(
+                                vm,
+                                inner
+                                    .lookup_field(vm, "object_id")
+                                    .expect("object_id is missing"),
+                            )
+                            .0,
+                        );
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -403,13 +403,15 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = ObjectID::from(WSuiAddress::from_value(
-                            vm,
-                            inner
-                                .lookup_field(vm, "object_id")
-                                .expect("object_id is missing"),
-                        )
-                        .0);
+                        let object_id = ObjectID::from(
+                            WSuiAddress::from_value(
+                                vm,
+                                inner
+                                    .lookup_field(vm, "object_id")
+                                    .expect("object_id is missing"),
+                            )
+                            .0,
+                        );
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -453,13 +455,15 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = ObjectID::from(WSuiAddress::from_value(
-                            vm,
-                            inner
-                                .lookup_field(vm, "object_id")
-                                .expect("object_id is missing"),
-                        )
-                        .0);
+                        let object_id = ObjectID::from(
+                            WSuiAddress::from_value(
+                                vm,
+                                inner
+                                    .lookup_field(vm, "object_id")
+                                    .expect("object_id is missing"),
+                            )
+                            .0,
+                        );
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -487,13 +491,15 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = ObjectID::from(WSuiAddress::from_value(
-                            vm,
-                            inner
-                                .lookup_field(vm, "object_id")
-                                .expect("object_id is missing"),
-                        )
-                        .0);
+                        let object_id = ObjectID::from(
+                            WSuiAddress::from_value(
+                                vm,
+                                inner
+                                    .lookup_field(vm, "object_id")
+                                    .expect("object_id is missing"),
+                            )
+                            .0,
+                        );
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner
@@ -525,13 +531,15 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectChange {
                                 .expect("object_type is missing"),
                         )
                         .0;
-                        let object_id = ObjectID::from(WSuiAddress::from_value(
-                            vm,
-                            inner
-                                .lookup_field(vm, "object_id")
-                                .expect("object_id is missing"),
-                        )
-                        .0);
+                        let object_id = ObjectID::from(
+                            WSuiAddress::from_value(
+                                vm,
+                                inner
+                                    .lookup_field(vm, "object_id")
+                                    .expect("object_id is missing"),
+                            )
+                            .0,
+                        );
                         let version = SequenceNumber::from_u64(u64::from_value(
                             vm,
                             inner

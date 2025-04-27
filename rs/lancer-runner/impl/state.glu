@@ -1,0 +1,27 @@
+let { TestClusterBuilder } = import! lancer.test_cluster.builder
+let { TestCluster } = import! lancer.test_cluster
+let { TempWallet } = import! lancer.temp_wallet
+let { PreparationReport, FinalReport } = import! impl.report
+
+type State =
+  | Unavailable
+  | Initializing {
+      builder: TestClusterBuilder,
+      wallet: TempWallet,
+    }
+  | Preparing {
+      cluster: TestCluster,
+      wallet: TempWallet,
+    }
+  | Demonstrating {
+    cluster: TestCluster,
+    wallet: TempWallet,
+    preparation_report: PreparationReport,
+  }
+  | Finalized {
+    final_report: FinalReport,
+  }
+
+{
+    State,
+}

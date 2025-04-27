@@ -1,31 +1,12 @@
 #![allow(non_local_definitions)]
 
-use std::collections::HashSet;
-use std::time::Duration;
-
 use anyhow::Result;
-use gluon::RootedThread;
-use gluon::vm::api::Hole;
-use gluon::vm::api::OpaqueValue;
-use gluon::vm::api::Pushable;
-use gluon::vm::api::VmType;
-use gluon::{
-    ThreadExt, new_vm_async,
-    vm::{
-        api::{FunctionRef, FutureResult, IO, UserdataValue},
-        thread::ThreadInternal,
-    },
-};
-use lancer_runner::PreparationDump;
-use lancer_runner::Reporting;
-use lancer_runner::{LancerInitializeArgs, LancerRef, install_lancer};
-use serde::Deserialize;
-use serde::Serialize;
-use sui_types::base_types::SuiAddress;
-use tokio::fs;
-use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
+use gluon::vm::api::IO;
+use gluon::{ThreadExt, new_vm_async, vm::api::FunctionRef};
+use lancer_runner::install_lancer;
+use lancer_runner::test_cluster::builder::WTestClusterBuilder;
 
+/*
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportManifest {
     pub preparation_sender: SuiAddress,
@@ -34,12 +15,24 @@ pub struct ReportManifest {
     pub execution_available_keys: HashSet<SuiAddress>,
     pub reporting: Reporting,
 }
+    */
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let vm = new_vm_async().await;
-    vm.run_io(true);
+    vm.run_io(false);
     install_lancer(&vm)?;
+
+    let (mut run, _) = vm
+        .run_expr_async::<FunctionRef<'_, fn(WTestClusterBuilder) -> IO<String>>>(
+            "main_",
+            "import! \"main.glu\"",
+        )
+        .await?;
+    let test_cluster_builder = WTestClusterBuilder::new();
+    let r = run.call_async(test_cluster_builder).await?;
+    println!("Result: {:?}", r);
+    /*
     vm.run_expr_async::<OpaqueValue<RootedThread, Hole>>("import", "import! lancer.prim")
         .await?;
     let (preparation_dump_sender, mut preparation_dump_receiver) =
@@ -133,7 +126,7 @@ async fn main() -> Result<()> {
     if let Some(private_tar) = private_tar {
         fs::write("/tmp/private.tar", &private_tar.into_inner()?).await?;
     }
-
+    */
     Ok(())
 }
 

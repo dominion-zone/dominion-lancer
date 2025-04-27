@@ -1,0 +1,41 @@
+let tcb @ { TestClusterBuilder } = import! lancer.test_cluster.builder
+let temp_wallet @ { TempWallet } = import! lancer.temp_wallet
+let { Initialization } = import! lancer.scenario.initialization
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { (<|), (<<) } = import! std.function
+let { wrap } = import! std.applicative
+let effect @ { Eff, ? } = import! std.effect
+let { Reference, load, ref, (<-) } = import! std.reference
+let { State } = import! impl.state
+let preparation = import! impl.preparation
+
+let make state builder :  TestClusterBuilder -> Eff [| lift : Lift IO | r |] (Reference State, Initialization) =
+    do wallet = TempWallet.new ()
+    do state = lift <| ref Initializing {
+        builder,
+        wallet,
+    }
+    let generate_keypair = \_ ->
+        do current_state = lift <| load state
+        do wallet = match current_state with
+            | Initializing { wallet, .. } -> wrap wallet
+            | _ -> throw "Invalid state"
+        temp_wallet.generate_keypair wallet
+    let build _ =
+        do current_state = lift <| load state
+        do wallet = match current_state with
+            | Initializing { wallet, builder } -> wrap wallet
+            | _ -> throw "Invalid state"
+        do cluster = tcb.build b
+        preparation.make cluster wallet r
+    wrap (
+        state,
+        {
+            generate_keypair,
+            build,
+        }
+    )
+
+{
+    make,
+}

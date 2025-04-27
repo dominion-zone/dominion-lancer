@@ -2,15 +2,13 @@ use gluon::{
     Thread,
     import::add_extern_module,
     primitive, record,
-    vm::{self, ExternModule, api::IO},
+    vm::{self, ExternModule},
 };
 use gluon_codegen::{Trace, Userdata, VmType};
-use std::{fmt, ops::Deref};
+use std::ops::Deref;
 use sui_move_build::{BuildConfig, CompiledPackage};
 
 use crate::sui::WSuiAddress;
-
-type ExecResult<T> = std::result::Result<T, String>;
 
 #[derive(Debug, Clone, Trace, VmType, Userdata)]
 #[gluon(vm_type = "lancer.compiler.prim.Package")]
@@ -27,12 +25,12 @@ impl Deref for WPackage {
 }
 
 impl WPackage {
-    fn compile(path: &str) -> IO<Self> {
+    fn compile(path: &str) -> Result<Self, String> {
         let builder = BuildConfig::new_for_testing();
-        match builder.build(path.as_ref()) {
-            Ok(package) => IO::Value(WPackage(package)),
-            Err(err) => IO::Exception(err.to_string()),
-        }
+        let r = builder
+            .build(path.as_ref())
+            .map_err(|err| err.to_string())?;
+        Ok(Self(r))
     }
 
     fn bytes(&self) -> Vec<Vec<u8>> {
@@ -40,7 +38,9 @@ impl WPackage {
     }
 
     fn dep_ids(&self) -> Vec<WSuiAddress> {
-        self.0.get_published_dependencies_ids().into_iter()
+        self.0
+            .get_published_dependencies_ids()
+            .into_iter()
             .map(|id| WSuiAddress(id.into()))
             .collect()
     }
