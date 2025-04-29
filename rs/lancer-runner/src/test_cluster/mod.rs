@@ -153,7 +153,7 @@ impl WTestCluster {
         .into()
     }
 
-    async fn get_coins(&mut self, coin_type: WStructTag, owner: WSuiAddress) -> IO<Vec<WCoin>> {
+    async fn get_coins(&self, coin_type: WStructTag, owner: WSuiAddress) -> IO<Vec<WCoin>> {
         async {
             let coin_type = coin_type.0.to_canonical_string(true);
             let mut coins = vec![];
@@ -179,7 +179,7 @@ impl WTestCluster {
         .into()
     }
 
-    async fn get_balance(&mut self, coin_type: WStructTag, owner: WSuiAddress) -> IO<u64> {
+    async fn get_balance(&self, coin_type: WStructTag, owner: WSuiAddress) -> IO<u64> {
         async {
             let coin_type = coin_type.0.to_canonical_string(true);
             let balance = self

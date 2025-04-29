@@ -19,6 +19,11 @@ let get_coins cluster coin_type owner
     -> Eff [| lift : Lift IO | r |] (Array Coin) =
     lift <| prim.get_coins cluster coin_type owner
 
+let get_balance cluster coin_type owner
+    : TestCluster -> StructTag -> SuiAddress
+    -> Eff [| lift : Lift IO | r |] Int =
+    lift <| prim.get_balance cluster coin_type owner
+
 let dump_db cluster
     : TestCluster -> Eff [| lift : Lift IO | r |] String =
     lift <| prim.dump_db cluster
@@ -31,6 +36,7 @@ let stop cluster
     TestCluster,
     execute_tx,
     get_coins,
+    get_balance,
     dump_db,
     stop,
 }

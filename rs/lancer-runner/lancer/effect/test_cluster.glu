@@ -22,6 +22,7 @@ type TestCluster r a =
         -> Eff [| transaction_builder: TransactionBuilder | r |] x
         -> TestCluster r TransactionBlockResponse
     | GetCoins : StructTag -> SuiAddress -> TestCluster r (Array Coin)
+    | GetBalance : StructTag -> SuiAddress -> TestCluster r Int
     | CommitPreparation : TestCluster r ()
     | CommitDemonstration : Reporting -> TestCluster r ()
     .. r
@@ -40,6 +41,10 @@ let execute_tx gas_budget sender tx_building
 let get_coins coin_type owner
     : StructTag -> SuiAddress -> Eff [| test_cluster : TestCluster | r |] (Array Coin) =
     Impure (convert_effect! test_cluster (GetCoins coin_type owner)) Pure
+
+let get_balance coin_type owner
+    : StructTag -> SuiAddress -> Eff [| test_cluster : TestCluster | r |] Int =
+    Impure (convert_effect! test_cluster (GetBalance coin_type owner)) Pure
 
 let commit_preparation : Eff [| test_cluster : TestCluster | r |] () =
     Impure (convert_effect! test_cluster CommitPreparation) Pure
@@ -82,6 +87,10 @@ let run_test_cluster cluster temp_wallet eff =
                 do current_state = get
                 do coins = tc.get_coins current_state.cluster coin_type owner
                 loop <| f coins
+            | GetBalance coin_type owner ->
+                do current_state = get
+                do balance = tc.get_balance current_state.cluster coin_type owner
+                loop <| f balance
             | CommitPreparation ->
                 do current_state = get
                 do temp_wallet = tw.new ()
@@ -133,6 +142,7 @@ let run_test_cluster cluster temp_wallet eff =
     generate_keypair,
     execute_tx,
     get_coins,
+    get_balance,
     commit_preparation,
     commit_demonstration,
     run_test_cluster
