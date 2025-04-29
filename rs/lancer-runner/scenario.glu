@@ -42,12 +42,15 @@ let {
     move_call,
     pay,
 } = import! lancer.effect.transaction_builder
+let { Logger, log, ? } = import! lancer.effect.logger
 
+log "Building sources"
 load_directory "../../sui/dummy_pool"
 do { bytes, dep_ids } = compile
 
 do admin = generate_keypair
 
+log "Publishing the main contract"
 do r = execute_tx 500000000 admin (
     publish_immutable bytes dep_ids
 )
@@ -56,6 +59,7 @@ let package_id = unwrap (find_map (\x ->
     match x with
     | Published { package_id, ? } -> Some package_id
     | _ -> None) r.object_changes)
+
 let (state_id, state_version) = unwrap (find_map (\x ->
     match x with
     | Created {
@@ -72,6 +76,8 @@ let (state_id, state_version) = unwrap (find_map (\x ->
                 Some (object_id, version)
             else None
     | _ -> None) r.object_changes)
+
+log <| "Package ID: " ++ show package_id ++ ", State ID: " ++ show state_id
 
 let some_coin_struct: StructTag = {
     address = package_id,
@@ -107,6 +113,8 @@ let some_coin_object_ref: ObjectRef = unwrap (find_map (\x ->
         }, ? } -> if address == sui_framework && type_params == [some_coin_type] then Some (object_id, version, digest) else None
     | _ -> None) r.object_changes)
 
+log <| "Creating pool"
+
 do r = execute_tx 500000000 admin (
     do state_arg = object_ref <| SharedObject {
         id = state_id,
@@ -137,7 +145,12 @@ let (vault_id, vault_version) = unwrap (find_map (\x ->
             else None
     | _ -> None) r.object_changes)
 
+log <| "Vault ID: " ++ show vault_id
+
 do user = generate_keypair
+
+log <| "Sending some coins to user"
+
 do r = execute_tx 500000000 admin (
     pay [some_coin_object_ref] [10000000] [user]
 )
@@ -145,6 +158,8 @@ do r = execute_tx 500000000 admin (
 do coins = get_coins some_coin_struct user
 let _ = assert(array.len coins == 1)
 let coin = array.index coins 0
+
+log <| "Depositing some coins into the pool"
 
 do r = execute_tx 500000000 user (
     do state_arg = object_ref <| SharedObject {
@@ -165,9 +180,11 @@ do r = execute_tx 500000000 user (
     ]
 )
 
-commit_preparation
+commit_preparation []
 
 do hacker = generate_keypair
+
+log <| "Creating a hacker's vault"
 
 do r = execute_tx 500000000 hacker (
     do state_arg = object_ref <| SharedObject {
@@ -198,6 +215,10 @@ let (hacker_vault_id, hacker_vault_version) = unwrap (find_map (\x ->
                 Some (object_id, version)
             else None
     | _ -> None) r.object_changes)
+
+log <| "Hacker's Vault ID: " ++ show hacker_vault_id
+
+log <| "Executing stealing funds"
 
 do r = execute_tx 500000000 hacker (
     do otw = u64 0
@@ -268,4 +289,6 @@ do r = execute_tx 500000000 hacker (
 do balance = get_balance some_coin_struct hacker
 let _ = assert(balance > 0)
 
-commit_demonstration Public
+log <| "Now hacker has " ++ show balance ++ " some coins"
+
+commit_demonstration <| Public { dummy = 1 }

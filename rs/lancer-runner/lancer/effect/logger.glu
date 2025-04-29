@@ -1,0 +1,72 @@
+let effect @ { Arr, Eff, inject_rest, ? } = import! std.effect
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { (<|), (<<) } = import! std.function
+let { wrap } = import! std.applicative
+let { State, run_state, get, put, modify } = import! std.effect.state
+let io @ { IO} = import! std.io
+let { SuiAddress } = import! lancer.sui.sui_address
+let array = import! std.array
+let { Functor } = import! std.functor
+
+type Logger l r a =
+    | Log : l -> Logger l r ()
+    .. r
+
+type UntypedLogger r a l = Eff [| logger : Logger l | r |] a
+
+let log v : forall l . l -> Eff [| logger : Logger l | r |] () =
+    Impure (convert_effect! logger (Log v)) Pure
+
+#[inline(never)]
+let extract_logger x : forall l . [| logger : Logger l | r |] a -> Logger l r a = convert_variant! x
+
+let run_logger eff =
+    let loop ve =
+        match ve with
+        | Pure value -> wrap value
+        | Impure e f ->
+            match extract_logger e with
+            | Log v ->
+                modify <| \current_state -> array.append current_state [ v ]
+                loop <| f ()
+            | rest ->
+                Impure (inject_rest rest) (loop << f)
+
+    let initial_state : Array l = []
+    do { value, state } = run_state initial_state <| loop eff
+    wrap { value, logs = state }
+
+let exec_logger eff =
+    do { value, logs } = run_logger eff
+    wrap logs
+
+
+let map_logs f eff
+    : forall l ll r a . (l -> ll)
+    -> Eff [| logger : Logger l | r |] a
+    -> Eff [| logger : Logger ll | r |] a =
+    let loop ve : Eff [| logger : Logger l | r |] a -> Eff [| logger : Logger ll | r |] a = 
+            match ve with
+            | Pure value -> wrap value
+            | Impure e g ->
+                match extract_logger e with
+                | Log v ->
+                    let first = Log <| f v
+                    Impure (convert_effect! logger first) <| loop << g
+                | rest ->
+                    Impure (inject_rest rest) <| loop << g
+    loop eff
+
+let functor : Functor (UntypedLogger r a) = {
+    map = map_logs
+}
+
+{
+    Logger,
+    UntypedLogger,
+    run_logger,
+    exec_logger,
+    log,
+    map_logs,
+    functor,
+}

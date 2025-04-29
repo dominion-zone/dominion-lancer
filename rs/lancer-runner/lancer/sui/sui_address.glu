@@ -1,24 +1,44 @@
 let { sui_address } = import! lancer.sui.prim
 
-let { Parse } = import! lancer.parse
+let { Parse, parse } = import! lancer.parse
+let { Value } = import! std.json
+let { Serialize } = import! std.json.ser
+let { Deserialize } = import! std.json.de
+let { Result, ? } = import! std.result
+let { Show, show } = import! std.show
+let { (<<), (<|) } = import! std.function
+let { map } = import! std.functor
 
-let show : Show sui_address.SuiAddress = {
+type SuiAddress = sui_address.SuiAddress
+
+let show : Show SuiAddress = {
     show = sui_address.to_string
 }
 
-let parse : Parse sui_address.SuiAddress = {
+let parse : Parse SuiAddress = {
     parse = sui_address.from_string
 }
 
-let eq : Eq sui_address.SuiAddress = {
+let eq : Eq SuiAddress = {
     (==) = sui_address.eq
 }
 
-type SuiAddress = sui_address.SuiAddress
+let serialize : Serialize SuiAddress = {
+    serialize = Ok << String << sui_address.to_string
+}
+
+let deserialize: Deserialize SuiAddress = {
+    deserializer = \input ->
+        match input with
+        | String s -> map (\value -> { value, input }) (sui_address.from_string s)
+        | _ -> Err "Expected a string"
+}
 
 {
     SuiAddress,
     show,
     parse,
     eq,
+    serialize,
+    deserialize,
 }

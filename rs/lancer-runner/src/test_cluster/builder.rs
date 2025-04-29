@@ -33,7 +33,6 @@ impl WTestClusterBuilder {
     }
 
     pub async fn build(&self) -> IO<WTestCluster> {
-        println!("Building test cluster... ");
         async {
             let cluster = self
                 .0

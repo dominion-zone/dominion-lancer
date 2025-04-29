@@ -10,6 +10,9 @@ let new _ : () -> Eff [| lift : Lift IO | r |] TempWallet
 let generate_keypair : TempWallet -> Eff [| lift : Lift IO | r |] SuiAddress
     = lift << prim.generate_keypair
 
+let retain_keys wallet keys : TempWallet -> Array SuiAddress -> Eff [| lift : Lift IO | r |] ()
+    = lift <| prim.retain_keys wallet keys
+
 let clear: TempWallet -> Eff [| lift : Lift IO | r |] ()
     = lift << prim.clear
 
@@ -17,6 +20,7 @@ let clear: TempWallet -> Eff [| lift : Lift IO | r |] ()
     TempWallet,
     new,
     generate_keypair,
+    retain_keys,
     get_keys,
     clear,
 }

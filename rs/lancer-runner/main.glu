@@ -5,9 +5,12 @@ let { error } = import! std.prim
 let { wrap } = import! std.applicative
 let tw @ { TempWallet } = import! lancer.temp_wallet
 let io @ { IO, ? } = import! std.io
+let { map } = import! std.functor
+let { Log, ? } = import! lancer.report
+let { run_logger, map_logs } = import! lancer.effect.logger
+let { Show, ? } = import! std.show
 
 let tcbi @ { TestClusterBuilder } = import! lancer.test_cluster.builder
-// let { FinalReport } = import! lancer.test_cluster.report
 let io @ { ? } = import! std.io
 
 let { TestCluster, run_test_cluster } = import! lancer.effect.test_cluster
@@ -15,6 +18,8 @@ let { run_compiler } = import! lancer.effect.compiler
 let { Lancer } = import! lancer
 
 let run builder scenario : TestClusterBuilder -> Lancer _ -> IO () =
+    // Map logs into user ones
+    let scenario = map_logs (\x -> User x) scenario
     // Apply the compiler effect
     let scenario = run_compiler scenario
     // Apply the test cluster effect
@@ -22,7 +27,9 @@ let run builder scenario : TestClusterBuilder -> Lancer _ -> IO () =
         do test_cluster = tcbi.build builder
         do temp_wallet = tw.new ()
         run_test_cluster test_cluster temp_wallet scenario
-    run_lift scenario
-    io.println "Tested"
+    
+    let scenario = run_logger scenario
+    do { value = final_report, logs } = run_lift scenario
+    io.println <| show logs
 
 run

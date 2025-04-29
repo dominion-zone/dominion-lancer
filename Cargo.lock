@@ -277,6 +277,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anymap"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33954243bd79057c2de7338850b85983a44588021f8a5fee574a8888c6de4344"
+
+[[package]]
 name = "arc-swap"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -586,6 +592,15 @@ dependencies = [
 name = "async-task"
 version = "4.3.0"
 source = "git+https://github.com/mystenmark/async-task?rev=4e45b26e11126b191701b9b2ce5e2346b8d7682f#4e45b26e11126b191701b9b2ce5e2346b8d7682f"
+
+[[package]]
+name = "async-tempfile"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8a57b75c36e16f4d015e60e6a177552976a99b6947724403c551bcfa7cb1207"
+dependencies = [
+ "tokio",
+]
 
 [[package]]
 name = "async-trait"
@@ -3092,6 +3107,9 @@ dependencies = [
  "rand 0.8.5",
  "rand_xorshift",
  "regex",
+ "serde",
+ "serde_derive_state",
+ "serde_state",
  "tokio",
  "walkdir",
 ]
@@ -3131,6 +3149,7 @@ dependencies = [
 name = "gluon_base"
 version = "0.18.2"
 dependencies = [
+ "anymap",
  "bitflags 1.3.2",
  "codespan",
  "codespan-reporting",
@@ -3144,6 +3163,10 @@ dependencies = [
  "ordered-float",
  "pretty",
  "quick-error 2.0.1",
+ "serde",
+ "serde_derive",
+ "serde_derive_state",
+ "serde_state",
  "smallvec",
  "typed-arena",
  "vec_map",
@@ -3227,6 +3250,11 @@ dependencies = [
  "petgraph 0.6.5",
  "pretty",
  "quick-error 2.0.1",
+ "serde",
+ "serde_derive",
+ "serde_derive_state",
+ "serde_json",
+ "serde_state",
  "slab",
  "smallvec",
  "typed-arena",
@@ -4318,6 +4346,7 @@ name = "lancer-runner"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-tempfile",
  "clap",
  "fastcrypto",
  "gluon",
@@ -7662,6 +7691,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_derive_state"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bda1ea9a4f7c5304e85a1d878457087121ee7be0bef4a3315c14827325e8b12"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "serde_json"
 version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7700,6 +7740,15 @@ name = "serde_spanned"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "serde_state"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "740753f904603d9f3b7130b13125be3a470aca9e6616da18cb96d9291bd6a72a"
 dependencies = [
  "serde",
 ]

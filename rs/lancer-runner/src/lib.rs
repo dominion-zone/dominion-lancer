@@ -17,6 +17,7 @@ pub mod sui;
 pub mod temp_wallet;
 pub mod test_cluster;
 pub mod transaction;
+pub mod temp_file;
 
 /*
 pub struct PreparationDump {
@@ -322,10 +323,7 @@ pub fn install_lancer(vm: &Thread) -> vm::Result<()> {
 
     temp_wallet::install(vm)?;
     test_cluster::install(vm)?;
-    /*
-    vm.register_type::<LancerRef>("lancer.prim.Lancer", &[])?;
-    vm.register_type::<LancerInitializeArgs>("lancer.prim.LancerInitializeArgs", &[])?;
-    */
+    temp_file::install(vm)?;
 
     add_extern_module_with_deps(
         vm,

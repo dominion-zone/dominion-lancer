@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fmt, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    sync::Arc,
+};
 
 use gluon::{
     Thread,
@@ -52,6 +56,16 @@ impl TempWallet {
         IO::Value(WSuiAddress(address))
     }
 
+    pub async fn retain_keys(&self, addresses: Vec<WSuiAddress>) -> IO<()> {
+        let mut lock = self.0.write().await;
+        let addresses = addresses
+            .into_iter()
+            .map(|a| a.0)
+            .collect::<HashSet<_>>();
+        lock.retain(move |k, _| addresses.contains(k));
+        IO::Value(())
+    }
+
     pub async fn get_keypair(&self, address: &SuiAddress) -> Option<SuiKeyPair> {
         self.0.read().await.get(address).map(|k| k.copy())
     }
@@ -98,6 +112,7 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
             type TempWallet => TempWallet,
             new => primitive!(1, "lancer.temp_wallet.prim.new", TempWallet::new),
             generate_keypair => primitive!(1, "lancer.temp_wallet.prim.generate_keypair", async fn TempWallet::generate_keypair),
+            retain_keys => primitive!(2, "lancer.temp_wallet.prim.retain_keys", async fn TempWallet::retain_keys),
             get_keys => primitive!(1, "lancer.temp_wallet.prim.get_keys", async fn TempWallet::get_keys),
             clear => primitive!(1, "lancer.temp_wallet.prim.clear", async fn TempWallet::clear),
         ),

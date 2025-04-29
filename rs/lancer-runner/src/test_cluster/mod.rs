@@ -73,7 +73,6 @@ impl WTestCluster {
             if !self.0.swarm.validator_nodes().next().unwrap().is_running() {
                 return Err("Cluster is not running".to_string());
             }
-            println!("Executing transaction... {:?}", pt.0);
 
             let gas_price = self.0.get_reference_gas_price().await;
 

@@ -1,20 +1,59 @@
-let { SuiAddress } = import! lancer.sui.sui_address
+let { SuiAddress, ? } = import! lancer.sui.sui_address
 let effect @ { Eff, ? } = import! std.effect
 let io @ { IO, ? } = import! std.io
 let { (<|), (<<) } = import! std.function
 let { wrap } = import! std.applicative
 let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { Serialize, ? } = import! std.json.ser
+let { Deserialize, ? } = import! std.json.de
+let { Show } = import! std.show
+let { Reporting, ? } = import! lancer.reporting
 
+#[derive(Show, Serialize, Deserialize)]
+type KeypairGeneratedInfo = {
+    address: SuiAddress,
+}
+
+#[derive(Show, Serialize, Deserialize)]
+type TxExecutedInfo = {
+    dummy: Int,
+}
+
+#[derive(Show, Serialize, Deserialize)]
+type PreparationCommitedInfo = {
+    retaining_keys: Array SuiAddress,
+}
+
+#[derive(Show, Serialize, Deserialize)]
+type DemonstrationCommitedInfo = {
+    reporting: Reporting
+}
+
+#[derive(Show, Serialize, Deserialize)]
+type SystemLog =
+    | KeypairGenerated KeypairGeneratedInfo
+    | TxExecuted TxExecutedInfo
+    | PreparationCommited PreparationCommitedInfo
+    | DemonstrationCommited DemonstrationCommitedInfo
+
+#[derive(Show, Serialize, Deserialize)]
+type Log =
+    | System SystemLog
+    | User String
+
+#[derive(Show, Serialize, Deserialize)]
 type PreparationReport = {
     sql: String,
     keys: Array SuiAddress,
 }
 
+#[derive(Show, Serialize, Deserialize)]
 type DemonstrationReport = {
     sql: String,
     keys: Array SuiAddress,
 }
 
+#[derive(Show, Serialize, Deserialize)]
 type FinalReport = {
     preparation: PreparationReport,
     demonstration: DemonstrationReport,
@@ -31,44 +70,30 @@ let build builder : ReportBuilder -> Eff [| lift : Lift IO | r |] FinalReport =
     | Preparation p -> lift <| io.throw "Not demonstrated"
     | Final r -> wrap r
 
-/*
-type ReportBuilder = {
-    preparation: Option PreparationReport,
-    demonstration:  Option DemonstrationReport,
-}
-
-let default_builder : ReportBuilder = {
-    preparation = None,
-    demonstration = None,
-}
-
-let put_preparation r p : ReportBuilder -> PreparationReport -> ReportBuilder = 
-    {
-        preparation = Some p,
-        .. r
-    }
-
-let put_demonstration r d : ReportBuilder -> PreparationReport -> ReportBuilder = 
-    {
-        demonstration = Some d,
-        .. r
-    }
-
-let finalize r : ReportBuilder -> FinalReport = 
-    let preparation = unwrap (load r.preparation)
-    let demonstration = unwrap (load r.demonstration)
-    {
-        preparation,
-        demonstration,
-    }
-*/
 {
+    Log,
+    SystemLog,
     ReportBuilder,
-    // default_builder,
     PreparationReport,
     DemonstrationReport,
     FinalReport,
-    // put_preparation,
-    // put_demonstration,
-    build
+    build,
+
+    show_Log,
+    show_SystemLog,
+    show_PreparationReport,
+    show_DemonstrationReport,
+    show_FinalReport,
+
+    serialize_Log,
+    serialize_SystemLog,
+    serialize_PreparationReport,
+    serialize_DemonstrationReport,
+    serialize_FinalReport,
+
+    deserialize_Log,
+    deserialize_SystemLog,
+    deserialize_PreparationReport,
+    deserialize_DemonstrationReport,
+    deserialize_FinalReport,
 }
