@@ -28,7 +28,6 @@ let {
 } = import! lancer.effect.compiler
 
 let {
-    start_transaction,
     u8,
     u16,
     u32,
@@ -40,7 +39,6 @@ let {
     publish_immutable,
     move_call,
     pay,
-    finish_transaction,
 } = import! lancer.effect.transaction_builder
 
 load_directory "../../sui/dummy_pool"
@@ -48,10 +46,9 @@ do { bytes, dep_ids } = compile
 
 do admin = generate_keypair
 
-start_transaction
-publish_immutable bytes dep_ids
-do tx = finish_transaction
-do r = execute_tx tx 500000000 admin []
+do r = execute_tx 500000000 admin (
+    publish_immutable bytes dep_ids
+)
 
 let package_id = unwrap (find_map (\x ->
     match x with
@@ -108,19 +105,18 @@ let some_coin_object_ref: ObjectRef = unwrap (find_map (\x ->
         }, ? } -> if address == sui_framework && type_params == [some_coin_type] then Some (object_id, version, digest) else None
     | _ -> None) r.object_changes)
 
-start_transaction
-do state_arg = object_ref <| SharedObject {
-    id = state_id,
-    initial_shared_version = state_version,
-    mutable = True,
-}
-do price = u64 10000
-move_call package_id "dummy_pool" "create_vault" [ some_coin_type ] [
-    state_arg,
-    price
-]
-do tx = finish_transaction
-do r = execute_tx tx 500000000 admin []
+do r = execute_tx 500000000 admin (
+    do state_arg = object_ref <| SharedObject {
+        id = state_id,
+        initial_shared_version = state_version,
+        mutable = True,
+    }
+    do price = u64 10000
+    move_call package_id "dummy_pool" "create_vault" [ some_coin_type ] [
+        state_arg,
+        price
+    ]
+)
 
 commit_preparation
 commit_demonstration Public

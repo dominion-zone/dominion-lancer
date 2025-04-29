@@ -18,7 +18,6 @@ let tb = import! lancer.transaction.builder
 let { for } = import! std.traversable
 
 type TransactionBuilder r a =
-    | New : TransactionBuilder r ()
     | U8 : Byte -> TransactionBuilder r Argument
     | U16 : Int -> TransactionBuilder r Argument
     | U32 : Int -> TransactionBuilder r Argument
@@ -30,11 +29,7 @@ type TransactionBuilder r a =
     | PublishImmutable : Array (Array Byte) -> Array SuiAddress -> TransactionBuilder r ()
     | MoveCall : SuiAddress -> String -> String -> Array TypeTag -> Array Argument -> TransactionBuilder r Argument
     | Pay : Array ObjectRef -> Array Int -> Array SuiAddress -> TransactionBuilder r ()
-    | Finish : TransactionBuilder r Transaction
     .. r
-
-let start_transaction : Eff [| transaction_builder : TransactionBuilder | r |] () =
-    Impure (convert_effect! transaction_builder New) Pure
 
 let u8 value : Byte -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
     Impure (convert_effect! transaction_builder (U8 value)) Pure
@@ -73,146 +68,64 @@ let pay coins amounts recipients
     : Array ObjectRef -> Array Int -> Array SuiAddress -> Eff [| transaction_builder : TransactionBuilder | r |] () =
     Impure (convert_effect! transaction_builder (Pay coins amounts recipients)) Pure
 
-let finish_transaction : Eff [| transaction_builder : TransactionBuilder | r |] Transaction =
-    Impure (convert_effect! transaction_builder Finish) Pure
-
 #[inline(never)]
 let extract_transaction_builder x : [| transaction_builder : TransactionBuilder | r |] a -> TransactionBuilder r a = convert_variant! x
 
-type Data = {
-    transaction_builder: Option tb.TransactionBuilder,
-}
-
 let run_transaction_builder eff =
+    do builder = tb.new ()
     let loop ve : Eff [|
             transaction_builder: TransactionBuilder,
-            lift : Lift IO,
-            state: State Data | r |] a
+            lift : Lift IO | r |] a
         -> Eff [|
-            lift : Lift IO,
-            state: State Data | r |] a =
+            lift : Lift IO | r |] a =
         match ve with
         | Pure value -> wrap value
         | Impure e f ->
             match extract_transaction_builder e with
-            | New ->
-                do transaction_builder = tb.new ()
-                put { transaction_builder = Some transaction_builder }
-                loop <| f ()
             | U8 value ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.u8 builder value
-                    loop <| f arg
+                do arg = tb.u8 builder value
+                loop <| f arg
             | U16 value ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.u16 builder value
-                    loop <| f arg
+                do arg = tb.u16 builder value
+                loop <| f arg
             | U32 value ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.u32 builder value
-                    loop <| f arg
+                do arg = tb.u32 builder value
+                loop <| f arg
             | U64 value ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.u64 builder value
-                    loop <| f arg
+                do arg = tb.u64 builder value
+                loop <| f arg
             | Bool value ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.bool builder value
-                    loop <| f arg
+                do arg = tb.bool builder value
+                loop <| f arg
             | Address value ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.address builder value
-                    loop <| f arg
-            | ObjectRef value ->    
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.object_ref builder value
-                    loop <| f arg
+                do arg = tb.address builder value
+                loop <| f arg
+            | ObjectRef value ->
+                do arg = tb.object_ref builder value
+                loop <| f arg
             | PublishUpgradeable modules dep_ids ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.publish_upgradeable builder modules dep_ids
-                    loop <| f arg
+                do arg = tb.publish_upgradeable builder modules dep_ids
+                loop <| f arg
             | PublishImmutable modules dep_ids ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do _ = tb.publish_immutable builder modules dep_ids
-                    loop <| f ()
+                do _ = tb.publish_immutable builder modules dep_ids
+                loop <| f ()
             | MoveCall package module function type_args args ->
                 for args <| \arg ->
                     if arg == GasCoin then
                         lift <| io.throw "GasCoin is not allowed in move_call"
                     else wrap ()
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do arg = tb.move_call builder package module function type_args args
-                    loop <| f arg
+                do arg = tb.move_call builder package module function type_args args
+                loop <| f arg
             | Pay coins amounts recipients ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do _ = tb.pay builder coins amounts recipients
-                    loop <| f ()
-            | Finish ->
-                do current_state = get
-                match current_state.transaction_builder with
-                | None ->
-                    lift <| io.throw "No transaction builder"
-                | Some builder ->
-                    do tx = tb.finish builder
-                    let new_state: Data = {
-                        transaction_builder = None,
-                    }
-                    put new_state
-                    loop <| f tx
+                do _ = tb.pay builder coins amounts recipients
+                loop <| f ()
             | rest ->
                 Impure (inject_rest rest) (loop << f)
-    let initial_state : Data = {
-        transaction_builder = None,
-    }
-    eval_state initial_state <| loop eff
+    do _ = loop eff
+    tb.finish builder
 
 {
     TransactionBuilder,
-    start_transaction,
     u8,
     u16,
     u32,
@@ -224,6 +137,5 @@ let run_transaction_builder eff =
     publish_immutable,
     move_call,
     pay,
-    finish_transaction,
     run_transaction_builder
 }

@@ -11,15 +11,12 @@ let tcbi @ { TestClusterBuilder } = import! lancer.test_cluster.builder
 let io @ { ? } = import! std.io
 
 let { TestCluster, run_test_cluster } = import! lancer.effect.test_cluster
-let { run_transaction_builder } = import! lancer.effect.transaction_builder
 let { run_compiler } = import! lancer.effect.compiler
 let { Lancer } = import! lancer
 
 let run builder scenario : TestClusterBuilder -> Lancer _ -> IO () =
     // Apply the compiler effect
     let scenario = run_compiler scenario
-    // Apply the transaction builder effect
-    let scenario = run_transaction_builder scenario
     // Apply the test cluster effect
     let scenario =
         do test_cluster = tcbi.build builder

@@ -1,11 +1,9 @@
 let { Eff } = import! std.effect
 let { TestCluster } = import! lancer.effect.test_cluster
 let { Compiler } = import! lancer.effect.compiler
-let { TransactionBuilder } = import! lancer.effect.transaction_builder
 
 type Lancer r = Eff [|
     test_cluster: TestCluster,
-    transaction_builder: TransactionBuilder,
     compiler: Compiler,
     | r |] ()
 

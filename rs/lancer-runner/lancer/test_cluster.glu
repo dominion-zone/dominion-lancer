@@ -23,9 +23,14 @@ let dump_db cluster
     : TestCluster -> Eff [| lift : Lift IO | r |] String =
     lift <| prim.dump_db cluster
 
+let stop cluster
+    : TestCluster -> Eff [| lift : Lift IO | r |] () =
+    lift <| prim.stop cluster
+
 {
     TestCluster,
     execute_tx,
     get_coins,
     dump_db,
+    stop,
 }

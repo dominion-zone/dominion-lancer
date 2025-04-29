@@ -1,4 +1,4 @@
-let effect @ { Eff, inject_rest, ? } = import! std.effect
+let effect @ { Eff, inject_rest, run_pure, ? } = import! std.effect
 let prim = import! lancer.test_cluster.prim
 let tc = import! lancer.test_cluster
 let tw @ { TempWallet } = import! lancer.temp_wallet
@@ -7,17 +7,20 @@ let { (<|), (<<) } = import! std.function
 let { wrap } = import! std.applicative
 let { State, exec_state, get, put } = import! std.effect.state
 let r @ { ReportBuilder, FinalReport } = import! lancer.report
-let io @ { IO} = import! std.io
+let io @ { IO } = import! std.io
 let { Transaction } = import! lancer.transaction
 let { TransactionBlockResponse } = import! lancer.rpc
 let { SuiAddress } = import! lancer.sui.sui_address
 let { StructTag } = import! lancer.sui.types
 let { Coin } = import! lancer.rpc.types
 let { Reporting } = import! lancer.reporting
+let { TransactionBuilder, run_transaction_builder, ? } = import! lancer.effect.transaction_builder
 
 type TestCluster r a =
     | GenerateKeypair : TestCluster r SuiAddress
-    | ExecuteTx : Transaction -> Int -> SuiAddress -> Array SuiAddress -> TestCluster r TransactionBlockResponse
+    | ExecuteTx : forall x . Int -> SuiAddress -> Array SuiAddress
+        -> Eff [| transaction_builder: TransactionBuilder | r |] x
+        -> TestCluster r TransactionBlockResponse
     | GetCoins : StructTag -> SuiAddress -> TestCluster r (Array Coin)
     | CommitPreparation : TestCluster r ()
     | CommitDemonstration : Reporting -> TestCluster r ()
@@ -26,9 +29,13 @@ type TestCluster r a =
 let generate_keypair : Eff [| test_cluster : TestCluster | r |] SuiAddress =
     Impure (convert_effect! test_cluster GenerateKeypair) Pure
 
-let execute_tx tx gas_budget sender additional_signers
-    : Transaction -> Int -> SuiAddress -> Array SuiAddress -> Eff [| test_cluster : TestCluster | r |] TransactionBlockResponse =
-    Impure (convert_effect! test_cluster (ExecuteTx tx gas_budget sender additional_signers)) Pure
+let execute_tx gas_budget sender tx_building
+    : forall x . Int
+    -> SuiAddress
+    -> Eff [| transaction_builder: TransactionBuilder | r |] x
+    -> Eff [| test_cluster : TestCluster | r |] TransactionBlockResponse =
+    let r : TestCluster r TransactionBlockResponse = ExecuteTx gas_budget sender [] tx_building
+    Impure (convert_effect! test_cluster r) Pure
 
 let get_coins coin_type owner
     : StructTag -> SuiAddress -> Eff [| test_cluster : TestCluster | r |] (Array Coin) =
@@ -66,7 +73,8 @@ let run_test_cluster cluster temp_wallet eff =
                 do current_state = get
                 do keypair = tw.generate_keypair current_state.temp_wallet
                 loop <| f keypair
-            | ExecuteTx tx gas_budget sender additional_signers ->
+            | ExecuteTx gas_budget sender additional_signers tx ->
+                do tx = run_transaction_builder tx
                 do current_state = get
                 do tx_block_response = tc.execute_tx current_state.cluster current_state.temp_wallet tx gas_budget sender additional_signers
                 loop <| f tx_block_response
@@ -95,7 +103,7 @@ let run_test_cluster cluster temp_wallet eff =
                 match current_state.report_builder with
                 | Preparation p ->
                     do sql = tc.dump_db current_state.cluster
-                    do temp_wallet = tw.new ()
+                    tc.stop current_state.cluster
                     put <| {
                         cluster = current_state.cluster,
                         report_builder = Final {
@@ -105,7 +113,7 @@ let run_test_cluster cluster temp_wallet eff =
                                 keys = tw.get_keys current_state.temp_wallet,
                             },
                         },
-                        temp_wallet,
+                        temp_wallet = current_state.temp_wallet,
                     }
                     loop <| f ()
                 | _ -> lift <| io.throw "Invalid state for commit demonstration"
