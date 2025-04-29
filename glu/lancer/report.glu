@@ -5,31 +5,33 @@ let { (<|), (<<) } = import! std.function
 let { wrap } = import! std.applicative
 let { Lift, run_lift, lift, ? } = import! std.effect.lift
 let { Serialize, ? } = import! std.json.ser
-let { Deserialize, ? } = import! std.json.de
 let { Show } = import! std.show
 let { Reporting, ? } = import! lancer.reporting
+let { Transaction, ? } = import! lancer.transaction
+let { TransactionBlockResponse, ? } = import! lancer.rpc
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type KeypairGeneratedInfo = {
     address: SuiAddress,
 }
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type TxExecutedInfo = {
-    dummy: Int,
+    transaction: Transaction,
+    response: TransactionBlockResponse,
 }
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type PreparationCommitedInfo = {
     retaining_keys: Array SuiAddress,
 }
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type DemonstrationCommitedInfo = {
     reporting: Reporting
 }
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type SystemLog =
     | KeypairGenerated KeypairGeneratedInfo
     | TxExecuted TxExecutedInfo
@@ -37,24 +39,24 @@ type SystemLog =
     | DemonstrationCommited DemonstrationCommitedInfo
     | DirectoryCompiled String
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type Log =
     | System SystemLog
     | User String
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type PreparationReport = {
     sql: String,
     keys: Array SuiAddress,
 }
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type DemonstrationReport = {
     sql: String,
     keys: Array SuiAddress,
 }
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type FinalReport = {
     preparation: PreparationReport,
     demonstration: DemonstrationReport,
@@ -91,10 +93,4 @@ let build builder : ReportBuilder -> Eff [| lift : Lift IO | r |] FinalReport =
     serialize_PreparationReport,
     serialize_DemonstrationReport,
     serialize_FinalReport,
-
-    deserialize_Log,
-    deserialize_SystemLog,
-    deserialize_PreparationReport,
-    deserialize_DemonstrationReport,
-    deserialize_FinalReport,
 }

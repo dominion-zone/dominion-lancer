@@ -9,6 +9,8 @@ let { map } = import! std.functor
 let { Log, ? } = import! lancer.report
 let { run_logger, map_logs } = import! lancer.effect.logger
 let { Show, ? } = import! std.show
+let { to_string_pretty, ? } = import! std.json.ser
+let { unwrap_ok } = import! std.result
 
 let tcbi @ { TestClusterBuilder } = import! lancer.test_cluster.builder
 let io @ { ? } = import! std.io
@@ -28,6 +30,6 @@ let run builder working_dir scenario : TestClusterBuilder -> String -> Lancer _ 
     let scenario = run_logger scenario
     // Run IO
     do { value = final_report, logs } = run_lift scenario
-    io.println <| show logs
+    io.println <| unwrap_ok <| to_string_pretty logs
 
 run

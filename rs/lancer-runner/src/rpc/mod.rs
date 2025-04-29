@@ -2,7 +2,7 @@ use gluon::{
     Thread,
     base::types::ArcType,
     import::add_extern_module_with_deps,
-    record,
+    primitive, record,
     vm::{
         self, ExternModule,
         api::{Collect, Getable, Pushable, ValueRef, VmType},
@@ -142,6 +142,16 @@ impl Deref for WTransactionBlockResponse {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl WTransactionBlockResponse {
+    pub fn serialize(self) -> Result<serde_json::Value, String> {
+        serde_json::to_value(self.0).map_err(|e| e.to_string())
+    }
+
+    pub fn show(self) -> String {
+        format!("{:?}", self.0)
     }
 }
 
@@ -750,6 +760,8 @@ fn load_rpc(vm: &Thread) -> vm::Result<vm::ExternModule> {
         vm,
         record!(
             type TransactionBlockResponse => WTransactionBlockResponse,
+            serialize => primitive!(1, "lancer.rpc.prim.serialize", WTransactionBlockResponse::serialize),
+            show => primitive!(1, "lancer.rpc.prim.show", WTransactionBlockResponse::show),
         ),
     )
 }
@@ -763,6 +775,7 @@ pub fn install_rpc(vm: &Thread) -> vm::Result<()> {
         vec![
             "lancer.rpc.types".to_string(),
             "lancer.sui.types".to_string(),
+            "std.json".to_string(),
         ],
     );
     Ok(())

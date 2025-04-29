@@ -82,12 +82,12 @@ let run_test_cluster cluster temp_wallet working_dir eff =
                 do address = tw.generate_keypair current_state.temp_wallet
                 log <| System <| KeypairGenerated { address }
                 loop <| f address
-            | ExecuteTx gas_budget sender additional_signers tx ->
-                do tx = run_transaction_builder working_dir tx
+            | ExecuteTx gas_budget sender additional_signers transaction ->
+                do transaction = run_transaction_builder working_dir transaction
                 do current_state = get
-                do tx_block_response = tc.execute_tx current_state.cluster current_state.temp_wallet tx gas_budget sender additional_signers
-                log <| System <| TxExecuted { dummy = 1 } // tx tx_block_response
-                loop <| f tx_block_response
+                do response = tc.execute_tx current_state.cluster current_state.temp_wallet transaction gas_budget sender additional_signers
+                log <| System <| TxExecuted { transaction, response }
+                loop <| f response
             | GetCoins coin_type owner ->
                 do current_state = get
                 do coins = tc.get_coins current_state.cluster coin_type owner

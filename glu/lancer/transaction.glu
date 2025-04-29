@@ -1,6 +1,19 @@
 let prim @ { Transaction } = import! lancer.transaction.prim
 
+let { Serialize, ? } = import! std.json.ser
+let { Show } = import! std.show
+
+let serialize_Transaction : Serialize Transaction = {
+    serialize = prim.serialize
+}
+
+let show_Transaction : Show Transaction = {
+    show = prim.show
+}
+
 {
+    serialize_Transaction,
+    show_Transaction,
     ..
     prim
 }
