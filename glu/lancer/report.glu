@@ -35,6 +35,7 @@ type SystemLog =
     | TxExecuted TxExecutedInfo
     | PreparationCommited PreparationCommitedInfo
     | DemonstrationCommited DemonstrationCommitedInfo
+    | DirectoryCompiled String
 
 #[derive(Show, Serialize, Deserialize)]
 type Log =

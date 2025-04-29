@@ -25,8 +25,7 @@ let {
 } = import! lancer.effect.test_cluster
 
 let {
-    load_directory,
-    compile
+    compile_directory,
 } = import! lancer.effect.compiler
 
 let {
@@ -44,15 +43,12 @@ let {
 } = import! lancer.effect.transaction_builder
 let { Logger, log, ? } = import! lancer.effect.logger
 
-log "Building sources"
-load_directory "../../sui/dummy_pool"
-do { bytes, dep_ids } = compile
-
+log "Generating admin keypair"
 do admin = generate_keypair
 
 log "Publishing the main contract"
 do r = execute_tx 500000000 admin (
-    publish_immutable bytes dep_ids
+    publish_immutable <| compile_directory "dummy_pool"
 )
 
 let package_id = unwrap (find_map (\x ->
@@ -147,6 +143,7 @@ let (vault_id, vault_version) = unwrap (find_map (\x ->
 
 log <| "Vault ID: " ++ show vault_id
 
+log <| "Generating user keypair"
 do user = generate_keypair
 
 log <| "Sending some coins to user"
@@ -182,6 +179,7 @@ do r = execute_tx 500000000 user (
 
 commit_preparation []
 
+log <| "Generating hacker keypair"
 do hacker = generate_keypair
 
 log <| "Creating a hacker's vault"

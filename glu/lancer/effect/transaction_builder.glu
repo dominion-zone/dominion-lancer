@@ -16,6 +16,9 @@ let { Argument, ObjectRef, ObjectArg, ? } = import! lancer.transaction.builder.t
 let { TypeTag } = import! lancer.sui.types
 let tb = import! lancer.transaction.builder
 let { for } = import! std.traversable
+let { Compiler, run_compiler } = import! lancer.effect.compiler
+let { Logger, log, ? } = import! lancer.effect.logger
+let { Log, ? } = import! lancer.report
 
 type TransactionBuilder r a =
     | U8 : Byte -> TransactionBuilder r Argument
@@ -25,8 +28,8 @@ type TransactionBuilder r a =
     | Bool : Bool -> TransactionBuilder r Argument
     | Address : SuiAddress -> TransactionBuilder r Argument
     | ObjectRef : ObjectArg -> TransactionBuilder r Argument
-    | PublishUpgradeable : Array (Array Byte) -> Array SuiAddress -> TransactionBuilder r Argument
-    | PublishImmutable : Array (Array Byte) -> Array SuiAddress -> TransactionBuilder r ()
+    | PublishUpgradeable : forall x . Eff [| compiler: Compiler | r |] x -> TransactionBuilder r Argument
+    | PublishImmutable : forall x . Eff [| compiler: Compiler | r |] x -> TransactionBuilder r ()
     | MoveCall : SuiAddress -> String -> String -> Array TypeTag -> Array Argument -> TransactionBuilder r Argument
     | Pay : Array ObjectRef -> Array Int -> Array SuiAddress -> TransactionBuilder r ()
     .. r
@@ -52,13 +55,13 @@ let address value : SuiAddress -> Eff [| transaction_builder : TransactionBuilde
 let object_ref value : ObjectArg -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
     Impure (convert_effect! transaction_builder (ObjectRef value)) Pure
 
-let publish_upgradeable modules dep_ids
-    : Array (Array Byte) -> Array SuiAddress -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
-    Impure (convert_effect! transaction_builder (PublishUpgradeable modules dep_ids)) Pure
+let publish_upgradeable package_builder
+    : forall x . Eff [| compiler: Compiler | r |] x -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
+    Impure (convert_effect! transaction_builder (PublishUpgradeable package_builder)) Pure
 
-let publish_immutable modules dep_ids
-    : Array (Array Byte) -> Array SuiAddress -> Eff [| transaction_builder : TransactionBuilder | r |] () =
-    Impure (convert_effect! transaction_builder (PublishImmutable modules dep_ids)) Pure
+let publish_immutable package_builder
+    : forall x . Eff [| compiler: Compiler | r |] x -> Eff [| transaction_builder : TransactionBuilder | r |] () =
+    Impure (convert_effect! transaction_builder (PublishImmutable package_builder)) Pure
 
 let move_call package module function type_args args
     : SuiAddress -> String -> String -> Array TypeTag -> Array Argument -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
@@ -71,12 +74,14 @@ let pay coins amounts recipients
 #[inline(never)]
 let extract_transaction_builder x : [| transaction_builder : TransactionBuilder | r |] a -> TransactionBuilder r a = convert_variant! x
 
-let run_transaction_builder eff =
+let run_transaction_builder working_dir eff =
     do builder = tb.new ()
     let loop ve : Eff [|
             transaction_builder: TransactionBuilder,
+            logger : Logger Log,
             lift : Lift IO | r |] a
         -> Eff [|
+            logger : Logger Log,
             lift : Lift IO | r |] a =
         match ve with
         | Pure value -> wrap value
@@ -103,11 +108,13 @@ let run_transaction_builder eff =
             | ObjectRef value ->
                 do arg = tb.object_ref builder value
                 loop <| f arg
-            | PublishUpgradeable modules dep_ids ->
-                do arg = tb.publish_upgradeable builder modules dep_ids
+            | PublishUpgradeable package_builder ->
+                do { bytes, dep_ids } = run_compiler working_dir package_builder
+                do arg = tb.publish_upgradeable builder bytes dep_ids
                 loop <| f arg
-            | PublishImmutable modules dep_ids ->
-                do _ = tb.publish_immutable builder modules dep_ids
+            | PublishImmutable package_builder ->
+                do { bytes, dep_ids } = run_compiler working_dir package_builder
+                tb.publish_immutable builder bytes dep_ids
                 loop <| f ()
             | MoveCall package module function type_args args ->
                 for args <| \arg ->
@@ -117,11 +124,11 @@ let run_transaction_builder eff =
                 do arg = tb.move_call builder package module function type_args args
                 loop <| f arg
             | Pay coins amounts recipients ->
-                do _ = tb.pay builder coins amounts recipients
+                tb.pay builder coins amounts recipients
                 loop <| f ()
             | rest ->
                 Impure (inject_rest rest) (loop << f)
-    do _ = loop eff
+    loop eff
     tb.finish builder
 
 {

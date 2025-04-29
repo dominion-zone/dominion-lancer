@@ -1,0 +1,81 @@
+let effect @ { Eff, inject_rest, ? } = import! std.effect
+let cp = import! lancer.compiler
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { (<|), (<<) } = import! std.function
+let { wrap } = import! std.applicative
+let { State, exec_state, get, put } = import! std.effect.state
+let io @ { IO} = import! std.io
+let { SuiAddress } = import! lancer.sui.sui_address
+let { Logger, log, ? } = import! lancer.effect.logger
+let { Log, SystemLog, ? } = import! lancer.report
+let { Component, is_relative, components, join } = import! std.path
+let array @ { ? } = import! std.array
+let { all } = import! std.foldable
+
+type Compiler r a =
+    | CompileDirectory : String -> Compiler r ()
+    .. r
+
+let compile_directory path : String -> Eff [| compiler : Compiler | r |] () =
+    Impure (convert_effect! compiler (CompileDirectory path)) Pure
+
+#[inline(never)]
+let extract_compiler x : [| compiler : Compiler | r |] a -> Compiler r a = convert_variant! x
+
+type Data = {
+    compiled: Option { bytes: Array (Array Byte), dep_ids: Array SuiAddress },
+}
+
+let is_safe_path path =
+    if is_relative path then
+        let cs = components path
+        all (\x ->
+            match x with
+            | Prefix -> False
+            | RootDir -> False
+            | CurDir -> False
+            | ParentDir -> False
+            | Normal _ -> True) cs
+    else False
+
+let run_compiler working_dir eff =
+    let loop ve : Eff [|
+            compiler: Compiler,
+            lift : Lift IO,
+            state: State Data,
+            logger: Logger Log | r |] a
+        -> Eff [|
+            lift : Lift IO,
+            state: State Data,
+            logger: Logger Log | r |] a =
+        match ve with
+        | Pure value -> wrap value
+        | Impure e f ->
+            match extract_compiler e with
+            | CompileDirectory path ->
+                if is_safe_path path then
+                    do r = cp.compile (join (join working_dir "input/sui") path)
+                    log <| System <| DirectoryCompiled path
+                    put {
+                        compiled = Some { bytes = cp.bytes r, dep_ids = cp.dep_ids r }
+                    }
+                    loop <| f ()
+                else
+                    lift <| io.throw "Unsafe path"
+            | rest ->
+                Impure (inject_rest rest) (loop << f)
+    let initial_state : Data = {
+        compiled = None,
+    }
+    do data = exec_state initial_state <| loop eff
+    match data.compiled with
+    | Some compiled ->
+        wrap compiled
+    | None ->
+        lift <| io.throw "No compiled package found."
+
+{
+    Compiler,
+    compile_directory,
+    run_compiler,
+}

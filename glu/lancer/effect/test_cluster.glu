@@ -63,7 +63,7 @@ type Data = {
     temp_wallet: TempWallet,
 }
 
-let run_test_cluster cluster temp_wallet eff =
+let run_test_cluster cluster temp_wallet working_dir eff =
     let loop ve : Eff [|
             test_cluster: TestCluster,
             lift : Lift IO,
@@ -83,7 +83,7 @@ let run_test_cluster cluster temp_wallet eff =
                 log <| System <| KeypairGenerated { address }
                 loop <| f address
             | ExecuteTx gas_budget sender additional_signers tx ->
-                do tx = run_transaction_builder tx
+                do tx = run_transaction_builder working_dir tx
                 do current_state = get
                 do tx_block_response = tc.execute_tx current_state.cluster current_state.temp_wallet tx gas_budget sender additional_signers
                 log <| System <| TxExecuted { dummy = 1 } // tx tx_block_response
