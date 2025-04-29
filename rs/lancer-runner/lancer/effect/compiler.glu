@@ -1,0 +1,63 @@
+let effect @ { Eff, inject_rest, ? } = import! std.effect
+let cp = import! lancer.compiler
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { (<|), (<<) } = import! std.function
+let { wrap } = import! std.applicative
+let { State, eval_state, get, put } = import! std.effect.state
+let io @ { IO} = import! std.io
+let { SuiAddress } = import! lancer.sui.sui_address
+
+type Compiler r a =
+    | LoadDirectory : String -> Compiler r ()
+    | Compile : Compiler r { bytes: Array (Array Byte), dep_ids: Array SuiAddress }
+    .. r
+
+let load_directory path : String -> Eff [| compiler : Compiler | r |] () =
+    Impure (convert_effect! compiler (LoadDirectory path)) Pure
+
+let compile : Eff [| compiler : Compiler | r |] { bytes: Array (Array Byte), dep_ids: Array SuiAddress } =
+    Impure (convert_effect! compiler Compile) Pure
+
+#[inline(never)]
+let extract_compiler x : [| compiler : Compiler | r |] a -> Compiler r a = convert_variant! x
+
+type Data = {
+    current_directory: Option String,
+}
+
+let run_compiler eff =
+    let loop ve : Eff [|
+            compiler: Compiler,
+            lift : Lift IO,
+            state: State Data | r |] a
+        -> Eff [|
+            lift : Lift IO,
+            state: State Data | r |] a =
+        match ve with
+        | Pure value -> wrap value
+        | Impure e f ->
+            match extract_compiler e with
+            | LoadDirectory path ->
+                put { current_directory = Some path }
+                loop <| f ()
+            | Compile ->
+                do current_state = get
+                match current_state.current_directory with
+                | None ->
+                    lift <| io.throw "No directory loaded"
+                | Some path ->
+                    do r = cp.compile path
+                    loop <| f { bytes = cp.bytes r, dep_ids = cp.dep_ids r }
+            | rest ->
+                Impure (inject_rest rest) (loop << f)
+    let initial_state : Data = {
+        current_directory = None,
+    }
+    eval_state initial_state <| loop eff
+
+{
+    Compiler,
+    run_compiler = run_compiler,
+    load_directory = load_directory,
+    compile = compile,
+}

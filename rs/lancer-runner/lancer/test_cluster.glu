@@ -6,14 +6,26 @@ let { TransactionBlockResponse } = import! lancer.rpc
 let { SuiAddress } = import! lancer.sui.sui_address
 let { TempWallet } = import! lancer.temp_wallet
 let prim @ { TestCluster } = import! lancer.test_cluster.prim
+let { StructTag } = import! lancer.sui.types
+let { Coin } = import! lancer.rpc.types
 
-let execute_tx cluster wallet_index temp_wallet tx sender
-  : TestCluster -> Int -> TempWallet ->  Transaction
-  -> Option SuiAddress -> Eff [| lift : Lift IO | r |] TransactionBlockResponse
-    = lift <| prim.execute_tx cluster wallet_index temp_wallet tx sender
+let execute_tx cluster temp_wallet tx gas_budget sender additional_signers
+    : TestCluster -> TempWallet -> Transaction -> Int -> SuiAddress -> Array SuiAddress
+    -> Eff [| lift : Lift IO | r |] TransactionBlockResponse = 
+    lift <| prim.execute_tx cluster temp_wallet tx gas_budget sender additional_signers
 
+let get_coins cluster coin_type owner
+    : TestCluster -> StructTag -> SuiAddress
+    -> Eff [| lift : Lift IO | r |] (Array Coin) =
+    lift <| prim.get_coins cluster coin_type owner
+
+let dump_db cluster
+    : TestCluster -> Eff [| lift : Lift IO | r |] String =
+    lift <| prim.dump_db cluster
 
 {
     TestCluster,
     execute_tx,
+    get_coins,
+    dump_db,
 }

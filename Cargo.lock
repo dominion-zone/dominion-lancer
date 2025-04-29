@@ -1593,7 +1593,7 @@ name = "consensus-config"
 version = "0.1.0"
 source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb652346cbf62dc68b45bcff036ffc4749"
 dependencies = [
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "mysten-network",
  "rand 0.8.5",
  "serde",
@@ -1618,7 +1618,7 @@ dependencies = [
  "consensus-config",
  "dashmap",
  "enum_dispatch",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "futures 0.3.31",
  "http 1.3.1",
  "itertools 0.13.0",
@@ -1727,15 +1727,6 @@ name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
-
-[[package]]
-name = "convert_case"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
-dependencies = [
- "unicode-segmentation",
-]
 
 [[package]]
 name = "core-foundation"
@@ -2136,7 +2127,7 @@ version = "0.99.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3da29a38df43d6f156149c9b43ded5e018ddff2a855cf2cfd62e8cd7d079c69f"
 dependencies = [
- "convert_case 0.4.0",
+ "convert_case",
  "proc-macro2",
  "quote",
  "rustc_version",
@@ -2584,7 +2575,7 @@ dependencies = [
  "ecdsa 0.16.9",
  "ed25519-consensus",
  "elliptic-curve 0.13.8",
- "fastcrypto-derive 0.1.3 (git+https://github.com/MystenLabs/fastcrypto?rev=69d496c71fb37e3d22fe85e5bbfd4256d61422b9)",
+ "fastcrypto-derive",
  "generic-array",
  "hex",
  "hex-literal",
@@ -2610,69 +2601,6 @@ dependencies = [
  "tokio",
  "typenum",
  "zeroize",
-]
-
-[[package]]
-name = "fastcrypto"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e06674cac3bf7ec9a951971285e6051a45273dc4e265cca27c02a0d4ebcb46f8"
-dependencies = [
- "ark-ec",
- "ark-ff",
- "ark-secp256r1",
- "ark-serialize",
- "auto_ops",
- "base64ct",
- "bech32",
- "bincode",
- "blake2",
- "blst",
- "bs58 0.4.0",
- "curve25519-dalek-ng",
- "derive_more 0.99.19",
- "digest 0.10.7",
- "ecdsa 0.16.9",
- "ed25519-consensus",
- "elliptic-curve 0.13.8",
- "fastcrypto-derive 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "generic-array",
- "hex",
- "hex-literal",
- "hkdf",
- "lazy_static",
- "num-bigint 0.4.6",
- "once_cell",
- "p256",
- "rand 0.8.5",
- "readonly",
- "rfc6979 0.4.0",
- "rsa",
- "schemars",
- "secp256k1",
- "serde",
- "serde_json",
- "serde_with",
- "sha2 0.10.8",
- "sha3 0.10.8",
- "signature 2.2.0",
- "static_assertions",
- "thiserror 1.0.69",
- "tokio",
- "typenum",
- "zeroize",
-]
-
-[[package]]
-name = "fastcrypto-derive"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c0c2af2157f416cb885e11d36cd0de2753f6d5384752d364075c835f5f8f891"
-dependencies = [
- "convert_case 0.6.0",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -2691,7 +2619,7 @@ source = "git+https://github.com/MystenLabs/fastcrypto?rev=69d496c71fb37e3d22fe8
 dependencies = [
  "bcs",
  "digest 0.10.7",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "hex",
  "itertools 0.10.5",
  "rand 0.8.5",
@@ -2709,7 +2637,7 @@ version = "0.1.0"
 source = "git+https://github.com/MystenLabs/fastcrypto?rev=69d496c71fb37e3d22fe85e5bbfd4256d61422b9#69d496c71fb37e3d22fe85e5bbfd4256d61422b9"
 dependencies = [
  "bcs",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "lazy_static",
  "num-bigint 0.4.6",
  "num-integer",
@@ -2735,7 +2663,7 @@ dependencies = [
  "bcs",
  "byte-slice-cast",
  "derive_more 0.99.19",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "ff 0.13.1",
  "im",
  "itertools 0.12.1",
@@ -4391,7 +4319,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "fastcrypto 0.1.9",
+ "fastcrypto",
  "gluon",
  "gluon_codegen",
  "move-core-types",
@@ -4400,6 +4328,7 @@ dependencies = [
  "serde_json",
  "sui-framework",
  "sui-json-rpc-types",
+ "sui-keys",
  "sui-move-build",
  "sui-swarm-config",
  "sui-types",
@@ -5518,7 +5447,7 @@ dependencies = [
  "antithesis_sdk",
  "anyhow",
  "either",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "futures 0.3.31",
  "mysten-metrics",
  "once_cell",
@@ -7902,7 +7831,7 @@ source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb65
 dependencies = [
  "bcs",
  "eyre",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "serde",
  "serde_repr",
 ]
@@ -7992,7 +7921,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bcs",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "futures 0.3.31",
  "move-binary-format",
  "move-bytecode-utils",
@@ -8389,7 +8318,7 @@ dependencies = [
  "anyhow",
  "byteorder",
  "bytes",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "futures 0.3.31",
  "indicatif",
  "num_enum",
@@ -8430,7 +8359,7 @@ dependencies = [
  "consensus-config",
  "csv",
  "dirs",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "move-vm-config",
  "mysten-common",
  "nonzero_ext",
@@ -8472,7 +8401,7 @@ dependencies = [
  "either",
  "enum_dispatch",
  "eyre",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-tbls",
  "fastcrypto-zkp",
  "futures 0.3.31",
@@ -8666,7 +8595,7 @@ dependencies = [
  "anyhow",
  "bcs",
  "camino",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "move-binary-format",
  "move-core-types",
  "prometheus",
@@ -8726,7 +8655,7 @@ dependencies = [
  "diesel",
  "diesel-async",
  "diesel_migrations",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "futures 0.3.31",
  "hex",
  "indicatif",
@@ -8837,7 +8766,7 @@ source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb65
 dependencies = [
  "anyhow",
  "bcs",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "move-binary-format",
  "move-bytecode-utils",
  "move-core-types",
@@ -8862,7 +8791,7 @@ dependencies = [
  "cached",
  "chrono",
  "eyre",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-zkp",
  "futures 0.3.31",
  "http-body 0.4.6",
@@ -8911,7 +8840,7 @@ version = "0.0.0"
 source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb652346cbf62dc68b45bcff036ffc4749"
 dependencies = [
  "anyhow",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "jsonrpsee",
  "mysten-metrics",
  "once_cell",
@@ -8934,7 +8863,7 @@ dependencies = [
  "bcs",
  "colored",
  "enum_dispatch",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "itertools 0.13.0",
  "json_to_table",
  "move-binary-format",
@@ -8964,7 +8893,7 @@ source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb65
 dependencies = [
  "anyhow",
  "bip32",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "rand 0.8.5",
  "regex",
  "serde",
@@ -8993,7 +8922,7 @@ version = "1.48.0"
 source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb652346cbf62dc68b45bcff036ffc4749"
 dependencies = [
  "anyhow",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "move-binary-format",
  "move-bytecode-utils",
  "move-bytecode-verifier",
@@ -9018,7 +8947,7 @@ source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb65
 dependencies = [
  "bcs",
  "better_any",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-vdf",
  "fastcrypto-zkp",
  "indexmap 2.9.0",
@@ -9041,7 +8970,7 @@ source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb65
 dependencies = [
  "bcs",
  "better_any",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-zkp",
  "linked-hash-map",
  "move-binary-format",
@@ -9062,7 +8991,7 @@ source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb65
 dependencies = [
  "bcs",
  "better_any",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-zkp",
  "linked-hash-map",
  "move-binary-format",
@@ -9083,7 +9012,7 @@ source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb65
 dependencies = [
  "bcs",
  "better_any",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-zkp",
  "indexmap 2.9.0",
  "move-binary-format",
@@ -9122,7 +9051,7 @@ dependencies = [
  "bcs",
  "bytes",
  "dashmap",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-tbls",
  "futures 0.3.31",
  "governor",
@@ -9165,7 +9094,7 @@ dependencies = [
  "bin-version",
  "clap",
  "consensus-core",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-zkp",
  "futures 0.3.31",
  "http 1.3.1",
@@ -9334,7 +9263,7 @@ dependencies = [
  "base64 0.21.7",
  "bcs",
  "bytes",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "http 1.3.1",
  "itertools 0.13.0",
  "mime",
@@ -9377,7 +9306,7 @@ dependencies = [
  "bcs",
  "clap",
  "colored",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "futures 0.3.31",
  "futures-core",
  "jsonrpsee",
@@ -9426,7 +9355,7 @@ dependencies = [
  "anemo",
  "anemo-tower",
  "bcs",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "lru 0.10.1",
  "move-package",
  "msim",
@@ -9451,7 +9380,7 @@ dependencies = [
  "bcs",
  "byteorder",
  "bytes",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "futures 0.3.31",
  "indicatif",
  "integer-encoding",
@@ -9496,7 +9425,7 @@ dependencies = [
  "chrono",
  "clap",
  "eyre",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "futures 0.3.31",
  "hyper 1.6.0",
  "hyper-rustls",
@@ -9566,7 +9495,7 @@ dependencies = [
  "anemo",
  "anyhow",
  "bcs",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "move-bytecode-utils",
  "mysten-common",
  "prometheus",
@@ -9620,7 +9549,7 @@ dependencies = [
  "axum 0.8.3",
  "axum-server",
  "ed25519",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "pkcs8 0.10.2",
  "rcgen",
  "reqwest",
@@ -9697,7 +9626,7 @@ dependencies = [
  "derive_more 1.0.0",
  "enum_dispatch",
  "eyre",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-tbls",
  "fastcrypto-zkp",
  "im",
@@ -9996,7 +9925,7 @@ source = "git+https://github.com/aankor/sui.git?branch=testing-access#d4721cfb65
 dependencies = [
  "anyhow",
  "bcs",
- "fastcrypto 0.1.8",
+ "fastcrypto",
  "fastcrypto-zkp",
  "futures 0.3.31",
  "jsonrpsee",

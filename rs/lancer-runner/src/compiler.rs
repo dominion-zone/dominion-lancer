@@ -2,7 +2,7 @@ use gluon::{
     Thread,
     import::add_extern_module,
     primitive, record,
-    vm::{self, ExternModule},
+    vm::{self, ExternModule, api::IO},
 };
 use gluon_codegen::{Trace, Userdata, VmType};
 use std::ops::Deref;
@@ -25,12 +25,15 @@ impl Deref for WPackage {
 }
 
 impl WPackage {
-    fn compile(path: &str) -> Result<Self, String> {
-        let builder = BuildConfig::new_for_testing();
-        let r = builder
-            .build(path.as_ref())
-            .map_err(|err| err.to_string())?;
-        Ok(Self(r))
+    fn compile(path: &str) -> IO<Self> {
+        (|| {
+            let builder = BuildConfig::new_for_testing();
+            let r = builder
+                .build(path.as_ref())
+                .map_err(|err| err.to_string())?;
+            Ok::<_, String>(Self(r))
+        })()
+        .into()
     }
 
     fn bytes(&self) -> Vec<Vec<u8>> {

@@ -1,4 +1,9 @@
 let { SuiAddress } = import! lancer.sui.sui_address
+let effect @ { Eff, ? } = import! std.effect
+let io @ { IO, ? } = import! std.io
+let { (<|), (<<) } = import! std.function
+let { wrap } = import! std.applicative
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
 
 type PreparationReport = {
     sql: String,
@@ -14,6 +19,17 @@ type FinalReport = {
     preparation: PreparationReport,
     demonstration: DemonstrationReport,
 }
+
+type ReportBuilder =
+    | Nothing
+    | Preparation PreparationReport
+    | Final FinalReport
+
+let build builder : ReportBuilder -> Eff [| lift : Lift IO | r |] FinalReport =
+    match builder with
+    | Nothing -> lift <| io.throw "Not prepared"
+    | Preparation p -> lift <| io.throw "Not demonstrated"
+    | Final r -> wrap r
 
 /*
 type ReportBuilder = {
@@ -47,12 +63,12 @@ let finalize r : ReportBuilder -> FinalReport =
     }
 */
 {
-    // ReportBuilder,
+    ReportBuilder,
     // default_builder,
     PreparationReport,
     DemonstrationReport,
     FinalReport,
     // put_preparation,
     // put_demonstration,
-    // finalize
+    build
 }

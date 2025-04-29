@@ -1,31 +1,14 @@
-let prim @ {
-    Lancer,
-    lancer,
-    current_wallet,
-    start,
-    commit,
-    execute,
-    generate_keypair,
-    get_coins,
-    get_balance,
-    report_public,
-    report_owner_by,
-    report_objects,
-    hiding_objects,
-} = import! lancer.prim
+let { Eff } = import! std.effect
+let { TestCluster } = import! lancer.effect.test_cluster
+let { Compiler } = import! lancer.effect.compiler
+let { TransactionBuilder } = import! lancer.effect.transaction_builder
 
-let current_wallet _ = prim.current_wallet lancer in
+type Lancer r = Eff [|
+    test_cluster: TestCluster,
+    transaction_builder: TransactionBuilder,
+    compiler: Compiler,
+    | r |] ()
 
 {
-    current_wallet,
-    start = start lancer,
-    commit = commit lancer,
-    execute = execute lancer,
-    generate_keypair = generate_keypair lancer,
-    get_coins = get_coins lancer,
-    get_balance = get_balance lancer,
-    report_public = report_public lancer,
-    report_owner_by = report_owner_by lancer,
-    report_objects = report_objects lancer,
-    hiding_objects = hiding_objects lancer,
+    Lancer,
 }

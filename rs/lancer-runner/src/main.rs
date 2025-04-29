@@ -1,7 +1,8 @@
 #![allow(non_local_definitions)]
 
 use anyhow::Result;
-use gluon::vm::api::IO;
+use gluon::RootedThread;
+use gluon::vm::api::{Hole, IO, OpaqueValue};
 use gluon::{ThreadExt, new_vm_async, vm::api::FunctionRef};
 use lancer_runner::install_lancer;
 use lancer_runner::test_cluster::builder::WTestClusterBuilder;
@@ -20,18 +21,29 @@ pub struct ReportManifest {
 #[tokio::main]
 async fn main() -> Result<()> {
     let vm = new_vm_async().await;
-    vm.run_io(false);
     install_lancer(&vm)?;
 
+    vm.run_io(false);
+    let (scenario, _) = vm
+        .run_expr_async::<OpaqueValue<RootedThread, Hole>>(
+            "scenario_",
+            r#"
+let { Lancer } = import! lancer
+let scenario : Lancer r = import! "scenario.glu"
+scenario
+"#,
+        )
+        .await?;
+    vm.run_io(true);
+
     let (mut run, _) = vm
-        .run_expr_async::<FunctionRef<'_, fn(WTestClusterBuilder) -> IO<String>>>(
+        .run_expr_async::<FunctionRef<'_, fn(WTestClusterBuilder, OpaqueValue<RootedThread, Hole>) -> IO<()>>>(
             "main_",
             "import! \"main.glu\"",
         )
         .await?;
     let test_cluster_builder = WTestClusterBuilder::new();
-    let r = run.call_async(test_cluster_builder).await?;
-    println!("Result: {:?}", r);
+    run.call_async(test_cluster_builder, scenario).await?;
     /*
     vm.run_expr_async::<OpaqueValue<RootedThread, Hole>>("import", "import! lancer.prim")
         .await?;

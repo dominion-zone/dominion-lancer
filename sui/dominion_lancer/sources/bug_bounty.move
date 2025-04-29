@@ -47,7 +47,7 @@ public fun assert_owner_cap(
     self: &OwnerCap,
     bug_bounty: &BugBounty,
 ) {
-    assert!(bug_bounty.owner_, EInvalidOwnerCap);
+    assert!(bug_bounty.owner_cap_id == object::id(self), EInvalidOwnerCap);
 }
 
 // === Package Functions ===

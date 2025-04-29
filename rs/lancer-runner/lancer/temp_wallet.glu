@@ -10,9 +10,13 @@ let new _ : () -> Eff [| lift : Lift IO | r |] TempWallet
 let generate_keypair : TempWallet -> Eff [| lift : Lift IO | r |] SuiAddress
     = lift << prim.generate_keypair
 
+let clear: TempWallet -> Eff [| lift : Lift IO | r |] ()
+    = lift << prim.clear
+
 {
     TempWallet,
     new,
     generate_keypair,
     get_keys,
+    clear,
 }

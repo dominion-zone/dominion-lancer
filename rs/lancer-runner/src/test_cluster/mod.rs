@@ -1,3 +1,4 @@
+use fastcrypto::bls12381::min_sig::DST_G1;
 use gluon::{
     Thread,
     import::add_extern_module_with_deps,
@@ -7,7 +8,13 @@ use gluon::{
 use gluon_codegen::{Trace, Userdata, VmType};
 use std::fmt;
 use std::fmt::Debug;
-use sui_types::transaction::{Transaction, TransactionData};
+use sui_types::{
+    base_types::SuiAddress,
+    crypto::{Signature, Signer, SuiKeyPair, get_key_pair_from_rng},
+    gas_model::units_types::Gas,
+    programmable_transaction_builder::ProgrammableTransactionBuilder,
+    transaction::{GasData, Transaction, TransactionData, TransactionKind},
+};
 use test_cluster::TestCluster;
 use tokio::process::Command;
 use tokio::sync::RwLock;
@@ -18,13 +25,14 @@ use crate::{
     temp_wallet::TempWallet,
     transaction::WTransaction,
 };
+use sui_keys::keystore::AccountKeystore;
 
 pub mod builder;
 
 #[derive(Trace, VmType, Userdata)]
 #[gluon(vm_type = "lancer.test_cluster.prim.TestCluster")]
 #[gluon_trace(skip)]
-pub struct WTestCluster(pub RwLock<TestCluster>);
+pub struct WTestCluster(TestCluster);
 
 impl Debug for WTestCluster {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -34,89 +42,112 @@ impl Debug for WTestCluster {
 
 impl WTestCluster {
     pub(crate) fn new(cluster: TestCluster) -> Self {
-        Self(RwLock::new(cluster))
+        Self(cluster)
     }
 
     async fn start(&self) -> IO<()> {
         async {
-            let lock = self.0.read().await;
-            if lock.swarm.validator_nodes().next().unwrap().is_running() {
+            if self.0.swarm.validator_nodes().next().unwrap().is_running() {
                 return Err("Cluster is already running".to_string());
             }
-            lock.start_all_validators().await;
+            self.0.start_all_validators().await;
             Ok::<_, String>(())
         }
         .await
         .into()
     }
 
-    pub async fn is_running(&self) -> bool {
-        let lock = self.0.read().await;
-        lock.swarm.validator_nodes().next().unwrap().is_running()
+    pub fn is_running(&self) -> bool {
+        self.0.swarm.validator_nodes().next().unwrap().is_running()
     }
 
     async fn execute_tx(
         &self,
-        wallet_index: usize,
         temp_wallet: &TempWallet,
         pt: &WTransaction,
-        sender: Option<WSuiAddress>,
+        gas_budget: u64, // 500_000_000
+        sender: WSuiAddress,
+        additional_signers: Vec<WSuiAddress>,
     ) -> IO<WTransactionBlockResponse> {
         async {
-            let mut lock = self.0.write().await;
-            if !lock.swarm.validator_nodes().next().unwrap().is_running() {
+            if !self.0.swarm.validator_nodes().next().unwrap().is_running() {
                 return Err("Cluster is not running".to_string());
             }
-            let gas_budget = 500_000_000;
-            let gas_price = lock.get_reference_gas_price().await;
-            let sender_provided = sender.is_some();
-            let (sender, gas) = if let Some(sender) = sender {
-                let gas = lock
-                    .wallet()
-                    .get_one_gas_object_owned_by_address(sender.0)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                let gas = if let Some(gas) = gas {
-                    gas
-                } else {
-                    lock.fund_address_and_return_gas(gas_price, Some(gas_budget), sender.0)
-                        .await
-                };
-                (sender.0, gas)
-            } else {
-                let sender = lock.get_addresses()[wallet_index];
-                (
-                    sender,
-                    lock.wallet()
-                        .get_one_gas_object_owned_by_address(sender)
-                        .await
-                        .map_err(|e| e.to_string())?
-                        .ok_or("No gas object".to_string())?,
-                )
-            };
+            println!("Executing transaction... {:?}", pt.0);
+
+            let gas_price = self.0.get_reference_gas_price().await;
+
+            // Generate a fresh keypair for the transaction gas sponsor
+            // to make sure the script may not use the SUI coin provided
+            // for anything else
+            let (sponsor_address, sponsor_keypair) = get_key_pair_from_rng(&mut rand::rngs::OsRng);
+            let sponsor_keypair = SuiKeyPair::Ed25519(sponsor_keypair);
+
+            let gas = self
+                .0
+                .fund_address_and_return_gas(gas_price, Some(gas_budget), sponsor_address)
+                .await;
+
             // create the transaction data that will be sent to the network
-            let tx_data = TransactionData::new_programmable(
-                sender,
-                vec![gas],
-                pt.0.clone(),
-                gas_budget,
-                gas_price,
+            let tx_data = TransactionData::new_with_gas_data(
+                TransactionKind::programmable(pt.0.clone()),
+                sender.0,
+                GasData {
+                    payment: vec![gas],
+                    owner: sponsor_address,
+                    price: gas_price,
+                    budget: gas_budget,
+                },
             );
-            let tx = if sender_provided {
-                let keypair = temp_wallet
-                    .get_keypair(sender)
-                    .await
-                    .ok_or("Key not found")?;
-                Transaction::from_data_and_signer(tx_data, vec![&keypair])
-            } else {
-                lock.wallet().sign_transaction(&tx_data)
-            };
-            let r = lock.execute_transaction(tx).await;
-            if r.status_ok().unwrap() {
-                Ok::<_, String>(WTransactionBlockResponse(r))
-            } else {
-                Err(r.errors.join(", "))
+            let mut addresses = vec![sender.0];
+            for additional_signer in additional_signers {
+                addresses.push(additional_signer.0);
             }
+            let tx = temp_wallet
+                .with_keipairs(addresses.iter(), |keypairs| {
+                    let mut signers: Vec<&dyn Signer<Signature>> = vec![&sponsor_keypair];
+                    signers.extend(&keypairs);
+                    Transaction::from_data_and_signer(tx_data, signers)
+                })
+                .await?;
+
+            let r = self.0.execute_transaction(tx).await;
+            {
+                let (another_sponsor, gas) = self
+                    .0
+                    .wallet
+                    .get_one_gas_object()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .ok_or("No gas".to_string())?;
+                // Cleanup the blockchain (next time we will generate a new keypair for the sponsor)
+                let mut b = ProgrammableTransactionBuilder::new();
+                b.pay_all_sui(self.0.get_address_0());
+                let tx_data = TransactionData::new_with_gas_data(
+                    TransactionKind::programmable(b.finish()),
+                    sponsor_address,
+                    GasData {
+                        payment: vec![gas],
+                        owner: another_sponsor,
+                        price: gas_price,
+                        budget: 500_000_000,
+                    },
+                );
+                let tx = Transaction::from_data_and_signer(
+                    tx_data,
+                    vec![
+                        &sponsor_keypair,
+                        self.0
+                            .wallet
+                            .config
+                            .keystore
+                            .get_key(&another_sponsor)
+                            .unwrap(),
+                    ],
+                );
+                self.0.execute_transaction(tx).await;
+            }
+            Ok::<_, String>(WTransactionBlockResponse(r))
         }
         .await
         .into()
@@ -125,11 +156,11 @@ impl WTestCluster {
     async fn get_coins(&mut self, coin_type: WStructTag, owner: WSuiAddress) -> IO<Vec<WCoin>> {
         async {
             let coin_type = coin_type.0.to_canonical_string(true);
-            let lock = self.0.read().await;
             let mut coins = vec![];
             let mut cursor = None;
             loop {
-                let page = lock
+                let page = self
+                    .0
                     .fullnode_handle
                     .sui_client
                     .coin_read_api()
@@ -151,8 +182,8 @@ impl WTestCluster {
     async fn get_balance(&mut self, coin_type: WStructTag, owner: WSuiAddress) -> IO<u64> {
         async {
             let coin_type = coin_type.0.to_canonical_string(true);
-            let lock = self.0.read().await;
-            let balance = lock
+            let balance = self
+                .0
                 .fullnode_handle
                 .sui_client
                 .coin_read_api()
@@ -167,8 +198,8 @@ impl WTestCluster {
 
     pub(crate) async fn dump_db(&self) -> IO<String> {
         async {
-            let lock = self.0.read().await;
-            let url = lock
+            let url = self
+                .0
                 .indexer_handle
                 .as_ref()
                 .unwrap()
@@ -196,11 +227,10 @@ impl WTestCluster {
 
     async fn stop(&self) -> IO<()> {
         async {
-            let lock = self.0.read().await;
-            if !lock.swarm.validator_nodes().next().unwrap().is_running() {
+            if !self.0.swarm.validator_nodes().next().unwrap().is_running() {
                 return Err("Cluster is not running".to_string());
             }
-            lock.stop_all_validators().await;
+            self.0.stop_all_validators().await;
             Ok::<_, String>(())
         }
         .await
@@ -217,9 +247,9 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
             is_running => primitive!(
                 1,
                 "lancer.test_cluster.prim.is_running",
-                async fn WTestCluster::is_running),
+                WTestCluster::is_running),
             execute_tx => primitive!(
-                5,
+                6,
                 "lancer.test_cluster.prim.execute_tx",
                 async fn WTestCluster::execute_tx),
             get_coins => primitive!(

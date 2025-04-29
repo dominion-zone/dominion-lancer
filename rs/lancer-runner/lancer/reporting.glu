@@ -1,0 +1,16 @@
+let  { SuiAddress } = import! lancer.sui.sui_address
+
+type Reporting =
+    | Public
+    | Partial {
+        owned_by: Array SuiAddress,
+        objects:  Array SuiAddress,
+    }
+    | Hiding {
+        owned_by: Array SuiAddress,
+        objects:  Array SuiAddress,
+    }
+
+{
+    Reporting,
+}

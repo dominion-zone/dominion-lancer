@@ -54,4 +54,6 @@ type CallArg =
     CallArg,
 
     show_ObjectRef,
+
+    eq_Argument,
 }

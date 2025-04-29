@@ -1,3 +1,9 @@
-let { Package, compile, bytes, dep_ids } = import! lancer.compiler.prim
+let prim @ { Package, bytes, dep_ids } = import! lancer.compiler.prim
+let effect @ { Eff, ? } = import! std.effect
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { IO, ? } = import! std.io
+
+let compile path : String -> Eff [| lift : Lift IO | r |] Package =
+    lift <| prim.compile path
 
 { Package, compile, bytes, dep_ids }

@@ -1,0 +1,131 @@
+let effect @ { Eff, inject_rest, ? } = import! std.effect
+let prim = import! lancer.test_cluster.prim
+let tc = import! lancer.test_cluster
+let tw @ { TempWallet } = import! lancer.temp_wallet
+let { Lift, run_lift, lift, ? } = import! std.effect.lift
+let { (<|), (<<) } = import! std.function
+let { wrap } = import! std.applicative
+let { State, exec_state, get, put } = import! std.effect.state
+let r @ { ReportBuilder, FinalReport } = import! lancer.report
+let io @ { IO} = import! std.io
+let { Transaction } = import! lancer.transaction
+let { TransactionBlockResponse } = import! lancer.rpc
+let { SuiAddress } = import! lancer.sui.sui_address
+let { StructTag } = import! lancer.sui.types
+let { Coin } = import! lancer.rpc.types
+let { Reporting } = import! lancer.reporting
+
+type TestCluster r a =
+    | GenerateKeypair : TestCluster r SuiAddress
+    | ExecuteTx : Transaction -> Int -> SuiAddress -> Array SuiAddress -> TestCluster r TransactionBlockResponse
+    | GetCoins : StructTag -> SuiAddress -> TestCluster r (Array Coin)
+    | CommitPreparation : TestCluster r ()
+    | CommitDemonstration : Reporting -> TestCluster r ()
+    .. r
+
+let generate_keypair : Eff [| test_cluster : TestCluster | r |] SuiAddress =
+    Impure (convert_effect! test_cluster GenerateKeypair) Pure
+
+let execute_tx tx gas_budget sender additional_signers
+    : Transaction -> Int -> SuiAddress -> Array SuiAddress -> Eff [| test_cluster : TestCluster | r |] TransactionBlockResponse =
+    Impure (convert_effect! test_cluster (ExecuteTx tx gas_budget sender additional_signers)) Pure
+
+let get_coins coin_type owner
+    : StructTag -> SuiAddress -> Eff [| test_cluster : TestCluster | r |] (Array Coin) =
+    Impure (convert_effect! test_cluster (GetCoins coin_type owner)) Pure
+
+let commit_preparation : Eff [| test_cluster : TestCluster | r |] () =
+    Impure (convert_effect! test_cluster CommitPreparation) Pure
+
+let commit_demonstration reporting
+    : Reporting -> Eff [| test_cluster : TestCluster | r |] () =
+    Impure (convert_effect! test_cluster (CommitDemonstration reporting)) Pure
+
+#[inline(never)]
+let extract_test_cluster x : [| test_cluster : TestCluster | r |] a -> TestCluster r a = convert_variant! x
+
+type Data = {
+    cluster: tc.TestCluster,
+    report_builder: ReportBuilder,
+    temp_wallet: TempWallet,
+}
+
+let run_test_cluster cluster temp_wallet eff =
+    let loop ve : Eff [|
+            test_cluster: TestCluster,
+            lift : Lift IO,
+            state: State Data | r |] a
+        -> Eff [|
+            lift : Lift IO,
+            state: State Data | r |] a =
+        match ve with
+        | Pure value -> wrap value
+        | Impure e f ->
+            match extract_test_cluster e with
+            | GenerateKeypair ->
+                do current_state = get
+                do keypair = tw.generate_keypair current_state.temp_wallet
+                loop <| f keypair
+            | ExecuteTx tx gas_budget sender additional_signers ->
+                do current_state = get
+                do tx_block_response = tc.execute_tx current_state.cluster current_state.temp_wallet tx gas_budget sender additional_signers
+                loop <| f tx_block_response
+            | GetCoins coin_type owner ->
+                do current_state = get
+                do coins = tc.get_coins current_state.cluster coin_type owner
+                loop <| f coins
+            | CommitPreparation ->
+                do current_state = get
+                do temp_wallet = tw.new ()
+                match current_state.report_builder with
+                | Nothing ->
+                    do sql = tc.dump_db current_state.cluster
+                    put <| {
+                        cluster = current_state.cluster,
+                        report_builder = Preparation {
+                            sql,
+                            keys = tw.get_keys current_state.temp_wallet,
+                        },
+                        temp_wallet,
+                    }
+                    loop <| f ()
+                | _ -> lift <| io.throw "Invalid state for commit preparation"
+            | CommitDemonstration _ ->
+                do current_state = get
+                match current_state.report_builder with
+                | Preparation p ->
+                    do sql = tc.dump_db current_state.cluster
+                    do temp_wallet = tw.new ()
+                    put <| {
+                        cluster = current_state.cluster,
+                        report_builder = Final {
+                            preparation = p,
+                            demonstration = {
+                                sql,
+                                keys = tw.get_keys current_state.temp_wallet,
+                            },
+                        },
+                        temp_wallet,
+                    }
+                    loop <| f ()
+                | _ -> lift <| io.throw "Invalid state for commit demonstration"
+            | rest ->
+                Impure (inject_rest rest) (loop << f)
+
+    let initial_state = {
+        cluster,
+        report_builder = Nothing,
+        temp_wallet,
+    }
+    do s = exec_state initial_state <| loop eff
+    r.build s.report_builder
+
+{
+    TestCluster,
+    generate_keypair,
+    execute_tx,
+    get_coins,
+    commit_preparation,
+    commit_demonstration,
+    run_test_cluster
+}
