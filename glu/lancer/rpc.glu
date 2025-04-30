@@ -12,7 +12,8 @@ let { Digest, ? } = import! lancer.sui.digest
 let { SuiAddress, ? } = import! lancer.sui.sui_address
 let { Serialize, ? } = import! std.json.ser
 let { Show, show } = import! std.show
-let prim = import! lancer.rpc.prim
+let { (<<) } = import! std.function
+let prim @ { TransactionBlockResponsePtr } = import! lancer.rpc.prim
 
 #[derive(Show, Eq)]
 type ObjectChangeKind =
@@ -74,15 +75,28 @@ let object_change_owner c : ObjectChange -> Option Owner =
     | Wrapped w -> None
     | Created c -> Some c.owner
 
-let seriazlize_TransactionBlockResponse: Serialize TransactionBlockResponse = {
+let inner : TransactionBlockResponsePtr -> TransactionBlockResponse = prim.inner
+
+let from_inner : TransactionBlockResponse -> TransactionBlockResponsePtr = prim.from_inner
+
+let seriazlize_TransactionBlockResponseRef : Serialize TransactionBlockResponsePtr = {
     serialize = prim.serialize,
 }
 
-let show_TransactionBlockResponse: Show TransactionBlockResponse = {
+let show_TransactionBlockResponseRef : Show TransactionBlockResponsePtr = {
     show = prim.show,
 }
 
+let seriazlize_TransactionBlockResponse : Serialize TransactionBlockResponse = {
+    serialize = prim.serialize << from_inner,
+}
+
+let show_TransactionBlockResponse : Show TransactionBlockResponse = {
+    show = prim.show << from_inner,
+}
+
 {
+    TransactionBlockResponsePtr,
     ObjectChangeKind,
     object_change_kind,
     show_ObjectChangeKind,
@@ -91,7 +105,11 @@ let show_TransactionBlockResponse: Show TransactionBlockResponse = {
     object_change_version,
     object_change_digest,
     object_change_owner,
+    seriazlize_TransactionBlockResponseRef,
+    show_TransactionBlockResponseRef,
     seriazlize_TransactionBlockResponse,
     show_TransactionBlockResponse,
+    inner,
+    from_inner,
     .. types
 }

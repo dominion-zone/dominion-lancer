@@ -14,9 +14,9 @@ pub mod builder;
 #[gluon(vm_type = "lancer.transaction.prim.Transaction")]
 #[gluon_trace(skip)]
 #[gluon_userdata(clone)]
-pub struct WTransaction(pub ProgrammableTransaction);
+pub struct TransactionRef(pub ProgrammableTransaction);
 
-impl WTransaction {
+impl TransactionRef {
     pub fn serialize(&self) -> Result<serde_json::Value, String> {
         serde_json::to_value(&self.0).map_err(|e| e.to_string())
     }
@@ -30,15 +30,15 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
     ExternModule::new(
         vm,
         record!(
-            type Transaction => WTransaction,
-            serialize => primitive!(1, "lancer.transaction.prim.serialize", WTransaction::serialize),
-            show => primitive!(1, "lancer.transaction.prim.show", WTransaction::show),
+            type Transaction => TransactionRef,
+            serialize => primitive!(1, "lancer.transaction.prim.serialize", TransactionRef::serialize),
+            show => primitive!(1, "lancer.transaction.prim.show", TransactionRef::show),
         ),
     )
 }
 
 pub fn install(vm: &Thread) -> vm::Result<()> {
-    vm.register_type::<WTransaction>("lancer.transaction.prim.Transaction", &[])?;
+    vm.register_type::<TransactionRef>("lancer.transaction.prim.Transaction", &[])?;
 
     add_extern_module_with_deps(
         vm,

@@ -6,7 +6,7 @@ use gluon::{
     vm::{self, ExternModule, api::IO},
 };
 use gluon_codegen::{Trace, Userdata, VmType};
-use std::fmt;
+use std::{fmt, sync::Arc};
 use std::fmt::Debug;
 use sui_types::{
     base_types::{ObjectID, SuiAddress},
@@ -20,14 +20,12 @@ use tokio::process::Command;
 use tokio::sync::RwLock;
 
 use crate::{
-    rpc::{WTransactionBlockResponse, coin::WCoin},
+    rpc::{coin::WCoin, TransactionBlockResponsePtr, WTransactionBlockResponse},
     sui::{
-        WSuiAddress,
-        object::{WObject, WObjectInfo},
-        types::WStructTag,
+        object::{WObject, WObjectInfo}, types::WStructTag, WSuiAddress
     },
     temp_wallet::TempWallet,
-    transaction::WTransaction,
+    transaction::TransactionRef,
 };
 use sui_keys::keystore::AccountKeystore;
 
@@ -68,11 +66,11 @@ impl WTestCluster {
     async fn execute_tx(
         &self,
         temp_wallet: &TempWallet,
-        pt: &WTransaction,
+        pt: &TransactionRef,
         gas_budget: u64, // 500_000_000
         sender: WSuiAddress,
         additional_signers: Vec<WSuiAddress>,
-    ) -> IO<WTransactionBlockResponse> {
+    ) -> IO<TransactionBlockResponsePtr> {
         async {
             if !self.0.swarm.validator_nodes().next().unwrap().is_running() {
                 return Err("Cluster is not running".to_string());
@@ -150,7 +148,7 @@ impl WTestCluster {
                 );
                 self.0.execute_transaction(tx).await;
             }
-            Ok::<_, String>(WTransactionBlockResponse(r))
+            Ok::<_, String>(TransactionBlockResponsePtr(Arc::new(r)))
         }
         .await
         .into()

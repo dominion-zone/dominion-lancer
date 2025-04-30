@@ -9,7 +9,7 @@ let { Result, ? } = import! std.result
 let { Show } = import! std.show
 let { Reporting, ? } = import! lancer.reporting
 let { Transaction, ? } = import! lancer.transaction
-let { TransactionBlockResponse, ? } = import! lancer.rpc
+let { TransactionBlockResponsePtr, ? } = import! lancer.rpc
 let { Object, ? } = import! lancer.sui.object
 let { Value } = import! std.json
 
@@ -21,7 +21,7 @@ type KeypairGeneratedInfo = {
 #[derive(Show, Serialize)]
 type TxExecutedInfo = {
     transaction: Transaction,
-    response: TransactionBlockResponse,
+    response: TransactionBlockResponsePtr,
 }
 
 #[derive(Show, Serialize)]

@@ -9,7 +9,7 @@ let { State, run_state, get, put } = import! std.effect.state
 let r @ { Log, SystemLog, ? } = import! lancer.report
 let io @ { IO } = import! std.io
 let { Transaction } = import! lancer.transaction
-let { TransactionBlockResponse } = import! lancer.rpc
+let { TransactionBlockResponse, inner } = import! lancer.rpc
 let { SuiAddress } = import! lancer.sui.sui_address
 let { StructTag } = import! lancer.sui.types
 let { Coin } = import! lancer.rpc.types
@@ -91,7 +91,7 @@ let run_test_cluster cluster temp_wallet working_dir eff =
                     do transaction = run_transaction_builder working_dir transaction
                     do response = tc.execute_tx cluster temp_wallet transaction gas_budget sender additional_signers
                     log <| System <| TxExecuted { transaction, response }
-                    loop <| f response
+                    loop <| f <| inner response
                 else
                     lift <| io.throw "Invalid state for execute transaction"
             | GetCoins coin_type owner ->

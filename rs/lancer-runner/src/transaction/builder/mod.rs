@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 
 use crate::sui::{WDigest, WSuiAddress, types::WTypeTag};
 
-use super::WTransaction;
+use super::TransactionRef;
 
 pub mod argument;
 pub mod object_arg;
@@ -166,7 +166,7 @@ impl WTransactionBuilder {
         .into()
     }
 
-    pub async fn finish(&self) -> IO<WTransaction> {
+    pub async fn finish(&self) -> IO<TransactionRef> {
         async {
             let r = self
                 .0
@@ -175,7 +175,7 @@ impl WTransactionBuilder {
                 .take()
                 .ok_or("Already built".to_string())?
                 .finish();
-            Ok::<_, String>(WTransaction(r))
+            Ok::<_, String>(TransactionRef(r))
         }
         .await
         .into()

@@ -2,7 +2,7 @@ let effect @ { Eff, ? } = import! std.effect
 let { Lift, run_lift, lift, ? } = import! std.effect.lift
 let { (<|), (<<) } = import! std.function
 let { Transaction } = import! lancer.transaction
-let { TransactionBlockResponse } = import! lancer.rpc
+let { TransactionBlockResponsePtr } = import! lancer.rpc
 let { SuiAddress } = import! lancer.sui.sui_address
 let { TempWallet } = import! lancer.temp_wallet
 let prim @ { TestCluster } = import! lancer.test_cluster.prim
@@ -12,7 +12,7 @@ let { Object, ObjectInfo } = import! lancer.sui.object
 
 let execute_tx cluster temp_wallet tx gas_budget sender additional_signers
     : TestCluster -> TempWallet -> Transaction -> Int -> SuiAddress -> Array SuiAddress
-    -> Eff [| lift : Lift IO | r |] TransactionBlockResponse = 
+    -> Eff [| lift : Lift IO | r |] TransactionBlockResponsePtr = 
     lift <| prim.execute_tx cluster temp_wallet tx gas_budget sender additional_signers
 
 let get_coins cluster coin_type owner

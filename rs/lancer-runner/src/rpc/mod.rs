@@ -9,7 +9,8 @@ use gluon::{
         impl_getable_simple,
     },
 };
-use std::ops::Deref;
+use gluon_codegen::{Trace, Userdata, VmType};
+use std::{fmt::Debug, ops::Deref, sync::Arc};
 use sui_json_rpc_types::{ObjectChange, SuiTransactionBlockResponse};
 use sui_types::{
     base_types::{ObjectID, SequenceNumber},
@@ -22,8 +23,50 @@ use crate::sui::{WDigest, WSuiAddress, types::WStructTag};
 
 pub mod coin;
 
+#[derive(Clone, Trace, Userdata, VmType)]
+#[gluon(vm_type = "lancer.rpc.prim.TransactionBlockResponsePtr")]
+#[gluon_trace(skip)]
+#[gluon_userdata(clone)]
+pub struct TransactionBlockResponsePtr(pub Arc<SuiTransactionBlockResponse>);
+
+impl Debug for TransactionBlockResponsePtr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl From<WTransactionBlockResponse> for TransactionBlockResponsePtr {
+    fn from(value: WTransactionBlockResponse) -> Self {
+        TransactionBlockResponsePtr(value.0.clone())
+    }
+}
+
+impl From<TransactionBlockResponsePtr> for WTransactionBlockResponse {
+    fn from(value: TransactionBlockResponsePtr) -> Self {
+        WTransactionBlockResponse(value.0.clone())
+    }
+}
+
+impl TransactionBlockResponsePtr {
+    pub fn inner(&self) -> WTransactionBlockResponse {
+        WTransactionBlockResponse(self.0.clone())
+    }
+
+    pub fn from_inner(w: WTransactionBlockResponse) -> Self {
+        TransactionBlockResponsePtr(w.0.clone())
+    }
+
+    pub fn serialize(&self) -> Result<serde_json::Value, String> {
+        serde_json::to_value(self.0.as_ref()).map_err(|e| e.to_string())
+    }
+
+    pub fn show(&self) -> String {
+        format!("{:?}", self.0)
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct WTransactionBlockResponse(pub SuiTransactionBlockResponse);
+pub struct WTransactionBlockResponse(pub Arc<SuiTransactionBlockResponse>);
 
 impl VmType for WTransactionBlockResponse {
     type Type = Self;
@@ -94,7 +137,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WTransactionBlockResponse {
                 #[serde(skip_serializing_if = "Vec::is_empty", default)]
                 pub raw_effects
                 */
-                Self(SuiTransactionBlockResponse {
+                Self(Arc::new(SuiTransactionBlockResponse {
                     digest: TransactionDigest::new(digest.0.into_inner()),
                     transaction: None,
                     raw_transaction,
@@ -107,7 +150,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WTransactionBlockResponse {
                     checkpoint: None,
                     errors: vec![],
                     raw_effects: vec![],
-                })
+                }))
             }
             _ => panic!("ValueRef is not a lancer.rpc.TransactionBlockResponse"),
         }
@@ -117,12 +160,13 @@ impl<'vm, 'value> Getable<'vm, 'value> for WTransactionBlockResponse {
 impl<'vm> Pushable<'vm> for WTransactionBlockResponse {
     fn vm_push(self, context: &mut vm::api::ActiveThread<'vm>) -> vm::Result<()> {
         WDigest(Digest::from(self.0.digest.into_inner())).vm_push(context)?;
-        self.0.raw_transaction.vm_push(context)?;
+        self.0.raw_transaction.clone().vm_push(context)?;
         self.0
             .object_changes
-            .unwrap_or_default()
-            .into_iter()
-            .map(|c| WObjectChange(c))
+            .as_ref()
+            .unwrap_or(&vec![])
+            .iter()
+            .map(|c| WObjectChange(c.clone()))
             .collect::<Vec<_>>()
             .vm_push(context)?;
         let vm = context.thread();
@@ -142,16 +186,6 @@ impl Deref for WTransactionBlockResponse {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl WTransactionBlockResponse {
-    pub fn serialize(self) -> Result<serde_json::Value, String> {
-        serde_json::to_value(self.0).map_err(|e| e.to_string())
-    }
-
-    pub fn show(self) -> String {
-        format!("{:?}", self.0)
     }
 }
 
@@ -760,14 +794,20 @@ fn load_rpc(vm: &Thread) -> vm::Result<vm::ExternModule> {
         vm,
         record!(
             type TransactionBlockResponse => WTransactionBlockResponse,
-            serialize => primitive!(1, "lancer.rpc.prim.serialize", WTransactionBlockResponse::serialize),
-            show => primitive!(1, "lancer.rpc.prim.show", WTransactionBlockResponse::show),
+            type TransactionBlockResponsePtr => TransactionBlockResponsePtr,
+            inner => primitive!(1, "lancer.rpc.prim.into_inner", TransactionBlockResponsePtr::inner),
+            from_inner => primitive!(1, "lancer.rpc.prim.from_inner", TransactionBlockResponsePtr::from_inner),
+            serialize => primitive!(1, "lancer.rpc.prim.serialize", TransactionBlockResponsePtr::serialize),
+            show => primitive!(1, "lancer.rpc.prim.show", TransactionBlockResponsePtr::show),
         ),
     )
 }
 
 pub fn install_rpc(vm: &Thread) -> vm::Result<()> {
-    // vm.register_type::<WTransactionBlockResponse>("lancer.rpc.TransactionBlockResponse", &[])?;
+    vm.register_type::<TransactionBlockResponsePtr>(
+        "lancer.rpc.prim.TransactionBlockResponsePtr",
+        &[],
+    )?;
     add_extern_module_with_deps(
         vm,
         "lancer.rpc.prim",
