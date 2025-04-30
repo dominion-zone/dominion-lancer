@@ -10,7 +10,7 @@ let { Show } = import! std.show
 let { Reporting, ? } = import! lancer.reporting
 let { Transaction, ? } = import! lancer.transaction
 let { TransactionBlockResponsePtr, ? } = import! lancer.rpc
-let { Object, ? } = import! lancer.sui.object
+let { ObjectPtr, ? } = import! lancer.sui.object
 let { Value } = import! std.json
 
 #[derive(Show, Serialize)]
@@ -27,14 +27,14 @@ type TxExecutedInfo = {
 #[derive(Show, Serialize)]
 type PreparationCommitedInfo = {
     available_keys: Array SuiAddress,
-    live_objects: Array Object,
+    live_objects: Array ObjectPtr,
 }
 
 #[derive(Show, Serialize)]
 type DemonstrationCommitedInfo = {
     reporting: Reporting,
     available_keys: Array SuiAddress,
-    live_objects: Array Object,
+    live_objects: Array ObjectPtr,
 }
 
 #[derive(Show)]

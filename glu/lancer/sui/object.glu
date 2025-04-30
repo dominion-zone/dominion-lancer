@@ -1,20 +1,53 @@
-let prim = import! lancer.sui.object.prim
+let prim @ {
+    ObjectPtr,
+    inner_object,
+    from_inner_object,
+    object_id,
+    object_is_package,
+    object_struct_tag,
+    object_owner,
+
+} = import! lancer.sui.object.prim
+let { (<<) } = import! std.function
 
 let types @ { Object, ObjectInfo, ? } = import! lancer.sui.object.types
 
 let { Serialize, ? } = import! std.json.ser
 let { Result, ? } = import! std.result
 
-let serialize_Object : Serialize Object = {
+let show_ObjectPtr : Show ObjectPtr = {
+    show = prim.show_object
+}
+
+let show_Object : Show Object = {
+    show = prim.show_object << from_inner_object
+}
+
+let serialize_ObjectPtr : Serialize ObjectPtr = {
     serialize = prim.serialize_object
 }
+
+let serialize_Object : Serialize Object = {
+    serialize = prim.serialize_object << from_inner_object
+}
+
 
 let serialize_ObjectInfo : Serialize ObjectInfo = {
     serialize = prim.serialize_object_info
 }
 
 {
+    ObjectPtr,
+    show_ObjectPtr,
+    show_Object,
+    serialize_ObjectPtr,
     serialize_Object,
     serialize_ObjectInfo,
+    inner_object,
+    from_inner_object,
+    object_id,
+    object_is_package,
+    object_struct_tag,
+    object_owner
     .. types
 }

@@ -89,7 +89,7 @@ type ObjectData =
     // Map from each module name to raw serialized Move module bytes
     | Package MovePackage
 
-#[derive(Show, Eq)]
+#[derive(Eq)]
 type Object = {
     data: ObjectData,
     // The owner that unlocks this object
@@ -130,5 +130,4 @@ type Object = {
     show_UpgradeInfo,
     show_TypeOrigin,
     show_ObjectData,
-    show_Object,
 }

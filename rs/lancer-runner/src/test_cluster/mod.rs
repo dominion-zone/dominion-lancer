@@ -22,7 +22,7 @@ use tokio::sync::RwLock;
 use crate::{
     rpc::{coin::WCoin, TransactionBlockResponsePtr, WTransactionBlockResponse},
     sui::{
-        object::{WObject, WObjectInfo}, types::WStructTag, WSuiAddress
+        object::{ObjectPtr, WObject, WObjectInfo}, types::WStructTag, WSuiAddress
     },
     temp_wallet::TempWallet,
     transaction::TransactionRef,
@@ -246,13 +246,13 @@ impl WTestCluster {
                 .get_object_from_fullnode_store(&ObjectID::from_address(object_id.0.into()))
                 .await
                 .ok_or("Failed to get object")?;
-            Ok::<_, String>(WObject(r))
+            Ok::<_, String>(WObject(Arc::new(r)))
         }
         .await
         .into()
     }
 
-    pub fn get_all_live_objects(&self) -> IO<Vec<WObject>> {
+    pub fn get_all_live_objects(&self) -> IO<Vec<ObjectPtr>> {
         use sui_core::authority::authority_store_tables::LiveObject::Normal;
         use sui_core::state_accumulator::AccumulatorStore;
 
@@ -261,7 +261,7 @@ impl WTestCluster {
                 .database_for_testing()
                 .iter_live_object_set(false)
                 .map(|o| match o {
-                    Normal(o) => WObject(o),
+                    Normal(o) => ObjectPtr(Arc::new(o)),
                     _ => unreachable!(),
                 })
                 .collect::<Vec<_>>()

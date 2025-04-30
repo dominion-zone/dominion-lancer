@@ -1,5 +1,6 @@
-use std::{collections::BTreeMap, str::FromStr};
+use std::{collections::BTreeMap, fmt::Debug, str::FromStr, sync::Arc};
 
+use crate::rpc::WOwner;
 use gluon::{
     Thread, ThreadExt,
     base::types::ArcType,
@@ -11,6 +12,7 @@ use gluon::{
         impl_getable_simple,
     },
 };
+use gluon_codegen::{Trace, Userdata, VmType};
 use move_core_types::language_storage::StructTag;
 use sui_types::{
     base_types::{ObjectID, ObjectInfo, ObjectType, SequenceNumber},
@@ -18,8 +20,6 @@ use sui_types::{
     move_package::{MovePackage, TypeOrigin, UpgradeInfo},
     object::{Data as ObjectData, MoveObject, Object, ObjectInner},
 };
-
-use crate::rpc::WOwner;
 
 use super::{
     WDigest, WSuiAddress,
@@ -381,13 +381,7 @@ impl<'vm> Pushable<'vm> for WObjectData {
     }
 }
 
-pub struct WObject(pub Object);
-
-impl WObject {
-    pub fn serialize(self) -> Result<serde_json::Value, String> {
-        serde_json::to_value(self.0).map_err(|e| e.to_string())
-    }
-}
+pub struct WObject(pub Arc<Object>);
 
 impl VmType for WObject {
     type Type = Self;
@@ -431,7 +425,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObject {
                         .expect("storage_rebate field not found"),
                 );
 
-                Self(
+                Self(Arc::new(
                     ObjectInner {
                         data: object_data,
                         owner,
@@ -439,7 +433,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObject {
                         storage_rebate,
                     }
                     .into(),
-                )
+                ))
             }
             _ => panic!("ValueRef is not a lancer.sui.object.types.Object"),
         }
@@ -461,6 +455,64 @@ impl<'vm> Pushable<'vm> for WObject {
                 .collect::<vm::Result<Vec<_>>>()?,
         )?;
         Ok(())
+    }
+}
+
+#[derive(Clone, Trace, Userdata, VmType)]
+#[gluon(vm_type = "lancer.sui.object.prim.ObjectPtr")]
+#[gluon_trace(skip)]
+#[gluon_userdata(clone)]
+pub struct ObjectPtr(pub Arc<Object>);
+
+impl Debug for ObjectPtr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl ObjectPtr {
+    pub fn serialize(&self) -> Result<serde_json::Value, String> {
+        serde_json::to_value(self.0.as_ref()).map_err(|e| e.to_string())
+    }
+
+    pub fn show(&self) -> String {
+        format!("{:?}", self.0.as_ref())
+    }
+
+    pub fn inner(&self) -> WObject {
+        WObject(self.0.clone())
+    }
+
+    pub fn from_inner(object: WObject) -> Self {
+        Self(object.0.clone())
+    }
+
+    pub fn id(&self) -> WSuiAddress {
+        WSuiAddress(self.0.id().into())
+    }
+
+    pub fn is_package(&self) -> bool {
+        self.0.is_package()
+    }
+
+    pub fn struct_tag(&self) -> Option<WStructTag> {
+        self.0.struct_tag().map(|x| WStructTag(x))
+    }
+
+    pub fn owner(&self) -> WOwner {
+        WOwner(self.0.owner().clone())
+    }
+}
+
+impl From<ObjectPtr> for WObject {
+    fn from(object: ObjectPtr) -> Self {
+        WObject(object.0.clone())
+    }
+}
+
+impl From<WObject> for ObjectPtr {
+    fn from(object: WObject) -> Self {
+        ObjectPtr(object.0.clone())
     }
 }
 
@@ -638,19 +690,49 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
     ExternModule::new(
         vm,
         record!(
+            type ObjectPtr => ObjectPtr,
             serialize_object => primitive!(
                 1,
                 "lancer.sui.object.prim.serialize_object",
-                WObject::serialize),
+                ObjectPtr::serialize),
+            show_object => primitive!(
+                1,
+                "lancer.sui.object.prim.show_object",
+                ObjectPtr::show),
+            inner_object => primitive!(
+                1,
+                "lancer.sui.object.prim.inner_object",
+                ObjectPtr::inner),
+            from_inner_object => primitive!(
+                1,
+                "lancer.sui.object.prim.from_inner_object",
+                ObjectPtr::from_inner),
             serialize_object_info => primitive!(
                 1,
                 "lancer.sui.object.prim.serialize_object_info",
                 WObjectInfo::serialize),
+            object_id => primitive!(
+                1,
+                "lancer.sui.object.prim.object_id",
+                ObjectPtr::id),
+            object_is_package => primitive!(
+                1,
+                "lancer.sui.object.prim.object_is_package",
+                ObjectPtr::is_package),
+            object_struct_tag => primitive!(
+                1,
+                "lancer.sui.object.prim.object_struct_tag",
+                ObjectPtr::struct_tag),
+            object_owner => primitive!(
+                1,
+                "lancer.sui.object.prim.object_owner",
+                ObjectPtr::owner),
         ),
     )
 }
 
 pub fn install(vm: &Thread) -> vm::Result<()> {
+    vm.register_type::<ObjectPtr>("lancer.sui.object.prim.ObjectPtr", &[])?;
     add_extern_module_with_deps(
         vm,
         "lancer.sui.object.prim",
