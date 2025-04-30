@@ -31,7 +31,7 @@ pub struct WMoveObject(pub MoveObject);
 impl VmType for WMoveObject {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.sui.object.MoveObject")
+        vm.find_type_info("lancer.sui.object.types.MoveObject")
             .unwrap()
             .clone()
             .into_type()
@@ -63,7 +63,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WMoveObject {
                     unsafe {
                         MoveObject::new_from_execution_with_limit(
                             type_.0.into(),
-                            false,
+                            true, // for historical reasons
                             version,
                             contents.into(),
                             u64::MAX,
@@ -72,7 +72,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WMoveObject {
                     .unwrap(),
                 )
             }
-            _ => panic!("ValueRef is not a lancer.sui.object.MoveObject"),
+            _ => panic!("ValueRef is not a lancer.sui.object.types.MoveObject"),
         }
     }
 }
@@ -104,7 +104,7 @@ pub struct WTypeOrigin(pub TypeOrigin);
 impl VmType for WTypeOrigin {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.sui.object.TypeOrigin")
+        vm.find_type_info("lancer.sui.object.types.TypeOrigin")
             .unwrap()
             .clone()
             .into_type()
@@ -139,7 +139,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WTypeOrigin {
                     package: package.into(),
                 })
             }
-            _ => panic!("ValueRef is not a lancer.sui.object.TypeOrigin"),
+            _ => panic!("ValueRef is not a lancer.sui.object.types.TypeOrigin"),
         }
     }
 }
@@ -171,7 +171,7 @@ pub struct WUpgradeInfo(pub UpgradeInfo);
 impl VmType for WUpgradeInfo {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.sui.object.UpgradeInfo")
+        vm.find_type_info("lancer.sui.object.types.UpgradeInfo")
             .unwrap()
             .clone()
             .into_type()
@@ -200,7 +200,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WUpgradeInfo {
                     upgraded_version,
                 })
             }
-            _ => panic!("ValueRef is not a lancer.sui.object.UpgradeInfo"),
+            _ => panic!("ValueRef is not a lancer.sui.object.types.UpgradeInfo"),
         }
     }
 }
@@ -240,7 +240,7 @@ pub struct WMovePackage(pub MovePackage);
 impl VmType for WMovePackage {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.sui.object.MovePackage")
+        vm.find_type_info("lancer.sui.object.types.MovePackage")
             .unwrap()
             .clone()
             .into_type()
@@ -293,7 +293,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WMovePackage {
                     .unwrap(),
                 )
             }
-            _ => panic!("ValueRef is not a lancer.sui.object.MovePackage"),
+            _ => panic!("ValueRef is not a lancer.sui.object.types.MovePackage"),
         }
     }
 }
@@ -339,7 +339,7 @@ pub struct WObjectData(pub ObjectData);
 impl VmType for WObjectData {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.sui.object.ObjectData")
+        vm.find_type_info("lancer.sui.object.types.ObjectData")
             .unwrap()
             .clone()
             .into_type()
@@ -360,7 +360,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectData {
                 )),
                 _ => panic!("Unknown ObjectData variant"),
             },
-            _ => panic!("ValueRef is not a lancer.sui.object.ObjectData"),
+            _ => panic!("ValueRef is not a lancer.sui.object.types.ObjectData"),
         }
     }
 }
@@ -383,10 +383,16 @@ impl<'vm> Pushable<'vm> for WObjectData {
 
 pub struct WObject(pub Object);
 
+impl WObject {
+    pub fn serialize(self) -> Result<serde_json::Value, String> {
+        serde_json::to_value(self.0).map_err(|e| e.to_string())
+    }
+}
+
 impl VmType for WObject {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.sui.object.Object")
+        vm.find_type_info("lancer.sui.object.types.Object")
             .unwrap()
             .clone()
             .into_type()
@@ -435,7 +441,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObject {
                     .into(),
                 )
             }
-            _ => panic!("ValueRef is not a lancer.sui.object.Object"),
+            _ => panic!("ValueRef is not a lancer.sui.object.types.Object"),
         }
     }
 }
@@ -471,7 +477,7 @@ pub struct WObjectType(pub ObjectType);
 impl VmType for WObjectType {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.sui.object.ObjectType")
+        vm.find_type_info("lancer.sui.object.types.ObjectType")
             .unwrap()
             .clone()
             .into_type()
@@ -492,7 +498,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectType {
                 }
                 _ => panic!("Unknown ObjectType variant"),
             },
-            _ => panic!("ValueRef is not a lancer.sui.object.ObjectType"),
+            _ => panic!("ValueRef is not a lancer.sui.object.types.ObjectType"),
         }
     }
 }
@@ -524,10 +530,16 @@ pub struct ObjectInfo {
 */
 pub struct WObjectInfo(pub ObjectInfo);
 
+impl WObjectInfo {
+    pub fn serialize(self) -> Result<serde_json::Value, String> {
+        serde_json::to_value(self.0).map_err(|e| e.to_string())
+    }
+}
+
 impl VmType for WObjectInfo {
     type Type = Self;
     fn make_type(vm: &Thread) -> ArcType {
-        vm.find_type_info("lancer.sui.object.ObjectInfo")
+        vm.find_type_info("lancer.sui.object.types.ObjectInfo")
             .unwrap()
             .clone()
             .into_type()
@@ -590,7 +602,7 @@ impl<'vm, 'value> Getable<'vm, 'value> for WObjectInfo {
                     previous_transaction,
                 })
             }
-            _ => panic!("ValueRef is not a lancer.sui.object.ObjectInfo"),
+            _ => panic!("ValueRef is not a lancer.sui.object.types.ObjectInfo"),
         }
     }
 }
@@ -620,4 +632,33 @@ impl<'vm> Pushable<'vm> for WObjectInfo {
         )?;
         Ok(())
     }
+}
+
+fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
+    ExternModule::new(
+        vm,
+        record!(
+            serialize_object => primitive!(
+                1,
+                "lancer.sui.object.prim.serialize_object",
+                WObject::serialize),
+            serialize_object_info => primitive!(
+                1,
+                "lancer.sui.object.prim.serialize_object_info",
+                WObjectInfo::serialize),
+        ),
+    )
+}
+
+pub fn install(vm: &Thread) -> vm::Result<()> {
+    add_extern_module_with_deps(
+        vm,
+        "lancer.sui.object.prim",
+        load,
+        vec![
+            "std.json".to_string(),
+            "lancer.sui.object.types".to_string(),
+        ],
+    );
+    Ok(())
 }

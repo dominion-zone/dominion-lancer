@@ -1,37 +1,41 @@
 let { SuiAddress, ? } = import! lancer.sui.sui_address
 let { Serialize, ? } = import! std.json.ser
-let { Deserialize, ? } = import! std.json.de
+let { Result, ? } = import! std.result
 let { ? } = import! std.unit
 let { Value } = import! std.json
-let m = import! std.map
-let { Result } = import! std.result
 
-#[derive(Show, Serialize, Deserialize)]
-type PublicReporting = {
-    dummy: Int,
-}
-
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type PartialReporting = {
     owned_by: Array SuiAddress,
     objects:  Array SuiAddress,
 }
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show, Serialize)]
 type HidingReporting = {
     owned_by: Array SuiAddress,
     objects:  Array SuiAddress,
 }
 
-#[derive(Show, Serialize, Deserialize)]
+#[derive(Show)]
 type Reporting =
-    | Public PublicReporting
+    | Public
     | Partial PartialReporting
     | Hiding HidingReporting
+
+let serialize_Reporting: Serialize Reporting = {
+    serialize = \x ->
+        match x with
+        | Public -> Ok <| String "Public"
+        | Partial p ->
+            do inner = serialize_PartialReporting.serialize p
+            Ok <| Array [String "Partial", inner]
+        | Hiding p ->
+            do inner = serialize_HidingReporting.serialize p
+            Ok <| Array [String "Hiding", inner]
+}
 
 {
     Reporting,
     show_Reporting,
     serialize_Reporting,
-    deserialize_Reporting,
 }

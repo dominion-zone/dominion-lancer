@@ -8,7 +8,7 @@ use gluon::{
     vm::{self, ExternModule},
 };
 use rpc::install_rpc;
-use sui::install_sui;
+use sui::install;
 
 pub mod compiler;
 pub mod reporting;
@@ -316,7 +316,7 @@ fn load_lancer(vm: &Thread) -> vm::Result<vm::ExternModule> {
 }
 
 pub fn install_lancer(vm: &Thread) -> vm::Result<()> {
-    install_sui(vm)?;
+    install(vm)?;
     install_compiler(vm)?;
     transaction::install(vm)?;
     install_rpc(vm)?;

@@ -5,11 +5,13 @@ let { (<|), (<<) } = import! std.function
 let { wrap } = import! std.applicative
 let { Lift, run_lift, lift, ? } = import! std.effect.lift
 let { Serialize, ? } = import! std.json.ser
+let { Result, ? } = import! std.result
 let { Show } = import! std.show
 let { Reporting, ? } = import! lancer.reporting
 let { Transaction, ? } = import! lancer.transaction
 let { TransactionBlockResponse, ? } = import! lancer.rpc
 let { Object, ? } = import! lancer.sui.object
+let { Value } = import! std.json
 
 #[derive(Show, Serialize)]
 type KeypairGeneratedInfo = {
@@ -35,7 +37,7 @@ type DemonstrationCommitedInfo = {
     live_objects: Array Object,
 }
 
-#[derive(Show, Serialize)]
+#[derive(Show)]
 type SystemLog =
     | KeypairGenerated KeypairGeneratedInfo
     | TxExecuted TxExecutedInfo
@@ -43,10 +45,39 @@ type SystemLog =
     | DemonstrationCommited DemonstrationCommitedInfo
     | DirectoryCompiled String
 
-#[derive(Show, Serialize)]
+let serialize_SystemLog: Serialize SystemLog = {
+    serialize = \x ->
+        match x with
+        | KeypairGenerated info ->
+            do inner = serialize_KeypairGeneratedInfo.serialize info
+            Ok <| Array [String "KeypairGenerated", inner]
+        | TxExecuted info ->
+            do inner = serialize_TxExecutedInfo.serialize info
+            Ok <| Array [String "TxExecuted", inner]
+        | PreparationCommited info ->
+            do inner = serialize_PreparationCommitedInfo.serialize info
+            Ok <| Array [String "PreparationCommited", inner]
+        | DemonstrationCommited info ->
+            do inner = serialize_DemonstrationCommitedInfo.serialize info
+            Ok <| Array [String "DemonstrationCommited", inner]
+        | DirectoryCompiled dir ->
+            Ok <| Array [String "DirectoryCompiled", String dir]
+}
+
+#[derive(Show)]
 type Log =
     | System SystemLog
     | User String
+
+let serialize_Log: Serialize Log = {
+    serialize = \x ->
+        match x with
+        | System s ->
+            do inner = serialize_SystemLog.serialize s
+            Ok <| Array [String "System", inner]
+        | User s ->
+            Ok <| Array [String "User", String s]
+}
 
 {
     Log,

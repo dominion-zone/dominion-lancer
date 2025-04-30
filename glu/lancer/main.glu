@@ -8,7 +8,7 @@ let io @ { IO, ? } = import! std.io
 let { map } = import! std.functor
 let { Log, ? } = import! lancer.report
 let { exec_logger, map_logs } = import! lancer.effect.logger
-let { Show, ? } = import! std.show
+let { Show, show, ? } = import! std.show
 let { to_string_pretty, ? } = import! std.json.ser
 let { unwrap_ok } = import! std.result
 

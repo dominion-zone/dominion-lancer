@@ -101,6 +101,7 @@ let run_test_cluster cluster temp_wallet working_dir eff =
                 do balance = tc.get_balance cluster coin_type owner
                 loop <| f balance
             | CommitPreparation retaining_keys ->
+                lift <| io.println "Commit preparation"
                 do stage = get
                 if stage == Preparation then
                     do available_keys = tw.get_keys temp_wallet
@@ -112,6 +113,7 @@ let run_test_cluster cluster temp_wallet working_dir eff =
                 else
                     lift <| io.throw "Invalid state for commit preparation"
             | CommitDemonstration reporting ->
+                lift <| io.println "Commit demonstration"
                 do stage = get
                 if stage == Demonstration then
                     do available_keys = tw.get_keys temp_wallet

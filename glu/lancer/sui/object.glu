@@ -1,140 +1,20 @@
-let { StructTag, ? } = import! lancer.sui.types
-let { SuiAddress, ? } = import! lancer.sui.sui_address
-let { Digest, ? } = import! lancer.sui.digest
+let prim = import! lancer.sui.object.prim
+
+let types @ { Object, ObjectInfo, ? } = import! lancer.sui.object.types
+
 let { Serialize, ? } = import! std.json.ser
 let { Result, ? } = import! std.result
-let { Owner, ? } = import! lancer.rpc.types
-let { ? } = import! std.byte
-let { ? } = import! lancer.byte
-let { Map, ? } = import! std.map
 
-type SequenceNumber = Int
-type ObjectID = SuiAddress
-type ObjectDigest = Digest
-type TransactionDigest = Digest
-
-#[derive(Show, Eq, Serialize)]
-type MoveObject = {
-    // The type of this object. Immutable
-    type_: StructTag,
-    // Number that increases each time a tx takes this object as a mutable input
-    // This is a lamport timestamp, not a sequentially increasing version
-    version: SequenceNumber,
-    // BCS bytes of a Move struct value
-    contents: Array Byte,
+let serialize_Object : Serialize Object = {
+    serialize = prim.serialize_object
 }
 
-#[derive(Show, Eq, Serialize)]
-type TypeOrigin = {
-    module_name: String,
-    datatype_name: String,
-    package: ObjectID,
-}
-
-#[derive(Show, Eq, Serialize)]
-type UpgradeInfo = {
-    // The ID of the package that this package is an upgrade of
-    id: SuiAddress,
-    // The version of the package that this package is an upgrade of
-    version: SequenceNumber,
-}
-
-#[derive(Show, Eq, Serialize)]
-type MovePackage = {
-    id: SuiAddress,
-    // Most move packages are uniquely identified by their ID (i.e. there is only one version per
-    // ID), but the version is still stored because one package may be an upgrade of another (at a
-    // different ID), in which case its version will be one greater than the version of the
-    // upgraded package.
-    //
-    // Framework packages are an exception to this rule -- all versions of the framework packages
-    // exist at the same ID, at increasing versions.
-    //
-    // In all cases, packages are referred to by move calls using just their ID, and they are
-    // always loaded at their latest version.
-    version: SequenceNumber,
-    
-    module_map: Map String (Array Byte),
-
-    // Maps struct/module to a package version where it was first defined, stored as a vector for
-    // simple serialization and deserialization.
-    type_origin_table: Array TypeOrigin,
-
-    // For each dependency, maps original package ID to the info about the (upgraded) dependency
-    // version that this package is using
-    linkage_table: Map String UpgradeInfo,
-}
-
-#[derive(Show, Eq, Serialize)]
-type ObjectType =
-    // Move package containing one or more bytecode modules
-    | Package
-    // A Move struct of the given type
-    | Struct StructTag
-
-#[derive(Show, Eq, Serialize)]
-type ObjectInfo = {
-    object_id: ObjectID,
-    version: SequenceNumber,
-    digest: ObjectDigest,
-    type_: ObjectType,
-    owner: Owner,
-    previous_transaction: TransactionDigest,
-}
-
-#[derive(Show, Eq, Serialize)]
-type ObjectData =
-    // An object whose governing logic lives in a published Move module
-    | Move MoveObject
-    // Map from each module name to raw serialized Move module bytes
-    | Package MovePackage
-
-#[derive(Show, Eq, Serialize)]
-type Object = {
-    data: ObjectData,
-    // The owner that unlocks this object
-    owner: Owner,
-    // The digest of the transaction that created or last mutated this object
-    previous_transaction: TransactionDigest,
-    // The amount of SUI we would rebate if this object gets deleted.
-    // This number is re-calculated each time the object is mutated based on
-    // the present storage gas price.
-    storage_rebate: Int,
+let serialize_ObjectInfo : Serialize ObjectInfo = {
+    serialize = prim.serialize_object_info
 }
 
 {
-    ObjectID,
-    ObjectDigest,
-    ObjectType,
-    MoveObject,
-    MovePackage,
-    ObjectInfo,
-    UpgradeInfo,
-    TypeOrigin,
-    ObjectData,
-    Object,
-
-    eq_MoveObject,
-    eq_MovePackage,
-    eq_ObjectInfo,
-    eq_UpgradeInfo,
-    eq_TypeOrigin,
-    eq_ObjectData,
-    eq_Object,
-
-    show_MoveObject,
-    show_MovePackage,
-    show_ObjectInfo,
-    show_UpgradeInfo,
-    show_TypeOrigin,
-    show_ObjectData,
-    show_Object,
-
-    serialize_MoveObject,
-    serialize_MovePackage,
-    serialize_ObjectInfo,
-    serialize_UpgradeInfo,
-    serialize_TypeOrigin,
-    serialize_ObjectData,
     serialize_Object,
+    serialize_ObjectInfo,
+    .. types
 }

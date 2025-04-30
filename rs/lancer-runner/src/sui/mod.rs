@@ -127,7 +127,7 @@ impl WSuiAddress {
     }
 }
 
-fn load_sui(vm: &Thread) -> vm::Result<vm::ExternModule> {
+fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
     ExternModule::new(
         vm,
         record!(
@@ -147,15 +147,18 @@ fn load_sui(vm: &Thread) -> vm::Result<vm::ExternModule> {
     )
 }
 
-pub fn install_sui(vm: &Thread) -> vm::Result<()> {
+pub fn install(vm: &Thread) -> vm::Result<()> {
     vm.register_type::<WDigest>("lancer.sui.prim.digest.Digest", &[])?;
     vm.register_type::<WSuiAddress>("lancer.sui.prim.sui_address.SuiAddress", &[])?;
 
     add_extern_module_with_deps(
         vm,
         "lancer.sui.prim",
-        load_sui,
+        load,
         vec!["std.types".to_string()],
     );
+
+    object::install(vm)?;
+
     Ok(())
 }

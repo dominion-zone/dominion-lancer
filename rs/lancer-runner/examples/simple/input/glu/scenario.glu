@@ -289,4 +289,4 @@ let _ = assert(balance > 0)
 
 log <| "Now hacker has " ++ show balance ++ " some coins"
 
-commit_demonstration <| Public { dummy = 1 }
+commit_demonstration <| Partial { owned_by = [hacker], objects = [] }

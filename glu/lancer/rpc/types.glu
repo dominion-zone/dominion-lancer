@@ -14,13 +14,13 @@ type ObjectDigest = Digest
 type TransactionDigest = Digest
 type ObjectID = SuiAddress
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Shared = {
     // The version at which the object became shared
     initial_shared_version: SequenceNumber,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type ConsensusV2 = {
     // The version at which the object most recently became a consensus object.
     // This serves the same function as `initial_shared_version`, except it may change
@@ -30,7 +30,7 @@ type ConsensusV2 = {
     authenticator: SuiAddress,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Owner =
     // Object is exclusively owned by a single address, and is mutable.
     | AddressOwner SuiAddress
@@ -44,7 +44,7 @@ type Owner =
     // Object is sequenced via consensus. Ownership is managed by the configured authenticator.
     | ConsensusV2 ConsensusV2
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Published = {
     package_id: ObjectID,
     version: SequenceNumber,
@@ -52,7 +52,7 @@ type Published = {
     modules: Array String,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Transferred = {
     sender: SuiAddress,
     recipient: Owner,
@@ -62,7 +62,7 @@ type Transferred = {
     digest: ObjectDigest,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Mutated = {
     sender: SuiAddress,
     owner: Owner,
@@ -73,7 +73,7 @@ type Mutated = {
     digest: ObjectDigest,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Deleted = {
     sender: SuiAddress,
     object_type: StructTag,
@@ -81,7 +81,7 @@ type Deleted = {
     version: SequenceNumber,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Wrapped = {
     sender: SuiAddress,
     object_type: StructTag,
@@ -89,7 +89,7 @@ type Wrapped = {
     version: SequenceNumber,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Created = {
     sender: SuiAddress,
     owner: Owner,
@@ -99,7 +99,7 @@ type Created = {
     digest: ObjectDigest,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type ObjectChange =
     // Module published
     | Published Published
@@ -121,7 +121,7 @@ type TransactionBlockResponse = {
     object_changes: Array ObjectChange,
 }
 
-#[derive(Show, Eq, Serialize)]
+#[derive(Show, Eq)]
 type Coin = {
     coin_type: StructTag,
     coin_object_id: ObjectID,
@@ -159,19 +159,6 @@ type Coin = {
     eq_ObjectChange,
     eq_TransactionBlockResponse,
     eq_Coin,
-
-    serialize_Shared,
-    serialize_ConsensusV2,
-    serialize_Owner,
-    serialize_Published,
-    serialize_Transferred,
-    serialize_Mutated,
-    serialize_Deleted,
-    serialize_Wrapped,
-    serialize_Created,
-    serialize_ObjectChange,
-    // serialize_TransactionBlockResponse,
-    serialize_Coin,
 
     SequenceNumber,
     ObjectDigest,

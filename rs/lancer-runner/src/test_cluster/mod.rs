@@ -342,7 +342,7 @@ pub fn install(vm: &Thread) -> vm::Result<()> {
         load,
         vec![
             "lancer.rpc.types".to_string(),
-            "lancer.sui.object".to_string(),
+            "lancer.sui.object.types".to_string(),
         ],
     );
 
