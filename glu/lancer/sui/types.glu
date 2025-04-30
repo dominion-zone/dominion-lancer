@@ -1,35 +1,81 @@
 let { SuiAddress, ? } = import! lancer.sui.sui_address
+let { Value } = import! std.json
+let { Serialize, serialize ? } = import! std.json.ser
+let { Result, ? } = import! std.result
+let { (<|) } = import! std.function
+let { Map, empty, insert } = import! std.map
 
 type AccountAddress = SuiAddress
 type Identifier = String
 
 rec
-    #[derive(Show, Eq)]
-    type StructTag = {
-        address: AccountAddress,
-        module: Identifier,
-        name: Identifier,
-        type_params: Array TypeTag,
-    }
-    #[derive(Show, Eq)]
-    type TypeTag =
-        | Bool
-        | U8
-        | U64
-        | U128
-        | Address
-        | Signer
-        | Vector TypeTag
-        | Struct StructTag
-        | U16
-        | U32
-        | U256
-in {
+#[derive(Show, Eq)]
+type StructTag = {
+    address: AccountAddress,
+    module: Identifier,
+    name: Identifier,
+    type_params: Array TypeTag,
+}
+#[derive(Show, Eq)]
+type TypeTag =
+    | Bool
+    | U8
+    | U64
+    | U128
+    | Address
+    | Signer
+    | Vector TypeTag
+    | Struct StructTag
+    | U16
+    | U32
+    | U256
+
+
+in
+rec
+let serialize_TypeTag : Serialize TypeTag = {
+    serialize = \x ->
+        match x with
+        | Bool -> Ok <| String "Bool"
+        | U8 -> Ok <| String "U8"
+        | U64 -> Ok <| String "U64"
+        | U128 -> Ok <| String "U128"
+        | Address -> Ok <| String "Address"
+        | Signer -> Ok <| String "Signer"
+        | Vector t ->
+            do inner = serialize_TypeTag.serialize t
+            Ok <| Array [String "Vector ", inner]
+        | Struct s ->
+            do inner = serialize_StructTag.serialize s
+            Ok <| Array [String "Struct ", inner]
+        | U16 -> Ok <| String "U16"
+        | U32 -> Ok <| String "U32"
+        | U256 -> Ok <| String "U256"
+}
+let serialize_StructTag : Serialize StructTag = {
+    serialize = \x ->
+        let obj : Map String Value = empty
+        do address = serialize x.address
+        let object = insert "address" address obj
+        do module = serialize x.module
+        let object = insert "module" module obj
+        do name = serialize x.name
+        let object = insert "name" name obj
+        do type_params = serialize x.type_params
+        let object = insert "type_params" type_params obj
+        Ok <| Object obj
+}
+in
+{
     AccountAddress,
     StructTag,
     TypeTag,
     show_StructTag,
     show_TypeTag,
+
     eq_StructTag,
     eq_TypeTag,
+
+    serialize_StructTag,
+    serialize_TypeTag,
 }

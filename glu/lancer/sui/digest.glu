@@ -1,24 +1,33 @@
 let { digest } = import! lancer.sui.prim
-
+let { Serialize, ? } = import! std.json.ser
+let { Result, ? } = import! std.result
+let { (<<) } = import! std.function
+let { Value } = import! std.json
 let { Parse } = import! lancer.parse
 
-let show : Show digest.Digest = {
+type Digest = digest.Digest
+
+let show : Show Digest = {
     show = digest.to_string
 }
 
-let parse : Parse digest.Digest = {
+let parse : Parse Digest = {
     parse = digest.from_string
 }
 
-let eq : Eq digest.Digest = {
+let eq : Eq Digest = {
     (==) = digest.eq
 }
 
-type Digest = digest.Digest
+let serialize : Serialize Digest = {
+    serialize =  Ok << String << digest.to_string
+}
+
 
 {
     Digest,
     show,
     parse,
     eq,
+    serialize,
 }

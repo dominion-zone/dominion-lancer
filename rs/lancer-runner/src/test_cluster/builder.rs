@@ -27,7 +27,7 @@ impl Debug for WTestClusterBuilder {
 impl WTestClusterBuilder {
     pub fn new() -> Self {
         let builder = TestClusterBuilder::new()
-            .with_indexer_backed_rpc()
+            // .with_indexer_backed_rpc()
             .set_genesis_config(GenesisConfig::custom_genesis(1, 1));
         Self(RwLock::new(Some(builder)))
     }

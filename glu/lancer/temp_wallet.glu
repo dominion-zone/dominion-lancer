@@ -1,4 +1,4 @@
-let prim @ { TempWallet, get_keys } = import! lancer.temp_wallet.prim
+let prim @ { TempWallet } = import! lancer.temp_wallet.prim
 let effect @ { Eff, ? } = import! std.effect
 let { Lift, lift, ? } = import! std.effect.lift
 let { (<|), (<<) } = import! std.function
@@ -15,6 +15,9 @@ let retain_keys wallet keys : TempWallet -> Array SuiAddress -> Eff [| lift : Li
 
 let clear: TempWallet -> Eff [| lift : Lift IO | r |] ()
     = lift << prim.clear
+
+let get_keys: TempWallet -> Eff [| lift : Lift IO | r |] (Array SuiAddress)
+    = lift << prim.get_keys
 
 {
     TempWallet,

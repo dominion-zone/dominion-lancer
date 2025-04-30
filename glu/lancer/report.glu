@@ -9,6 +9,7 @@ let { Show } = import! std.show
 let { Reporting, ? } = import! lancer.reporting
 let { Transaction, ? } = import! lancer.transaction
 let { TransactionBlockResponse, ? } = import! lancer.rpc
+let { Object, ? } = import! lancer.sui.object
 
 #[derive(Show, Serialize)]
 type KeypairGeneratedInfo = {
@@ -23,12 +24,15 @@ type TxExecutedInfo = {
 
 #[derive(Show, Serialize)]
 type PreparationCommitedInfo = {
-    retaining_keys: Array SuiAddress,
+    available_keys: Array SuiAddress,
+    live_objects: Array Object,
 }
 
 #[derive(Show, Serialize)]
 type DemonstrationCommitedInfo = {
-    reporting: Reporting
+    reporting: Reporting,
+    available_keys: Array SuiAddress,
+    live_objects: Array Object,
 }
 
 #[derive(Show, Serialize)]
@@ -44,53 +48,13 @@ type Log =
     | System SystemLog
     | User String
 
-#[derive(Show, Serialize)]
-type PreparationReport = {
-    sql: String,
-    keys: Array SuiAddress,
-}
-
-#[derive(Show, Serialize)]
-type DemonstrationReport = {
-    sql: String,
-    keys: Array SuiAddress,
-}
-
-#[derive(Show, Serialize)]
-type FinalReport = {
-    preparation: PreparationReport,
-    demonstration: DemonstrationReport,
-}
-
-type ReportBuilder =
-    | Nothing
-    | Preparation PreparationReport
-    | Final FinalReport
-
-let build builder : ReportBuilder -> Eff [| lift : Lift IO | r |] FinalReport =
-    match builder with
-    | Nothing -> lift <| io.throw "Not prepared"
-    | Preparation p -> lift <| io.throw "Not demonstrated"
-    | Final r -> wrap r
-
 {
     Log,
     SystemLog,
-    ReportBuilder,
-    PreparationReport,
-    DemonstrationReport,
-    FinalReport,
-    build,
 
     show_Log,
     show_SystemLog,
-    show_PreparationReport,
-    show_DemonstrationReport,
-    show_FinalReport,
 
     serialize_Log,
     serialize_SystemLog,
-    serialize_PreparationReport,
-    serialize_DemonstrationReport,
-    serialize_FinalReport,
 }

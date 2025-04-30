@@ -20,6 +20,7 @@ use sui_types::{
 type ExecResult<T> = std::result::Result<T, String>;
 
 pub mod types;
+pub mod object;
 
 #[derive(Debug, Clone, VmType, PartialEq, Eq)]
 #[gluon(vm_type = "lancer.sui.prim.digest.Digest")]
@@ -77,7 +78,7 @@ impl WDigest {
     }
 }
 
-#[derive(Debug, Clone, VmType, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, VmType, PartialEq, Eq, Serialize, PartialOrd, Ord)]
 #[gluon(vm_type = "lancer.sui.prim.sui_address.SuiAddress")]
 #[serde(transparent)]
 pub struct WSuiAddress(pub SuiAddress);

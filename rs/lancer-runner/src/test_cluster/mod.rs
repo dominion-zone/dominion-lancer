@@ -9,7 +9,7 @@ use gluon_codegen::{Trace, Userdata, VmType};
 use std::fmt;
 use std::fmt::Debug;
 use sui_types::{
-    base_types::SuiAddress,
+    base_types::{ObjectID, SuiAddress},
     crypto::{Signature, Signer, SuiKeyPair, get_key_pair_from_rng},
     gas_model::units_types::Gas,
     programmable_transaction_builder::ProgrammableTransactionBuilder,
@@ -21,7 +21,11 @@ use tokio::sync::RwLock;
 
 use crate::{
     rpc::{WTransactionBlockResponse, coin::WCoin},
-    sui::{WSuiAddress, types::WStructTag},
+    sui::{
+        WSuiAddress,
+        object::{WObject, WObjectInfo},
+        types::WStructTag,
+    },
     temp_wallet::TempWallet,
     transaction::WTransaction,
 };
@@ -224,6 +228,48 @@ impl WTestCluster {
         .into()
     }
 
+    pub fn get_owned_objects(&self, owner: WSuiAddress) -> IO<Vec<WObjectInfo>> {
+        self.0
+            .fullnode_handle
+            .sui_node
+            .with(|node| {
+                node.state()
+                    .get_owner_objects(owner.0, None, usize::MAX, None)
+                    .map(|v| v.into_iter().map(WObjectInfo).collect())
+            })
+            .map_err(|e| e.to_string())
+            .into()
+    }
+
+    pub async fn get_object(&self, object_id: WSuiAddress) -> IO<WObject> {
+        async {
+            let r = self
+                .0
+                .get_object_from_fullnode_store(&ObjectID::from_address(object_id.0.into()))
+                .await
+                .ok_or("Failed to get object")?;
+            Ok::<_, String>(WObject(r))
+        }
+        .await
+        .into()
+    }
+
+    pub fn get_all_live_objects(&self) -> IO<Vec<WObject>> {
+        use sui_core::authority::authority_store_tables::LiveObject::Normal;
+        use sui_core::state_accumulator::AccumulatorStore;
+
+        IO::Value(self.0.fullnode_handle.sui_node.with(|node| {
+            node.state()
+                .database_for_testing()
+                .iter_live_object_set(false)
+                .map(|o| match o {
+                    Normal(o) => WObject(o),
+                    _ => unreachable!(),
+                })
+                .collect::<Vec<_>>()
+        }))
+    }
+
     async fn stop(&self) -> IO<()> {
         async {
             if !self.0.swarm.validator_nodes().next().unwrap().is_running() {
@@ -259,10 +305,26 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 3,
                 "lancer.test_cluster.prim.get_balance",
                 async fn WTestCluster::get_balance),
+            /*
             dump_db => primitive!(
                 1,
                 "lancer.test_cluster.prim.dump_db",
                 async fn WTestCluster::dump_db),
+            */
+            get_owned_objects => primitive!(
+                2,
+                "lancer.test_cluster.prim.get_owned_objects",
+                WTestCluster::get_owned_objects),
+
+            get_object => primitive!(
+                2,
+                "lancer.test_cluster.prim.get_object",
+                async fn WTestCluster::get_object),
+
+            get_all_live_objects => primitive!(
+                1,
+                "lancer.test_cluster.prim.get_all_live_objects",
+                WTestCluster::get_all_live_objects),
             stop => primitive!(
                 1,
                 "lancer.test_cluster.prim.stop",
@@ -278,7 +340,10 @@ pub fn install(vm: &Thread) -> vm::Result<()> {
         vm,
         "lancer.test_cluster.prim",
         load,
-        vec!["lancer.rpc.types".to_string()],
+        vec![
+            "lancer.rpc.types".to_string(),
+            "lancer.sui.object".to_string(),
+        ],
     );
 
     builder::install(vm)?;

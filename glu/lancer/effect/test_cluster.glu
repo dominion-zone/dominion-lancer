@@ -5,8 +5,8 @@ let tw @ { TempWallet } = import! lancer.temp_wallet
 let { Lift, run_lift, lift, ? } = import! std.effect.lift
 let { (<|), (<<) } = import! std.function
 let { wrap } = import! std.applicative
-let { State, exec_state, get, put } = import! std.effect.state
-let r @ { ReportBuilder, FinalReport, Log, SystemLog, ? } = import! lancer.report
+let { State, run_state, get, put } = import! std.effect.state
+let r @ { Log, SystemLog, ? } = import! lancer.report
 let io @ { IO } = import! std.io
 let { Transaction } = import! lancer.transaction
 let { TransactionBlockResponse } = import! lancer.rpc
@@ -57,92 +57,79 @@ let commit_demonstration reporting
 #[inline(never)]
 let extract_test_cluster x : [| test_cluster : TestCluster | r |] a -> TestCluster r a = convert_variant! x
 
-type Data = {
-    cluster: tc.TestCluster,
-    report_builder: ReportBuilder,
-    temp_wallet: TempWallet,
-}
+#[derive(Show, Eq)]
+type Stage =
+    | Preparation
+    | Demonstration
+    | Finalized
 
 let run_test_cluster cluster temp_wallet working_dir eff =
     let loop ve : Eff [|
             test_cluster: TestCluster,
             lift : Lift IO,
-            state: State Data,
+            state: State Stage,
             logger: Logger Log | r |] a
         -> Eff [|
             lift : Lift IO,
-            state: State Data,
+            state: State Stage,
             logger: Logger Log | r |] a =
         match ve with
         | Pure value -> wrap value
         | Impure e f ->
             match extract_test_cluster e with
             | GenerateKeypair ->
-                do current_state = get
-                do address = tw.generate_keypair current_state.temp_wallet
-                log <| System <| KeypairGenerated { address }
-                loop <| f address
+                do stage = get
+                if stage /= Finalized then
+                    do address = tw.generate_keypair temp_wallet
+                    log <| System <| KeypairGenerated { address }
+                    loop <| f address
+                else
+                    lift <| io.throw "Invalid state for generate keypair"
             | ExecuteTx gas_budget sender additional_signers transaction ->
-                do transaction = run_transaction_builder working_dir transaction
-                do current_state = get
-                do response = tc.execute_tx current_state.cluster current_state.temp_wallet transaction gas_budget sender additional_signers
-                log <| System <| TxExecuted { transaction, response }
-                loop <| f response
+                do stage = get
+                if stage /= Finalized then
+                    do transaction = run_transaction_builder working_dir transaction
+                    do response = tc.execute_tx cluster temp_wallet transaction gas_budget sender additional_signers
+                    log <| System <| TxExecuted { transaction, response }
+                    loop <| f response
+                else
+                    lift <| io.throw "Invalid state for execute transaction"
             | GetCoins coin_type owner ->
-                do current_state = get
-                do coins = tc.get_coins current_state.cluster coin_type owner
+                do coins = tc.get_coins cluster coin_type owner
                 loop <| f coins
             | GetBalance coin_type owner ->
-                do current_state = get
-                do balance = tc.get_balance current_state.cluster coin_type owner
+                do balance = tc.get_balance cluster coin_type owner
                 loop <| f balance
             | CommitPreparation retaining_keys ->
-                do current_state = get
-                tw.retain_keys current_state.temp_wallet retaining_keys
-                match current_state.report_builder with
-                | Nothing ->
-                    do sql = tc.dump_db current_state.cluster
-                    put <| {
-                        cluster = current_state.cluster,
-                        report_builder = Preparation {
-                            sql,
-                            keys = tw.get_keys current_state.temp_wallet,
-                        },
-                        temp_wallet = current_state.temp_wallet,
-                    }
-                    log <| System <| PreparationCommited { retaining_keys }
+                do stage = get
+                if stage == Preparation then
+                    do available_keys = tw.get_keys temp_wallet
+                    tw.retain_keys temp_wallet retaining_keys
+                    do live_objects = tc.get_all_live_objects cluster
+                    put Demonstration
+                    log <| System <| PreparationCommited { available_keys, live_objects }
                     loop <| f ()
-                | _ -> lift <| io.throw "Invalid state for commit preparation"
+                else
+                    lift <| io.throw "Invalid state for commit preparation"
             | CommitDemonstration reporting ->
-                do current_state = get
-                match current_state.report_builder with
-                | Preparation p ->
-                    do sql = tc.dump_db current_state.cluster
-                    tc.stop current_state.cluster
-                    put <| {
-                        cluster = current_state.cluster,
-                        report_builder = Final {
-                            preparation = p,
-                            demonstration = {
-                                sql,
-                                keys = tw.get_keys current_state.temp_wallet,
-                            },
-                        },
-                        temp_wallet = current_state.temp_wallet,
-                    }
-                    log <| System <| DemonstrationCommited { reporting }
+                do stage = get
+                if stage == Demonstration then
+                    do available_keys = tw.get_keys temp_wallet
+                    do live_objects = tc.get_all_live_objects cluster
+                    tc.stop cluster
+                    put Finalized
+                    log <| System <| DemonstrationCommited { reporting, available_keys, live_objects }
                     loop <| f ()
-                | _ -> lift <| io.throw "Invalid state for commit demonstration"
+                else
+                    lift <| io.throw "Invalid state for commit demonstration"
             | rest ->
                 Impure (inject_rest rest) (loop << f)
 
-    let initial_state = {
-        cluster,
-        report_builder = Nothing,
-        temp_wallet,
-    }
-    do s = exec_state initial_state <| loop eff
-    r.build s.report_builder
+    do { value, state } = run_state Preparation <| loop eff
+    if state == Finalized then
+        wrap value
+    else
+        lift <| io.throw "Test cluster not finalized"
 
 {
     TestCluster,

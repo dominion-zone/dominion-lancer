@@ -7,7 +7,7 @@ let tw @ { TempWallet } = import! lancer.temp_wallet
 let io @ { IO, ? } = import! std.io
 let { map } = import! std.functor
 let { Log, ? } = import! lancer.report
-let { run_logger, map_logs } = import! lancer.effect.logger
+let { exec_logger, map_logs } = import! lancer.effect.logger
 let { Show, ? } = import! std.show
 let { to_string_pretty, ? } = import! std.json.ser
 let { unwrap_ok } = import! std.result
@@ -27,9 +27,9 @@ let run builder working_dir scenario : TestClusterBuilder -> String -> Lancer _ 
         run_test_cluster test_cluster temp_wallet working_dir scenario
     
     // Apply the logger effect
-    let scenario = run_logger scenario
+    let scenario = exec_logger scenario
     // Run IO
-    do { value = final_report, logs } = run_lift scenario
+    do logs = run_lift scenario
     io.println <| unwrap_ok <| to_string_pretty logs
 
 run

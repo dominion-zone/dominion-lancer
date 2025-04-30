@@ -1,0 +1,13 @@
+let { Serialize, ? } = import! std.json.ser
+let { Result, ? } = import! std.result
+let { Value } = import! std.json
+let { from_byte } = import! std.int
+let { (<|), (<<) } = import! std.function
+
+let serialize_Byte : Serialize Byte = {
+    serialize = Ok << Int << from_byte
+}
+
+{
+    serialize_Byte,
+}

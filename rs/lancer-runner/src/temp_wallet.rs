@@ -58,10 +58,7 @@ impl TempWallet {
 
     pub async fn retain_keys(&self, addresses: Vec<WSuiAddress>) -> IO<()> {
         let mut lock = self.0.write().await;
-        let addresses = addresses
-            .into_iter()
-            .map(|a| a.0)
-            .collect::<HashSet<_>>();
+        let addresses = addresses.into_iter().map(|a| a.0).collect::<HashSet<_>>();
         lock.retain(move |k, _| addresses.contains(k));
         IO::Value(())
     }
@@ -90,13 +87,15 @@ impl TempWallet {
         Ok(f(keypairs))
     }
 
-    pub async fn get_keys(&self) -> Vec<WSuiAddress> {
-        self.0
-            .read()
-            .await
-            .keys()
-            .map(|k| WSuiAddress(k.clone()))
-            .collect::<Vec<_>>()
+    pub async fn get_keys(&self) -> IO<Vec<WSuiAddress>> {
+        IO::Value(
+            self.0
+                .read()
+                .await
+                .keys()
+                .map(|k| WSuiAddress(k.clone()))
+                .collect::<Vec<_>>(),
+        )
     }
 
     pub async fn clear(&self) -> IO<()> {

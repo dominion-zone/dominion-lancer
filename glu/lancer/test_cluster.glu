@@ -8,6 +8,7 @@ let { TempWallet } = import! lancer.temp_wallet
 let prim @ { TestCluster } = import! lancer.test_cluster.prim
 let { StructTag } = import! lancer.sui.types
 let { Coin } = import! lancer.rpc.types
+let { Object, ObjectInfo } = import! lancer.sui.object
 
 let execute_tx cluster temp_wallet tx gas_budget sender additional_signers
     : TestCluster -> TempWallet -> Transaction -> Int -> SuiAddress -> Array SuiAddress
@@ -24,9 +25,25 @@ let get_balance cluster coin_type owner
     -> Eff [| lift : Lift IO | r |] Int =
     lift <| prim.get_balance cluster coin_type owner
 
+/*
 let dump_db cluster
     : TestCluster -> Eff [| lift : Lift IO | r |] String =
     lift <| prim.dump_db cluster
+*/
+
+let get_owned_objects cluster owner
+    : TestCluster -> SuiAddress
+    -> Eff [| lift : Lift IO | r |] (Array ObjectInfo) =
+    lift <| prim.get_owned_objects cluster owner
+
+let get_object cluster object_id
+    : TestCluster -> SuiAddress
+    -> Eff [| lift : Lift IO | r |] Object =
+    lift <| prim.get_object cluster object_id
+
+let get_all_live_objects cluster
+    : TestCluster -> Eff [| lift : Lift IO | r |] (Array Object) =
+    lift <| prim.get_all_live_objects cluster
 
 let stop cluster
     : TestCluster -> Eff [| lift : Lift IO | r |] () =
@@ -37,6 +54,9 @@ let stop cluster
     execute_tx,
     get_coins,
     get_balance,
-    dump_db,
+    // dump_db,
+    get_owned_objects,
+    get_object,
+    get_all_live_objects,
     stop,
 }

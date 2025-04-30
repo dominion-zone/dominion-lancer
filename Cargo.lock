@@ -4355,6 +4355,7 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_json",
+ "sui-core",
  "sui-framework",
  "sui-json-rpc-types",
  "sui-keys",

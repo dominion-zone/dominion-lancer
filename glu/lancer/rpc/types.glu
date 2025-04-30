@@ -1,20 +1,26 @@
 let { Digest, ? } = import! lancer.sui.digest
 let { SuiAddress, ? } = import! lancer.sui.sui_address
+let { StructTag, ? } = import! lancer.sui.types
+let { Serialize, ? } = import! std.json.ser
+let { Result, ? } = import! std.result
+let { Value, ? } = import! std.json
+let { from_byte } = import! std.int
+let { (<|), (<<) } = import! std.function
 let { ? } = import! std.byte
-let { StructTag, AccountAddress, ? } = import! lancer.sui.types
+let { ? } = import! lancer.byte
 
 type SequenceNumber = Int
 type ObjectDigest = Digest
 type TransactionDigest = Digest
 type ObjectID = SuiAddress
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Shared = {
     // The version at which the object became shared
     initial_shared_version: SequenceNumber,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type ConsensusV2 = {
     // The version at which the object most recently became a consensus object.
     // This serves the same function as `initial_shared_version`, except it may change
@@ -24,7 +30,7 @@ type ConsensusV2 = {
     authenticator: SuiAddress,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Owner =
     // Object is exclusively owned by a single address, and is mutable.
     | AddressOwner SuiAddress
@@ -38,7 +44,7 @@ type Owner =
     // Object is sequenced via consensus. Ownership is managed by the configured authenticator.
     | ConsensusV2 ConsensusV2
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Published = {
     package_id: ObjectID,
     version: SequenceNumber,
@@ -46,7 +52,7 @@ type Published = {
     modules: Array String,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Transferred = {
     sender: SuiAddress,
     recipient: Owner,
@@ -56,7 +62,7 @@ type Transferred = {
     digest: ObjectDigest,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Mutated = {
     sender: SuiAddress,
     owner: Owner,
@@ -67,7 +73,7 @@ type Mutated = {
     digest: ObjectDigest,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Deleted = {
     sender: SuiAddress,
     object_type: StructTag,
@@ -75,7 +81,7 @@ type Deleted = {
     version: SequenceNumber,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Wrapped = {
     sender: SuiAddress,
     object_type: StructTag,
@@ -83,7 +89,7 @@ type Wrapped = {
     version: SequenceNumber,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Created = {
     sender: SuiAddress,
     owner: Owner,
@@ -93,7 +99,7 @@ type Created = {
     digest: ObjectDigest,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type ObjectChange =
     // Module published
     | Published Published
@@ -108,14 +114,14 @@ type ObjectChange =
     // New object creation
     | Created Created
 
-#[derive(Show, Eq)]
+#[derive(Eq)]
 type TransactionBlockResponse = {
     digest: Digest,
     raw_transaction: Array Byte,
     object_changes: Array ObjectChange,
 }
 
-#[derive(Show, Eq)]
+#[derive(Show, Eq, Serialize)]
 type Coin = {
     coin_type: StructTag,
     coin_object_id: ObjectID,
@@ -138,13 +144,37 @@ type Coin = {
     show_Wrapped,
     show_Created,
     show_ObjectChange,
-    show_TransactionBlockResponse,
+    // show_TransactionBlockResponse,
     show_Coin,
+
+    eq_Shared,
+    eq_ConsensusV2,
+    eq_Owner,
+    eq_Published,
+    eq_Transferred,
+    eq_Mutated,
+    eq_Deleted,
+    eq_Wrapped,
+    eq_Created,
+    eq_ObjectChange,
+    eq_TransactionBlockResponse,
     eq_Coin,
+
+    serialize_Shared,
+    serialize_ConsensusV2,
+    serialize_Owner,
+    serialize_Published,
+    serialize_Transferred,
+    serialize_Mutated,
+    serialize_Deleted,
+    serialize_Wrapped,
+    serialize_Created,
+    serialize_ObjectChange,
+    // serialize_TransactionBlockResponse,
+    serialize_Coin,
 
     SequenceNumber,
     ObjectDigest,
-    AccountAddress,
     Owner,
     ObjectID,
     Coin,
