@@ -35,6 +35,7 @@ type DemonstrationCommitedInfo = {
     reporting: Reporting,
     available_keys: Array SuiAddress,
     live_objects: Array ObjectPtr,
+    description: String,
 }
 
 #[derive(Show)]

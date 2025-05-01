@@ -25,7 +25,7 @@ type TestCluster r a =
     | GetCoins : StructTag -> SuiAddress -> TestCluster r (Array Coin)
     | GetBalance : StructTag -> SuiAddress -> TestCluster r Int
     | CommitPreparation : Array SuiAddress -> TestCluster r ()
-    | CommitDemonstration : Reporting -> TestCluster r ()
+    | CommitDemonstration : String -> Reporting -> TestCluster r ()
     .. r
 
 let generate_keypair : Eff [| test_cluster : TestCluster | r |] SuiAddress =
@@ -50,9 +50,9 @@ let get_balance coin_type owner
 let commit_preparation retaining_keys : Array SuiAddress -> Eff [| test_cluster : TestCluster | r |] () =
     Impure (convert_effect! test_cluster (CommitPreparation retaining_keys)) Pure
 
-let commit_demonstration reporting
-    : Reporting -> Eff [| test_cluster : TestCluster | r |] () =
-    Impure (convert_effect! test_cluster (CommitDemonstration reporting)) Pure
+let commit_demonstration description reporting
+    : String -> Reporting -> Eff [| test_cluster : TestCluster | r |] () =
+    Impure (convert_effect! test_cluster (CommitDemonstration description reporting)) Pure
 
 #[inline(never)]
 let extract_test_cluster x : [| test_cluster : TestCluster | r |] a -> TestCluster r a = convert_variant! x
@@ -112,7 +112,7 @@ let run_test_cluster cluster temp_wallet working_dir eff =
                     loop <| f ()
                 else
                     lift <| io.throw "Invalid state for commit preparation"
-            | CommitDemonstration reporting ->
+            | CommitDemonstration description reporting ->
                 lift <| io.println "Commit demonstration"
                 do stage = get
                 if stage == Demonstration then
@@ -120,7 +120,7 @@ let run_test_cluster cluster temp_wallet working_dir eff =
                     do live_objects = tc.get_all_live_objects cluster
                     tc.stop cluster
                     put Finalized
-                    log <| System <| DemonstrationCommited { reporting, available_keys, live_objects }
+                    log <| System <| DemonstrationCommited { reporting, available_keys, live_objects, description }
                     loop <| f ()
                 else
                     lift <| io.throw "Invalid state for commit demonstration"

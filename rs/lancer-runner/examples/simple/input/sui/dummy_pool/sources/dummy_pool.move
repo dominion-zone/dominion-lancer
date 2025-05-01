@@ -26,7 +26,7 @@ public struct Vault<phantom T> has key {
     price_bp: u64,
 }
 
-public struct VaultAdminCap<phantom T> has key {
+public struct VaultAdminCap<phantom T> has key, store {
     id: UID,
     vault_id: ID,
 }

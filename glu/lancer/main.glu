@@ -9,16 +9,18 @@ let { map } = import! std.functor
 let { Log, ? } = import! lancer.report
 let { exec_logger, map_logs } = import! lancer.effect.logger
 let { Show, show, ? } = import! std.show
-let { to_string_pretty, ? } = import! std.json.ser
+let { to_string, ? } = import! std.json.ser
 let { unwrap_ok } = import! std.result
+let { (<<), (<|) } = import! std.function
 
 let tcbi @ { TestClusterBuilder } = import! lancer.test_cluster.builder
-let io @ { ? } = import! std.io
 
 let { TestCluster, run_test_cluster } = import! lancer.effect.test_cluster
 let { Lancer } = import! lancer.types
 
-let run builder working_dir scenario : TestClusterBuilder -> String -> Lancer _ -> IO () =
+let { make_public_summary, ? } = import! lancer.summary
+
+let run builder working_dir scenario : TestClusterBuilder -> String -> Lancer _ -> IO (String, Option String) =
     let scenario = map_logs (\x -> User x) scenario
     // Apply the test cluster effect
     let scenario =
@@ -30,6 +32,9 @@ let run builder working_dir scenario : TestClusterBuilder -> String -> Lancer _ 
     let scenario = exec_logger scenario
     // Run IO
     do logs = run_lift scenario
-    io.println <| unwrap_ok <| to_string_pretty logs
+    let public_summary = make_public_summary logs
+    let logs = unwrap_ok <| to_string logs
+    let public_summary = map (unwrap_ok << to_string) public_summary
+    wrap (logs, public_summary)
 
 run

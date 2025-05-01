@@ -1,0 +1,104 @@
+let { Log, SystemLog, ? } = import! lancer.report
+let { Reporting, ? } = import! lancer.reporting
+let a @ { Array, ? } = import! std.array
+let io @ { IO, ? } = import! std.io
+let { (<|), (<<) } = import! std.function
+let { wrap } = import! std.applicative
+let { join } = import! std.path
+let { error } = import! std.prim
+let { Log, SystemLog, ? } = import! lancer.report
+let { State, evalState, get, put, ? } = import! std.state
+let { ObjectPtr, object_id, object_owner, ? } = import! lancer.sui.object
+let { any, all } = import! std.foldable
+let { Owner, ? } = import! lancer.rpc.types
+let { SuiAddress, ? } = import! lancer.sui.sui_address
+let { Serialize, ? } = import! std.json.ser
+
+#[derive(Show, Serialize)]
+type PublicSummary = {
+    preparation_logs: Array Log,
+    demonstration_description: String,
+    demonstration_keys: Array SuiAddress,
+    demonstrated_live_objects: Array ObjectPtr,
+    reporting: Reporting,
+}
+
+let get_preparation_logs logs : Array Log -> Array Log =
+    let loop _ : () -> State Int (Array Log) =
+        do index = get
+        match a.index logs index with
+        | System (PreparationCommited v) ->
+            wrap <| a.slice logs 0 (index + 1)
+        | _ -> 
+            put <| index + 1
+            loop ()
+    in evalState (loop ()) 0
+
+let make_public_summary log : Array Log -> Option PublicSummary =
+    let final_log =
+        match a.index log (a.len log - 1) with
+        | System (DemonstrationCommited final_log) -> final_log
+        | _ -> error "Wrong log format"
+
+    let l = a.len final_log.live_objects
+    match final_log.reporting with
+    | Public -> None
+    | Partial { owned_by, objects } ->
+        let preparation_logs = get_preparation_logs log
+        let loop _ : () -> State { index: Int, result: Array ObjectPtr } (Array ObjectPtr) =
+            do { index, result } = get
+            if index < l then
+                let subject = a.index final_log.live_objects index
+                let subject_id = object_id subject
+                let subject_owner = object_owner subject
+                if any (\o -> subject_id == o) objects ||
+                    any (\o -> subject_owner == (AddressOwner o)) owned_by
+                then
+                    put { index = index + 1, result = a.append result [subject] }
+                    loop ()
+                else
+                    put { index = index + 1, result = result }
+                    loop ()
+            else
+                wrap result
+        let demonstrated_live_objects = evalState (loop ()) { index = 0, result = [] }
+        Some {
+            preparation_logs,
+            demonstration_description = final_log.description,
+            demonstration_keys = final_log.available_keys,
+            demonstrated_live_objects,
+            reporting = final_log.reporting,
+        }
+    | Hiding { owned_by, objects } ->
+        let preparation_logs = get_preparation_logs log
+        let loop _ : () -> State { index: Int, result: Array ObjectPtr } (Array ObjectPtr) =
+            do { index, result } = get
+            if index < l then
+                let subject = a.index final_log.live_objects index
+                let subject_id = object_id subject
+                let subject_owner = object_owner subject
+                if all (\o -> subject_id /= o) objects &&
+                    all (\o -> subject_owner /= (AddressOwner o)) owned_by
+                then
+                    put { index = index + 1, result = a.append result [subject] }
+                    loop ()
+                else
+                    put { index = index + 1, result = result }
+                    loop ()
+            else
+                wrap result
+        let demonstrated_live_objects = evalState (loop ()) { index = 0, result = [] }
+        Some {
+            preparation_logs,
+            demonstration_description = final_log.description,
+            demonstration_keys = final_log.available_keys,
+            demonstrated_live_objects,
+            reporting = final_log.reporting,
+        }
+
+{
+    PublicSummary,
+    show_PublicSummary,
+    serialize_PublicSummary,
+    make_public_summary,
+}

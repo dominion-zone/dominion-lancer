@@ -8,6 +8,8 @@ use gluon::{RootedThread, VmBuilder};
 use gluon::{ThreadExt, new_vm_async, vm::api::FunctionRef};
 use lancer_runner::install_lancer;
 use lancer_runner::test_cluster::builder::WTestClusterBuilder;
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 
 /*
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +36,7 @@ async fn main() -> Result<()> {
             working_dir.display()
         );
     }
+
     let vm = VmBuilder::new()
         .import_paths(Some(vec![working_dir.join("input/glu")]))
         .build_async()
@@ -52,15 +55,40 @@ scenario"#,
         .await?;
     vm.run_io(true);
 
-    let (mut run, _) =
-        vm.run_expr_async::<FunctionRef<
+    let (mut run, _) = vm
+        .run_expr_async::<FunctionRef<
             '_,
-            fn(WTestClusterBuilder, PathBuf, OpaqueValue<RootedThread, Hole>) -> IO<()>,
+            fn(
+                WTestClusterBuilder,
+                PathBuf,
+                OpaqueValue<RootedThread, Hole>,
+            ) -> IO<(String, Option<String>)>,
         >>("main_", "import! \"lancer/main.glu\"")
-            .await?;
-    let test_cluster_builder = WTestClusterBuilder::new();
-    run.call_async(test_cluster_builder, working_dir, scenario)
         .await?;
+    let test_cluster_builder = WTestClusterBuilder::new();
+    if let IO::Value((logs, public_summary)) = run
+        .call_async(test_cluster_builder, working_dir.clone(), scenario)
+        .await?
+    {
+        let output_path = working_dir.join("output");
+        if output_path.exists() {
+            fs::remove_dir_all(&output_path).await?;
+        }
+        let tmp_path = working_dir.join("tmp");
+        if tmp_path.exists() {
+            fs::remove_dir_all(&tmp_path).await?;
+        }
+        fs::create_dir(&tmp_path).await?;
+        let mut logs_file = fs::File::create(&tmp_path.join("logs.json")).await?;
+        logs_file.write_all(logs.as_bytes()).await?;
+        logs_file.flush().await?;
+        if let Some(public_summary) = public_summary {
+            let mut summary_file = fs::File::create(&tmp_path.join("public_summary.json")).await?;
+            summary_file.write_all(public_summary.as_bytes()).await?;
+            summary_file.flush().await?;
+        }
+        fs::rename(&tmp_path, &output_path).await?;
+    }
     /*
     vm.run_expr_async::<OpaqueValue<RootedThread, Hole>>("import", "import! lancer.prim")
         .await?;
