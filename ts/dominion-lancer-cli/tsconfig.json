@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "composite": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "pretty": true,
+    "sourceMap": true,
+    "stripInternal": true,
+    "strict": true,
+    "target": "ESNext",
+    "rootDir": ".",
+    "outDir": "build",
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+  },
+  "ts-node": {
+      "esm": true,
+      "experimentalSpecifierResolution": "node"
+  },
+  "exclude": ["node_modules"],
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts"
+, "src/index.mts"  ]
+}

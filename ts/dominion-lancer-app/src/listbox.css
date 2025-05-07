@@ -1,0 +1,133 @@
+
+.listbox {
+    display: inline-block;
+    width: 170px;
+  }
+  
+  .listbox__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  
+  .listbox__container {
+    position: relative;
+  }
+  
+  .listbox__button {
+    position: relative;
+    width: 100%;
+    margin-top: 0.1rem;
+    padding: 0.2rem 2rem 0.3rem 0.5rem;
+    text-align: left;
+    background: #c39999;
+    color: rgb(173, 255, 215);
+    border-radius: 0.5rem;
+    border-color: #7c2d12;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    outline: none;
+  }
+  
+  .listbox__button-text {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .listbox__button-icon {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    padding-right: 0.5rem;
+    pointer-events: none;
+  }
+  
+  .listbox__options {
+    position: absolute;
+    width: 100%;
+    margin-top: 0.05rem;
+    padding: 0.25rem 0;
+    background: #c39999;
+    color: rgb(173, 255, 215);
+    border-radius: 0.25rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    max-height: 25rem;
+    overflow-y: auto;
+    z-index: 1000;
+  }
+  
+  .listbox__option {
+    cursor: pointer;
+    display: block;
+    padding: 0.5rem 0.9rem 0.5rem 0.75rem;
+    white-space: nowrap;
+  }
+  
+  .listbox__install-label {
+    margin-left: 30px;
+  }
+  
+  .listbox__option-content {
+    display: flex;
+    align-items: center;
+  }
+  
+  .listbox__option--active {
+    background-color: #ffedd5;
+    color: #7c2d12;
+  }
+  
+  .listbox__option--selected {
+    font-weight: 600;
+  }
+  
+  .listbox__check-icon {
+    align-items: center;
+    margin-left: auto;
+    right: 0;
+    color: #d97706;
+  }
+  
+  .listbox__icon {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .listbox__link-icon {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .listbox__transition--enter {
+    transition: opacity 0.1s ease-in;
+  }
+  
+  .listbox__transition--enter-from {
+    opacity: 0;
+  }
+  
+  .listbox__transition--enter-to {
+    opacity: 1;
+  }
+  
+  .listbox__transition--leave {
+    transition: opacity 0.1s ease-out;
+  }
+  
+  .listbox__transition--leave-from {
+    opacity: 1;
+  }
+  
+  .listbox__transition--leave-to {
+    opacity: 0;
+  }
+  
+  .button-icon {
+    width: 0.6rem;
+    height: 0.6rem;
+    margin-right: 0.1rem;
+  }

@@ -1,0 +1,148 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #dde9b3;
+  color: rgb(119, 50, 40);
+}
+
+h1 {
+  text-align: center;
+  margin: 1rem 0;
+  color: #864beb;
+}
+
+.container {
+  display: flex;
+}
+
+main {
+  margin-top: 10px;
+  flex-grow: 1;
+  margin-left: 200px;
+}
+
+a {
+  display: inline;
+  color: inherit; /* blue colors for links too */
+  text-decoration: inherit; /* no underline */
+}
+
+a:hover {
+  background-color: #f0d690;
+}
+
+.card {
+  background: rgb(238, 232, 178);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin: 2rem;
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.card h2 {
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+a .card:hover {
+  background-color: #f0d690;
+}
+
+.warning {
+  color: red;
+  font-weight: bold;
+}
+
+li {
+  list-style-type: none;
+}
+
+button {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px;
+  margin: 1px 0;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  border: 1px solid #222;
+  border-radius: 2px;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+}
+
+.tabs__container {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tabs__list {
+  display: flex;
+  flex-direction: row;
+  background-color: #f3f4f6;
+  padding: 10px;
+}
+
+.tabs__tab {
+  background: none;
+  border: none;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+  font-weight: bold;
+  color: #333;
+}
+
+.tabs__tab--selected {
+  background-color: #c8a2c8;
+  color: white;
+  border-radius: 5px;
+}
+
+.tabs__content {
+  background-color: #ebf0db;
+  flex-grow: 1;
+}
+
+.tabs__panel {
+  background: #c9d5df;
+  padding: 2px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.tabs__title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.tabs__separator {
+  height: 2px;
+  background: #ef4444;
+  margin: 10px 0;
+}
+
+.tabs__description {
+  font-size: 14px;
+  color: #333;
+}
+
+span:empty::before {
+  content: "\00a0";
+}

@@ -1,0 +1,21 @@
+[package]
+name = "lancer-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aes-gcm = "0.10.3"
+axum = { version = "0.8.4", features = ["multipart"] }
+axum-extra = { version = "0.10.1", features = ["multipart"] }
+base64 = "0.22.1"
+rand = "0.8"
+rsa = "0.9.8"
+sha2 = "0.10.9"
+tokio = { version = "1.44.2", features = ["full"] }
+tower = "0.5.2"
+tower-http = { version = "0.6.2", features = ["compression-gzip", "compression-zstd", "cors", "limit"] }
+sui-sdk = { git = "https://github.com/aankor/sui.git", branch = "testing-access" }
+sui-types = { git = "https://github.com/aankor/sui.git", branch = "testing-access" }
+shared-crypto = { git = "https://github.com/aankor/sui.git", branch = "testing-access" }
+sqlx = "0.8.5"
+reqwest = "0.12.15"

@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
-    "rs/lancer-runner"]
+    "rs/lancer-runner", "rs/lancer-runner-wrapper", "rs/lancer-server"]
 
 # Dependencies that should be kept in sync through the whole workspace
 [workspace.dependencies]

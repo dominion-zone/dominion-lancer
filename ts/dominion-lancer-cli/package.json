@@ -1,0 +1,28 @@
+{
+  "name": "dominion-lancer-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "cli": "vite-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.10.0",
+  "dependencies": {
+    "@mysten/sui": "^1.29.1",
+    "commander": "^13.1.0",
+    "expand-tilde": "^2.0.2",
+    "mz": "^2.7.0",
+    "yaml": "^2.7.1"
+  },
+  "devDependencies": {
+    "@types/commander": "^2.12.5",
+    "@types/expand-tilde": "^2.0.2",
+    "@types/mz": "^2.7.8",
+    "@types/node": "^22.15.3",
+    "ts-node": "^10.9.2",
+    "vite-node": "^3.1.2"
+  }
+}

@@ -3,3 +3,13 @@ build
 node_modules
 target
 rs/lancer-runner/examples/simple/output
+.wrangler
+.output
+.vercel
+.netlify
+.vinxi
+app.config.timestamp_*.js
+
+# Environment
+.env
+.env*.local

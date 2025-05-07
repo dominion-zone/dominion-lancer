@@ -1,0 +1,39 @@
+.nav-controls {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+  margin-right: 12px;
+}
+
+.nav-controls a {
+  color: white;
+  text-decoration: none;
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #dbcb97;
+  color: rgb(107, 61, 54);
+  padding: 4px 15px;
+  border-radius: 0 0 4px 0;
+  z-index: 1000;
+  display: flex;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: right;
+  width: 100%;
+}
+
+.brand-icon {
+  width: 22px;
+  height: 22px;
+  fill: rgb(107, 61, 54);
+}
