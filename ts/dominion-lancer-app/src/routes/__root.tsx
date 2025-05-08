@@ -31,6 +31,7 @@ import { config, Network, networks } from "~/stores/config";
 import "../listbox.css";
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { queryClient } from "~/queries/client";
+import AppToaster from "~/components/AppToaster";
 
 const Devtools = clientOnly(() => import("../components/Devtools"));
 
@@ -145,6 +146,7 @@ function RootComponent() {
                     </Suspense>
                   </div>
                   <Footer />
+                  <AppToaster />
                 </SuiWalletControllerProvider>
               </SuiAutoconnectProvider>
             </SuiWalletProvider>

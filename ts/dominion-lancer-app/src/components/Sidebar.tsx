@@ -9,19 +9,28 @@ const Sidebar = (props: SidebarProps) => {
     <div {...props} class={styles.sidebar}>
       <ul class={styles.menu}>
         <li>
-          <Link to="/" search={(v) => v}>
+          <Link to="/" search={(v) => v} activeProps={{class: styles.disabled}}>
             Home
           </Link>
         </li>
         <li>
-          <Link to="/my-findings" search={(v) => v}>
+          <Link to="/findings" search={(v) => v} activeProps={{class: styles.disabled}}>
             Findings
           </Link>
         </li>
         <li>
-          <Link to="/bug-bounties" search={(v) => v}>
+          <Link to="/bug-bounties" search={(v) => v} activeProps={{class: styles.disabled}}>
             Bug Bounties
           </Link>
+        </li>
+        <li>
+          <Link to="/docs" search={(v) => v} activeProps={{class: styles.disabled}}>Docs</Link>
+        </li>
+        <li>
+          <Link to="/roadmap" search={(v) => v} activeProps={{class: styles.disabled}}>Roadmap</Link>
+        </li>
+        <li>
+          <Link to="/contacts" search={(v) => v} activeProps={{class: styles.disabled}}>Contacts</Link>
         </li>
       </ul>
     </div>

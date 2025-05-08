@@ -9,15 +9,16 @@ export const config = {
         url: "http://localhost:9200",
       }
     },
+    // 8KYuqLib5eBtcRN8Q8KExExigsivv4yZoNRcR6rXKARt
     lancer: {
-      package: '0x26e6be0dfebb91555bcd3633cfe083dcd45f4efc71715a80d34266210437f698',
-      upgradeCap: '0xcf92fa15b535c230b3aad3ff80910537ba5859344293a3af338bd27c19ff2aa1',
+      package: '0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f',
+      upgradeCap: '0x6689a153e74f63f67c4d4415753acd784af99aa0de995ffd50c632d588dd5612',
     },
     walrus: {
-      package: '0x26e6be0dfebb91555bcd3633cfe083dcd45f4efc71715a80d34266210437f698',
+      package: '0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f',
     },
     nautilus: {
-      package: '0x26e6be0dfebb91555bcd3633cfe083dcd45f4efc71715a80d34266210437f698',
+      package: '0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f',
     }
   }
 };

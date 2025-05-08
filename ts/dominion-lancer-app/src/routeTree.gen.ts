@@ -11,15 +11,43 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as RoadmapImport } from './routes/roadmap'
+import { Route as DocsImport } from './routes/docs'
+import { Route as ContactsImport } from './routes/contacts'
 import { Route as IndexImport } from './routes/index'
+import { Route as FindingsIndexImport } from './routes/findings/index'
 import { Route as BugBountiesIndexImport } from './routes/bug-bounties/index'
 import { Route as BugBountiesNewImport } from './routes/bug-bounties/new'
 
 // Create/Update Routes
 
+const RoadmapRoute = RoadmapImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const DocsRoute = DocsImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const ContactsRoute = ContactsImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const FindingsIndexRoute = FindingsIndexImport.update({
+  id: '/findings/',
+  path: '/findings/',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -46,6 +74,27 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
+    '/contacts': {
+      id: '/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof ContactsImport
+      parentRoute: typeof rootRoute
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsImport
+      parentRoute: typeof rootRoute
+    }
+    '/roadmap': {
+      id: '/roadmap'
+      path: '/roadmap'
+      fullPath: '/roadmap'
+      preLoaderRoute: typeof RoadmapImport
+      parentRoute: typeof rootRoute
+    }
     '/bug-bounties/new': {
       id: '/bug-bounties/new'
       path: '/bug-bounties/new'
@@ -60,6 +109,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof BugBountiesIndexImport
       parentRoute: typeof rootRoute
     }
+    '/findings/': {
+      id: '/findings/'
+      path: '/findings'
+      fullPath: '/findings'
+      preLoaderRoute: typeof FindingsIndexImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -67,42 +123,84 @@ declare module '@tanstack/solid-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/contacts': typeof ContactsRoute
+  '/docs': typeof DocsRoute
+  '/roadmap': typeof RoadmapRoute
   '/bug-bounties/new': typeof BugBountiesNewRoute
   '/bug-bounties': typeof BugBountiesIndexRoute
+  '/findings': typeof FindingsIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/contacts': typeof ContactsRoute
+  '/docs': typeof DocsRoute
+  '/roadmap': typeof RoadmapRoute
   '/bug-bounties/new': typeof BugBountiesNewRoute
   '/bug-bounties': typeof BugBountiesIndexRoute
+  '/findings': typeof FindingsIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/contacts': typeof ContactsRoute
+  '/docs': typeof DocsRoute
+  '/roadmap': typeof RoadmapRoute
   '/bug-bounties/new': typeof BugBountiesNewRoute
   '/bug-bounties/': typeof BugBountiesIndexRoute
+  '/findings/': typeof FindingsIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/bug-bounties/new' | '/bug-bounties'
+  fullPaths:
+    | '/'
+    | '/contacts'
+    | '/docs'
+    | '/roadmap'
+    | '/bug-bounties/new'
+    | '/bug-bounties'
+    | '/findings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/bug-bounties/new' | '/bug-bounties'
-  id: '__root__' | '/' | '/bug-bounties/new' | '/bug-bounties/'
+  to:
+    | '/'
+    | '/contacts'
+    | '/docs'
+    | '/roadmap'
+    | '/bug-bounties/new'
+    | '/bug-bounties'
+    | '/findings'
+  id:
+    | '__root__'
+    | '/'
+    | '/contacts'
+    | '/docs'
+    | '/roadmap'
+    | '/bug-bounties/new'
+    | '/bug-bounties/'
+    | '/findings/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ContactsRoute: typeof ContactsRoute
+  DocsRoute: typeof DocsRoute
+  RoadmapRoute: typeof RoadmapRoute
   BugBountiesNewRoute: typeof BugBountiesNewRoute
   BugBountiesIndexRoute: typeof BugBountiesIndexRoute
+  FindingsIndexRoute: typeof FindingsIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ContactsRoute: ContactsRoute,
+  DocsRoute: DocsRoute,
+  RoadmapRoute: RoadmapRoute,
   BugBountiesNewRoute: BugBountiesNewRoute,
   BugBountiesIndexRoute: BugBountiesIndexRoute,
+  FindingsIndexRoute: FindingsIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -116,18 +214,34 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/contacts",
+        "/docs",
+        "/roadmap",
         "/bug-bounties/new",
-        "/bug-bounties/"
+        "/bug-bounties/",
+        "/findings/"
       ]
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/contacts": {
+      "filePath": "contacts.tsx"
+    },
+    "/docs": {
+      "filePath": "docs.tsx"
+    },
+    "/roadmap": {
+      "filePath": "roadmap.tsx"
     },
     "/bug-bounties/new": {
       "filePath": "bug-bounties/new.tsx"
     },
     "/bug-bounties/": {
       "filePath": "bug-bounties/index.tsx"
+    },
+    "/findings/": {
+      "filePath": "findings/index.tsx"
     }
   }
 }

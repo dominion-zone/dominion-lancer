@@ -16,7 +16,7 @@ const AppBar = () => {
     <header class={styles.header}>
       <div class={styles.headerContainer}>
         <a href="/" class={styles.logo}>
-          <img class={styles.logoIcon} src="./lancer.png" />
+          <img class={styles.logoIcon} src="/lancer.png" />
           <div class={styles.titleContainer}>
             <div class={styles.title}>Dominion</div>
             <div class={styles.subtitle}>Lancer</div>

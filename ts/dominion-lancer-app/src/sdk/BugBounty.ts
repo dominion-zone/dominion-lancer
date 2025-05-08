@@ -1,4 +1,4 @@
-import { MoveStruct, SuiClient } from "@mysten/sui/client";
+import { MoveStruct, ObjectOwner, SuiClient } from "@mysten/sui/client";
 
 export type BugBounty = {
   id: string;
@@ -7,6 +7,7 @@ export type BugBounty = {
   name: string;
   isActive: boolean;
   approves: string[];
+  owner: string | null;
 };
 
 export const getBugBounties = async (
@@ -70,6 +71,12 @@ export const getBugBounties = async (
     const approves = await client.getDynamicFields({
       parentId: fields.value.fields.approves.fields.id.id,
     });
+    const ownerCap = await client.getObject({
+      id: fields.value.fields.owner_cap_id,
+      options: {
+        showOwner: true,
+      },
+    });
 
     bugBounties.push({
       id: ids[i],
@@ -81,6 +88,7 @@ export const getBugBounties = async (
         (approve) =>
           (approve.name.value as { name: string}).name
       ),
+      owner: (ownerCap.data!.owner as { AddressOwner?: string }).AddressOwner ?? null,
     });
   }
 

@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/solid-router";
+import { createFileRoute, createLink } from "@tanstack/solid-router";
 import { createForm } from "@tanstack/solid-form";
 import {
+  Button,
   DisclosureStateChild,
   Listbox,
   ListboxButton,
@@ -16,6 +17,8 @@ import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { createBugBountyMutation } from "~/mutations/createBugBounty";
 import { Network } from "~/stores/config";
+
+const LinkButton = createLink(Button);
 
 const searchSchema = z.object({
   user: z.string(),
@@ -69,31 +72,32 @@ function RouteComponent() {
             form.handleSubmit();
           }}
         >
-          <div>
+          <div class="form-field">
             <form.Field
               name="name"
               children={(field) => (
                 <>
-                  <label for={field.name}>Name:</label>
+                  <label for={field().name}>Name:</label>
                   <input
-                    id={field.name}
-                    name={field.name}
+                    id={field().name}
+                    name={field().name}
                     value={field().state.value}
                     onBlur={field().handleBlur}
                     onChange={(e) => field().handleChange(e.target.value)}
+                    type="text"
                   />
                 </>
               )}
             />
           </div>
-          <div>
+          <div class="form-field">
             <form.Field
               name="packageId"
               children={(field) => (
                 <>
-                  <label for={field.name}>Package:</label>
+                  <label for={field().name}>Package:</label>
                   <Listbox
-                    id={field.name}
+                    id={field().name}
                     value={field().state.value}
                     onBlur={field().handleBlur}
                     multiple={false}
@@ -176,13 +180,18 @@ function RouteComponent() {
               )}
             />
           </div>
-          <form.Subscribe
-            children={(state) => (
-              <button type="submit" disabled={!state().canSubmit}>
-                {state().isSubmitting ? "..." : "Create"}
-              </button>
-            )}
-          />
+          <div class="form-buttons">
+            <form.Subscribe
+              children={(state) => (
+                <Button type="submit" disabled={!state().canSubmit}>
+                  {state().isSubmitting ? "..." : "Create"}
+                </Button>
+              )}
+            />
+            <LinkButton type="button" to="/bug-bounties" search={(v) => v}>
+              Back
+            </LinkButton>
+          </div>
         </form>
       </article>
     </main>

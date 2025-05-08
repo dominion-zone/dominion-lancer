@@ -24,6 +24,7 @@ main {
   margin-top: 10px;
   flex-grow: 1;
   margin-left: 200px;
+  min-height: 500px;
 }
 
 a {
@@ -69,14 +70,20 @@ li {
 button {
   display: inline-block;
   width: fit-content;
-  padding: 2px;
-  margin: 1px 0;
-  border: none;
+  padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+  text-align: center;
+  background: #c39999;
+  color: rgb(173, 255, 215);
+  border-radius: 0.5rem;
+  border-color: #7c2d12;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-width: 1px;
   cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  border: 1px solid #222;
-  border-radius: 2px;
+  outline: none;
+}
+
+button:hover {
+  background: #eab26e;
 }
 
 .tabs {
@@ -143,6 +150,91 @@ button {
   color: #333;
 }
 
+.icon-button {
+  padding: 0;
+  height: 26px;
+  background: #c39999;
+  color: rgb(173, 255, 215);
+  border-radius: 0.5rem;
+  border-color: #7c2d12;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  outline: none;
+}
+
+.icon-button:hover {
+  background: #eab26e;
+}
+
+.icon-button:disabled {
+  background: #edcef0;
+  color: #a1a1aa;
+  cursor: not-allowed;
+}
+
+.checkbox {
+  display: flex;
+  gap: 5px;
+}
+
+label {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.toolbox {
+  display: flex;
+  gap: 20px;
+}
+
+.toolbox__container {
+  background-color: #fce3bf;
+  padding: 5px !important;
+}
+
+#new-bug-bounty {
+  margin-left: auto;
+}
+
 span:empty::before {
   content: "\00a0";
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 650px;
+}
+
+form input, form .listbox {
+  width: 100%;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+input[type="text"] {
+  padding: 0.2rem 2rem 0.3rem 0.5rem;
+  text-align: left;
+  background: #c39999;
+  color: rgb(173, 255, 215);
+  border-radius: 0.5rem;
+  border-color: #7c2d12;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-width: 1px;
+}
+
+input[type="text"]:focus {
+  background: #eab26e;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: right;
 }
