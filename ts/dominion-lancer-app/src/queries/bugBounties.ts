@@ -1,6 +1,6 @@
 import { EventId, MoveStruct, MoveValue } from "@mysten/sui/client";
 import { queryOptions, useQuery } from "@tanstack/solid-query";
-import { config, Network } from "~/stores/config";
+import { Network, useConfig } from "~/stores/config";
 import { suiClient } from "~/stores/suiClient";
 import { queryClient } from "./client";
 import { BugBounty, getBugBounties } from "~/sdk/BugBounty";
@@ -18,15 +18,14 @@ export const bugBountiesOptions = (props: BugBountiesProps) =>
   queryOptions({
     queryKey: bugBountiesKey(props),
     queryFn: async () => {
+      const config = useConfig(props.network);
       const client = suiClient(props.network);
       const bugBounties: BugBounty[] = [];
       let cursor = null;
       for (;;) {
         const page = await client.queryEvents({
           query: {
-            MoveEventType: `${
-              config[props.network].lancer.package
-            }::bug_bounty::BugBountyCreated`,
+            MoveEventType: `${config.lancer.typeOrigins.bugBounty.BugBountyCreatedEvent}::bug_bounty::BugBountyCreatedEvent`,
           },
           cursor,
         });
@@ -38,7 +37,7 @@ export const bugBountiesOptions = (props: BugBountiesProps) =>
               }
             ).parsedJson.bug_bounty_id as string
         );
-        bugBounties.push(...await getBugBounties(client, ids));
+        bugBounties.push(...(await getBugBounties(client, ids)));
         if (page.hasNextPage) {
           cursor = page.nextCursor;
         } else {

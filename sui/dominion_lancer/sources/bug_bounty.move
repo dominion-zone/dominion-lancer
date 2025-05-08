@@ -7,6 +7,7 @@ use sui::bag::{Self, Bag};
 use sui::versioned::{Self, Versioned};
 use sui::event;
 use std::type_name::{Self, TypeName};
+
 // === Errors ===
 
 const EUnknownVersion: u64 = 1;
@@ -36,7 +37,7 @@ public struct OwnerCap has key, store {
 
 // === Events ===
 
-public struct BugBountyCreated has copy, drop {
+public struct BugBountyCreatedEvent has copy, drop {
     bug_bounty_id: ID,
     package_id: ID,
     name: String,
@@ -87,7 +88,7 @@ public fun create_v1(
     };
 
 
-    event::emit(BugBountyCreated {
+    event::emit(BugBountyCreatedEvent {
         bug_bounty_id: object::id(&self),
         package_id,
         name,
@@ -115,13 +116,14 @@ public fun approve<T: store>(
     token: T,
 ) {
     self.assert_owner_cap(bug_bounty);
+    let bug_bounty_id = object::id(bug_bounty);
     match (bug_bounty.inner.version()) {
         1 => {
             let inner = bug_bounty.inner.load_value_mut<BugBountyV1>();
             let token_type = type_name::get<T>();
             inner.approves.add(token_type, token);
             event::emit(BugBountyApprovedEvent {
-                bug_bounty_id: object::id(self),
+                bug_bounty_id,
                 token_type
             });
         },
@@ -165,6 +167,17 @@ public fun name(
     match (self.inner.version()) {
         1 => {
             self.inner.load_value<BugBountyV1>().name
+        },
+        _ => abort(EUnknownVersion),
+    }
+}
+
+public fun is_active(
+    self: &BugBounty,
+) : bool {
+    match (self.inner.version()) {
+        1 => {
+            self.inner.load_value<BugBountyV1>().is_active
         },
         _ => abort(EUnknownVersion),
     }

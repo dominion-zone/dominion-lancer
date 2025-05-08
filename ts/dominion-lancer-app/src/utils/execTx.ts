@@ -1,6 +1,13 @@
-import { GetTransactionBlockParams, SuiClient } from "@mysten/sui/client";
+import { GetTransactionBlockParams, SuiClient, SuiTransactionBlockResponse } from "@mysten/sui/client";
 import { signAndExecuteTransaction } from "@mysten/wallet-standard";
 import { SuiWallet } from "~/contexts";
+
+export class SuiTransactionError extends Error {
+  constructor(public result: SuiTransactionBlockResponse) {
+    super(result.errors!.join(", "));
+    this.name = "SuiTransactionError";
+  }
+}
 
 const execTx = async ({
   tx,
@@ -25,7 +32,7 @@ const execTx = async ({
   });
   const r = await client.waitForTransaction({ digest: result.digest, options });
   if (r.errors) {
-    throw new Error(r.errors.join(", "));
+    throw new SuiTransactionError(r);
   }
   return r;
 };

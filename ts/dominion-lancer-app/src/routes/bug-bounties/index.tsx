@@ -9,7 +9,7 @@ import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
 import { Button, Checkbox, CheckboxIndicator } from "terracotta";
 import { useSuiNetwork, useSuiUser } from "~/contexts";
 import { bugBountiesQuery } from "~/queries/bugBounties";
-import { config, Network } from "~/stores/config";
+import { useConfig, Network } from "~/stores/config";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import BugBountyToolbox from "~/components/BugBountyToolbox";
@@ -18,6 +18,7 @@ import { normalizeStructTag } from "@mysten/sui/utils";
 const searchSchema = z.object({
   ownedBy: z.string().optional(),
   active: z.boolean().optional(),
+  approved: z.boolean().optional(),
 });
 
 export const Route = createFileRoute("/bug-bounties/")({
@@ -68,6 +69,25 @@ function RouteComponent() {
     });
   };
 
+  const filterApprovedChecked = () =>
+    search().approved === true;
+
+  const setFilterApprovedChecked = (
+    value: boolean | ((_: boolean) => boolean)
+  ) => {
+    if (typeof value === "function") {
+      value = value(filterApprovedChecked());
+    }
+    navigate({
+      from: matches()[matches().length - 1].fullPath,
+      to: ".",
+      search: (prev) => ({
+        ...prev,
+        approved: value || undefined,
+      }),
+    });
+  }
+
   const filteredBugBounties = () => {
     let bounties = bugBounties.data || [];
     if (filterMineChecked() && user.value) {
@@ -75,6 +95,20 @@ function RouteComponent() {
     }
     if (filterActiveChecked()) {
       bounties = bounties.filter((bounty) => bounty.isActive);
+    }
+    if (filterApprovedChecked()) {
+      bounties = bounties.filter((bounty) =>
+        bounty.approves.find(
+          (v) =>
+            normalizeStructTag(v) ===
+            normalizeStructTag(
+              `${
+                useConfig().lancer.typeOrigins.upgraderApprove
+                  .UpgraderApproveV1
+              }::upgrader_approve::UpgraderApproveV1`
+            )
+        )
+      );
     }
     return bounties;
   };
@@ -88,6 +122,8 @@ function RouteComponent() {
         setFilterMineChecked={setFilterMineChecked}
         filterActiveChecked={filterActiveChecked}
         setFilterActiveChecked={setFilterActiveChecked}
+        filterApprovedChecked={filterApprovedChecked}
+        setFilterApprovedChecked={setFilterApprovedChecked}
       />
       <For each={filteredBugBounties()}>
         {(bugBounty) => (
@@ -101,19 +137,20 @@ function RouteComponent() {
               Active:{" "}
               <Show when={bugBounty.isActive} fallback={<Square size={18} />}>
                 <SquareCheck size={18} />
-              </Show>
-              {" "}Approved:{" "}
+              </Show>{" "}
+              Approved:{" "}
               <Show
                 when={bugBounty.approves.find(
                   (v) =>
                     normalizeStructTag(v) ===
                     normalizeStructTag(
                       `${
-                        config[network.value as Network].lancer.package
+                        useConfig().lancer.typeOrigins.upgraderApprove
+                          .UpgraderApproveV1
                       }::upgrader_approve::UpgraderApproveV1`
                     )
                 )}
-                fallback={<Square size={18}/>}
+                fallback={<Square size={18} />}
               >
                 <SquareCheck size={18} />
               </Show>

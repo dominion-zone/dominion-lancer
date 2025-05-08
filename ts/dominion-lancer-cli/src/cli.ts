@@ -8,6 +8,7 @@ import {Ed25519Keypair} from '@mysten/sui/keypairs/ed25519';
 import {setContext} from './context';
 import {config, Config, Network} from './config';
 import { installCreateBugBounty } from './commands/createBugBounty';
+import { installPackageTypeOrigins } from './commands/packageTypeOrigins';
 
 export const cli = () => {
   const program = new Command();
@@ -50,6 +51,7 @@ export const cli = () => {
     });
 
   installCreateBugBounty(program);
+  installPackageTypeOrigins(program);
 
   return program;
 };

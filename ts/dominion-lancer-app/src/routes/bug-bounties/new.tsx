@@ -10,18 +10,18 @@ import {
   Transition,
 } from "terracotta";
 import { CheckIcon, ChevronsUpDown } from "lucide-solid";
-import { For, JSX, Show } from "solid-js";
+import { createEffect, For, JSX, Show } from "solid-js";
 import { userPackagesQuery } from "~/queries/userPackages";
-import { useSuiNetwork, useSuiUser, useSuiWallet } from "~/contexts";
+import { useSuiNetwork, useSuiUser, useSuiWallet, useSuiWalletController } from "~/contexts";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { createBugBountyMutation } from "~/mutations/createBugBounty";
 import { Network } from "~/stores/config";
 
-const LinkButton = createLink(Button);
-
 const searchSchema = z.object({
   user: z.string(),
+  name: z.string().optional().default(""),
+  packageId: z.string().optional().default(""),
 });
 
 export const Route = createFileRoute("/bug-bounties/new")({
@@ -30,6 +30,8 @@ export const Route = createFileRoute("/bug-bounties/new")({
 });
 
 function RouteComponent() {
+  const LinkButton = createLink(Button);
+
   const network = useSuiNetwork();
   const user = useSuiUser();
   const userPackages = userPackagesQuery({
@@ -37,13 +39,16 @@ function RouteComponent() {
     user: user.value!,
   });
   const wallet = useSuiWallet();
+  const walletController = useSuiWalletController();
+  const navigate = Route.useNavigate();
+  const search = Route.useSearch();
 
   const mutation = createBugBountyMutation();
 
   const form = createForm(() => ({
     defaultValues: {
-      name: "",
-      packageId: "",
+      name: search().name || "",
+      packageId: search().packageId || "",
     },
 
     onSubmit: async ({ value }) => {
@@ -57,9 +62,36 @@ function RouteComponent() {
         packageId: value.packageId,
         name: value.name,
         upgradeCapId,
+      }, {
+        onSuccess: () => {
+          navigate({
+            to: "/bug-bounties",
+            search: (prev) => ({
+              ...prev,
+              ownedBy: user.value,
+            }),
+          });
+        }
       });
     },
   }));
+
+  const store = form.useStore();
+  createEffect(() => {
+    const values = store().values;
+    if (values.name !== search().name || values.packageId !== search().packageId) {
+      navigate({
+        from: Route.fullPath,
+        to: ".",
+        search: (prev) => ({
+          ...prev,
+          name: values.name,
+          packageId: values.packageId,
+        }),
+      })
+    }
+  });
+
   return (
     <main>
       <article class="card">
@@ -183,12 +215,12 @@ function RouteComponent() {
           <div class="form-buttons">
             <form.Subscribe
               children={(state) => (
-                <Button type="submit" disabled={!state().canSubmit}>
+                <Button type="submit" disabled={!state().canSubmit || walletController.status !== "connected"}>
                   {state().isSubmitting ? "..." : "Create"}
                 </Button>
               )}
             />
-            <LinkButton type="button" to="/bug-bounties" search={(v) => v}>
+            <LinkButton type="button" to="/bug-bounties" search={(v) => ({ network: v.network, user: v.user })}>
               Back
             </LinkButton>
           </div>

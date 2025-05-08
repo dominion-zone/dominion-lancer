@@ -26,7 +26,7 @@ import {
 import { wallets } from "~/stores/wallets";
 import { isWalletWithRequiredFeatureSet } from "@mysten/wallet-standard";
 import { setConfigs, suiClientCache } from "~/stores/suiClient";
-import { config, Network, networks } from "~/stores/config";
+import { useConfig, Network, networks } from "~/stores/config";
 
 import "../listbox.css";
 import { QueryClientProvider } from "@tanstack/solid-query";
@@ -108,7 +108,7 @@ function RootComponent() {
       if (typeof value === "function") {
         value = value(prev as Network);
       }
-      if (config[value]) {
+      if (value in networks) {
         return value;
       } else {
         return prev;

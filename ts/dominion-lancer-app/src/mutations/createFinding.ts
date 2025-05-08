@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/solid-query";
 import { queryClient } from "../queries/client";
 import { UploadFile } from "@solid-primitives/upload";
 import { serverPkOptions, serverPkQuery } from "../queries/serverPk";
-import { config, Network } from "../stores/config";
+import { useConfig, Network } from "../stores/config";
 import axios from "axios";
 import { useSuiWallet } from "~/contexts";
 
@@ -18,6 +18,7 @@ export const createFindingMutation = () => {
     () => ({
       mutationKey: ["createFinding"],
       mutationFn: async (props: CreateFindingProps) => {
+        const config = useConfig(props.network);
         const serverPublicKey = await queryClient.fetchQuery(
           serverPkOptions({ network: props.network })
         );
@@ -93,7 +94,7 @@ export const createFindingMutation = () => {
         console.log("Sending new finding to server ", encryptedFile.byteLength);
 
         const result = await axios.post(
-          `${config[props.network].runner.server.url}/new_finding`,
+          `${config.runner.server.url}/new_finding`,
           formData
         );
       },
