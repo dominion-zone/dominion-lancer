@@ -1,5 +1,9 @@
-import { createFileRoute, createLink } from "@tanstack/solid-router";
+import { UploadFile } from "@solid-primitives/upload";
 import { createForm } from "@tanstack/solid-form";
+import { createFileRoute, createLink } from "@tanstack/solid-router";
+import { zodValidator } from "@tanstack/zod-adapter";
+import { CheckIcon, ChevronsUpDown } from "lucide-solid";
+import { createSignal, For, JSX, Show } from "solid-js";
 import {
   Button,
   DisclosureStateChild,
@@ -9,70 +13,55 @@ import {
   ListboxOptions,
   Transition,
 } from "terracotta";
-import { CheckIcon, ChevronsUpDown } from "lucide-solid";
-import { createEffect, For, JSX, Show } from "solid-js";
-import { userPackagesQuery } from "~/queries/userPackages";
-import {
-  useSuiNetwork,
-  useSuiUser,
-  useSuiWallet,
-  useSuiWalletController,
-} from "~/contexts";
 import { z } from "zod";
-import { zodValidator } from "@tanstack/zod-adapter";
-import { createBugBountyMutation } from "~/mutations/createBugBounty";
+import { useSuiNetwork, useSuiUser, useSuiWallet, useSuiWalletController } from "~/contexts";
+import { createFindingMutation } from "~/mutations/createFinding";
+import { bugBountiesQuery } from "~/queries/bugBounties";
 import { Network } from "~/stores/config";
+import { fileUploader } from "@solid-primitives/upload";
 
 const searchSchema = z.object({
   user: z.string(),
-  name: z.string().optional().default(""),
-  packageId: z.string().optional().default(""),
+  bugBountyId: z.string().optional().default(""),
 });
 
-export const Route = createFileRoute("/bug-bounties/new")({
+export const Route = createFileRoute("/findings/new")({
   component: RouteComponent,
   validateSearch: zodValidator(searchSchema),
 });
 
 function RouteComponent() {
   const LinkButton = createLink(Button);
-
+  const navigate = Route.useNavigate();
+  const search = Route.useSearch();
   const network = useSuiNetwork();
-  const user = useSuiUser();
-  const userPackages = userPackagesQuery({
-    network: network.value,
-    user: user.value!,
+  const bugBounties = bugBountiesQuery({
+    network: network.value as Network,
   });
   const wallet = useSuiWallet();
   const walletController = useSuiWalletController();
-  const navigate = Route.useNavigate();
-  const search = Route.useSearch();
-
-  const mutation = createBugBountyMutation();
+  const user = useSuiUser();
+  const mutation = createFindingMutation();
 
   const form = createForm(() => ({
     defaultValues: {
-      name: search().name || "",
-      packageId: search().packageId || "",
+      bugBountyId: search().bugBountyId || "",
+      files: [] as UploadFile[],
+      budget: 0n,
     },
 
     onSubmit: async ({ value }) => {
-      const upgradeCapId = userPackages.data?.find(
-        (cap) => cap.packageId === value.packageId
-      )?.upgradeCapId;
       await mutation.mutateAsync(
         {
           network: network.value as Network,
           wallet: wallet.value!,
           user: user.value!,
-          packageId: value.packageId,
-          name: value.name,
-          upgradeCapId,
+          file: value.files[0],
         },
         {
           onSuccess: () => {
             navigate({
-              to: "/bug-bounties",
+              to: "/findings",
               search: (prev) => ({
                 ...prev,
                 ownedBy: user.value,
@@ -83,31 +72,10 @@ function RouteComponent() {
       );
     },
   }));
-
-  const store = form.useStore();
-  createEffect(() => {
-    const values = store().values;
-    if (
-      values.name !== search().name ||
-      values.packageId !== search().packageId
-    ) {
-      navigate({
-        from: Route.fullPath,
-        to: ".",
-        search: (prev) => ({
-          ...prev,
-          name: values.name,
-          packageId: values.packageId,
-        }),
-        replace: true,
-      });
-    }
-  });
-
   return (
     <main>
       <article class="card">
-        <h2>New bug bounty program</h2>
+        <h2>New Finding</h2>
         <form
           method="post"
           onSubmit={(e) => {
@@ -116,23 +84,7 @@ function RouteComponent() {
             form.handleSubmit();
           }}
         >
-          <form.Field name="name">
-            {(field) => (
-              <div class="form-field">
-                <label for={field().name}>Name:</label>
-                <input
-                  id={field().name}
-                  name={field().name}
-                  value={field().state.value}
-                  onBlur={field().handleBlur}
-                  onChange={(e) => field().handleChange(e.target.value)}
-                  type="text"
-                />
-              </div>
-            )}
-          </form.Field>
-
-          <form.Field name="packageId">
+          <form.Field name="bugBountyId">
             {(field) => (
               <div class="form-field">
                 <label for={field().name}>Package:</label>
@@ -172,11 +124,11 @@ function RouteComponent() {
                             unmount={false}
                             class="listbox__options"
                           >
-                            <For each={userPackages.data}>
-                              {({ packageId }): JSX.Element => (
+                            <For each={bugBounties.data}>
+                              {({ id, name }): JSX.Element => (
                                 <ListboxOption
                                   class="listbox__option"
-                                  value={packageId}
+                                  value={id}
                                 >
                                   {({ isActive, isSelected }): JSX.Element => (
                                     <div
@@ -192,7 +144,7 @@ function RouteComponent() {
                                             isSelected(),
                                         }}
                                       >
-                                        {packageId}
+                                        {name} ({id})
                                       </span>
                                       <Show when={isSelected()}>
                                         <span class="listbox__check-icon">
@@ -216,6 +168,33 @@ function RouteComponent() {
               </div>
             )}
           </form.Field>
+          <form.Field name="files">
+            {(field) => (
+              <div class="form-field">
+                <label for={field().name}>Input:</label>
+                <input
+                  id={field().name}
+                  type="file"
+                  accept="application/x-tar"
+                  use:fileUploader={{
+                    userCallback: () => {},
+                    setFiles: field().handleChange,
+                  }}
+                />
+              </div>
+            )}
+          </form.Field>
+          <form.Field name="budget">
+            {(field) => (
+              <div class="form-field">
+                <label for={field().name}>WAL Budget:</label>
+                <input
+                  id={field().name}
+                  type="number"
+                />
+              </div>
+            )}
+          </form.Field>
           <div class="form-buttons">
             <form.Subscribe>
               {(state) => (
@@ -232,7 +211,7 @@ function RouteComponent() {
             </form.Subscribe>
             <LinkButton
               type="button"
-              to="/bug-bounties"
+              to="/findings"
               search={(v) => ({ network: v.network, user: v.user })}
             >
               Back

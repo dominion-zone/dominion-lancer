@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/solid-query";
 import { Network } from "../stores/config";
 import { suiClient } from "../stores/suiClient";
-import { config } from "../stores/config";
+import { useConfig } from "../stores/config";
 import { queryClient } from "./client";
 import axios from "axios";
 
@@ -38,7 +38,7 @@ export const serverPkOptions = (props: ServerPkProps) =>
       return importSpkiPublicKey(
         (
           await axios.get<string>(
-            config[props.network].runner.server.url + "/public_key"
+            useConfig(props.network).runner.server.url + "/public_key"
           )
         ).data
       );

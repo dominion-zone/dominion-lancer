@@ -17,6 +17,7 @@ import { Route as ContactsImport } from './routes/contacts'
 import { Route as IndexImport } from './routes/index'
 import { Route as FindingsIndexImport } from './routes/findings/index'
 import { Route as BugBountiesIndexImport } from './routes/bug-bounties/index'
+import { Route as FindingsNewImport } from './routes/findings/new'
 import { Route as BugBountiesNewImport } from './routes/bug-bounties/new'
 
 // Create/Update Routes
@@ -54,6 +55,12 @@ const FindingsIndexRoute = FindingsIndexImport.update({
 const BugBountiesIndexRoute = BugBountiesIndexImport.update({
   id: '/bug-bounties/',
   path: '/bug-bounties/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const FindingsNewRoute = FindingsNewImport.update({
+  id: '/findings/new',
+  path: '/findings/new',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -102,6 +109,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof BugBountiesNewImport
       parentRoute: typeof rootRoute
     }
+    '/findings/new': {
+      id: '/findings/new'
+      path: '/findings/new'
+      fullPath: '/findings/new'
+      preLoaderRoute: typeof FindingsNewImport
+      parentRoute: typeof rootRoute
+    }
     '/bug-bounties/': {
       id: '/bug-bounties/'
       path: '/bug-bounties'
@@ -127,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/docs': typeof DocsRoute
   '/roadmap': typeof RoadmapRoute
   '/bug-bounties/new': typeof BugBountiesNewRoute
+  '/findings/new': typeof FindingsNewRoute
   '/bug-bounties': typeof BugBountiesIndexRoute
   '/findings': typeof FindingsIndexRoute
 }
@@ -137,6 +152,7 @@ export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
   '/roadmap': typeof RoadmapRoute
   '/bug-bounties/new': typeof BugBountiesNewRoute
+  '/findings/new': typeof FindingsNewRoute
   '/bug-bounties': typeof BugBountiesIndexRoute
   '/findings': typeof FindingsIndexRoute
 }
@@ -148,6 +164,7 @@ export interface FileRoutesById {
   '/docs': typeof DocsRoute
   '/roadmap': typeof RoadmapRoute
   '/bug-bounties/new': typeof BugBountiesNewRoute
+  '/findings/new': typeof FindingsNewRoute
   '/bug-bounties/': typeof BugBountiesIndexRoute
   '/findings/': typeof FindingsIndexRoute
 }
@@ -160,6 +177,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/roadmap'
     | '/bug-bounties/new'
+    | '/findings/new'
     | '/bug-bounties'
     | '/findings'
   fileRoutesByTo: FileRoutesByTo
@@ -169,6 +187,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/roadmap'
     | '/bug-bounties/new'
+    | '/findings/new'
     | '/bug-bounties'
     | '/findings'
   id:
@@ -178,6 +197,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/roadmap'
     | '/bug-bounties/new'
+    | '/findings/new'
     | '/bug-bounties/'
     | '/findings/'
   fileRoutesById: FileRoutesById
@@ -189,6 +209,7 @@ export interface RootRouteChildren {
   DocsRoute: typeof DocsRoute
   RoadmapRoute: typeof RoadmapRoute
   BugBountiesNewRoute: typeof BugBountiesNewRoute
+  FindingsNewRoute: typeof FindingsNewRoute
   BugBountiesIndexRoute: typeof BugBountiesIndexRoute
   FindingsIndexRoute: typeof FindingsIndexRoute
 }
@@ -199,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsRoute: DocsRoute,
   RoadmapRoute: RoadmapRoute,
   BugBountiesNewRoute: BugBountiesNewRoute,
+  FindingsNewRoute: FindingsNewRoute,
   BugBountiesIndexRoute: BugBountiesIndexRoute,
   FindingsIndexRoute: FindingsIndexRoute,
 }
@@ -218,6 +240,7 @@ export const routeTree = rootRoute
         "/docs",
         "/roadmap",
         "/bug-bounties/new",
+        "/findings/new",
         "/bug-bounties/",
         "/findings/"
       ]
@@ -236,6 +259,9 @@ export const routeTree = rootRoute
     },
     "/bug-bounties/new": {
       "filePath": "bug-bounties/new.tsx"
+    },
+    "/findings/new": {
+      "filePath": "findings/new.tsx"
     },
     "/bug-bounties/": {
       "filePath": "bug-bounties/index.tsx"

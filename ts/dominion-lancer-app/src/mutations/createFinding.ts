@@ -4,10 +4,11 @@ import { UploadFile } from "@solid-primitives/upload";
 import { serverPkOptions, serverPkQuery } from "../queries/serverPk";
 import { useConfig, Network } from "../stores/config";
 import axios from "axios";
-import { useSuiWallet } from "~/contexts";
+import { SuiWallet, useSuiWallet } from "~/contexts";
 
 export type CreateFindingProps = {
   network: Network;
+  wallet: SuiWallet;
   user: string;
   file: UploadFile;
 };

@@ -245,7 +245,11 @@ input[type="text"]:focus {
   justify-content: right;
 }
 
-
+.line {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
 /* Toaster Component */
 .toaster {
   position: absolute;

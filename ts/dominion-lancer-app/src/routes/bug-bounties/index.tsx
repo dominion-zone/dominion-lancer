@@ -14,6 +14,7 @@ import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import BugBountyToolbox from "~/components/BugBountyToolbox";
 import { normalizeStructTag } from "@mysten/sui/utils";
+import BugBountyCard from "~/components/BugBountyCard";
 
 const searchSchema = z.object({
   ownedBy: z.string().optional(),
@@ -69,8 +70,7 @@ function RouteComponent() {
     });
   };
 
-  const filterApprovedChecked = () =>
-    search().approved === true;
+  const filterApprovedChecked = () => search().approved === true;
 
   const setFilterApprovedChecked = (
     value: boolean | ((_: boolean) => boolean)
@@ -86,7 +86,7 @@ function RouteComponent() {
         approved: value || undefined,
       }),
     });
-  }
+  };
 
   const filteredBugBounties = () => {
     let bounties = bugBounties.data || [];
@@ -103,8 +103,7 @@ function RouteComponent() {
             normalizeStructTag(v) ===
             normalizeStructTag(
               `${
-                useConfig().lancer.typeOrigins.upgraderApprove
-                  .UpgraderApproveV1
+                useConfig().lancer.typeOrigins.upgraderApprove.UpgraderApproveV1
               }::upgrader_approve::UpgraderApproveV1`
             )
         )
@@ -126,37 +125,7 @@ function RouteComponent() {
         setFilterApprovedChecked={setFilterApprovedChecked}
       />
       <For each={filteredBugBounties()}>
-        {(bugBounty) => (
-          <section class="card">
-            <h2>{bugBounty.name}</h2>
-            <p>Package: {bugBounty.packageId}</p>
-            <Show when={bugBounty.owner}>
-              <p>Owned by: {bugBounty.owner}</p>
-            </Show>
-            <p>
-              Active:{" "}
-              <Show when={bugBounty.isActive} fallback={<Square size={18} />}>
-                <SquareCheck size={18} />
-              </Show>{" "}
-              Approved:{" "}
-              <Show
-                when={bugBounty.approves.find(
-                  (v) =>
-                    normalizeStructTag(v) ===
-                    normalizeStructTag(
-                      `${
-                        useConfig().lancer.typeOrigins.upgraderApprove
-                          .UpgraderApproveV1
-                      }::upgrader_approve::UpgraderApproveV1`
-                    )
-                )}
-                fallback={<Square size={18} />}
-              >
-                <SquareCheck size={18} />
-              </Show>
-            </p>
-          </section>
-        )}
+        {(bugBounty) => <BugBountyCard bugBounty={bugBounty} />}
       </For>
     </main>
   );
