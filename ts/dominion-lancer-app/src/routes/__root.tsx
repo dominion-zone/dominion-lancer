@@ -28,10 +28,10 @@ import { isWalletWithRequiredFeatureSet } from "@mysten/wallet-standard";
 import { setConfigs, suiClientCache } from "~/stores/suiClient";
 import { useConfig, Network, networks } from "~/stores/config";
 
-import "../listbox.css";
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { queryClient } from "~/queries/client";
-import AppToaster from "~/components/AppToaster";
+import { Toast, toaster } from "@kobalte/core/toast";
+import toastStyles from "~/styles/Toast.module.css";
 
 const Devtools = clientOnly(() => import("../components/Devtools"));
 
@@ -146,7 +146,9 @@ function RootComponent() {
                     </Suspense>
                   </div>
                   <Footer />
-                  <AppToaster />
+                  <Toast.Region>
+                    <Toast.List class={toastStyles.toastList} />
+                  </Toast.Region>
                 </SuiWalletControllerProvider>
               </SuiAutoconnectProvider>
             </SuiWalletProvider>

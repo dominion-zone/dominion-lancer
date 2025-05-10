@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/solid-query";
 import { queryClient } from "../queries/client";
-import { UploadFile } from "@solid-primitives/upload";
 import { serverPkOptions, serverPkQuery } from "../queries/serverPk";
 import { useConfig, Network } from "../stores/config";
 import axios from "axios";
@@ -10,7 +9,7 @@ export type CreateFindingProps = {
   network: Network;
   wallet: SuiWallet;
   user: string;
-  file: UploadFile;
+  file: File;
 };
 
 export const createFindingMutation = () => {
@@ -20,7 +19,7 @@ export const createFindingMutation = () => {
       mutationKey: ["createFinding"],
       mutationFn: async (props: CreateFindingProps) => {
         const config = useConfig(props.network);
-        const serverPublicKey = await queryClient.fetchQuery(
+        const serverPublicKey = await queryClient.ensureQueryData(
           serverPkOptions({ network: props.network })
         );
         console.log("Public key", serverPublicKey.toString());
@@ -29,12 +28,11 @@ export const createFindingMutation = () => {
           true,
           ["encrypt", "decrypt"]
         );
-        const blob = await (await fetch(props.file.source)).blob();
         const iv = crypto.getRandomValues(new Uint8Array(12));
         const encryptedFile = await crypto.subtle.encrypt(
           { name: "AES-GCM", iv },
           aesKey,
-          await blob.arrayBuffer()
+          await props.file.arrayBuffer()
         );
 
         const rawAesKey = await crypto.subtle.exportKey("raw", aesKey);

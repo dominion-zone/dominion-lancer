@@ -1,5 +1,4 @@
 declare const styles: {
-  readonly "connectButton": string;
   readonly "header": string;
   readonly "headerContainer": string;
   readonly "logo": string;

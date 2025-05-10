@@ -1,5 +1,5 @@
 import { JSX } from "solid-js";
-import styles from "./Sidebar.module.css";
+import styles from "~/styles/Sidebar.module.css";
 import { Link } from "@tanstack/solid-router";
 
 export type SidebarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "class">;

@@ -1,16 +1,6 @@
 import { createFileRoute, createLink } from "@tanstack/solid-router";
 import { createForm } from "@tanstack/solid-form";
-import {
-  Button,
-  DisclosureStateChild,
-  Listbox,
-  ListboxButton,
-  ListboxOption,
-  ListboxOptions,
-  Transition,
-} from "terracotta";
-import { CheckIcon, ChevronsUpDown } from "lucide-solid";
-import { createEffect, For, JSX, Show } from "solid-js";
+import { createEffect } from "solid-js";
 import { userPackagesQuery } from "~/queries/userPackages";
 import {
   useSuiNetwork,
@@ -22,6 +12,20 @@ import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { createBugBountyMutation } from "~/mutations/createBugBounty";
 import { Network } from "~/stores/config";
+import PackageSelect from "~/components/bugBounty/new/PackageSelect";
+import formStyles from "~/styles/Form.module.css";
+import buttonStyles from "~/styles/Button.module.css";
+import { Button } from "@kobalte/core/button";
+import { TextField } from "@kobalte/core/text-field";
+import { Toast, toaster } from "@kobalte/core/toast";
+import { X } from "lucide-solid";
+import toastStyles from "~/styles/Toast.module.css";
+import {
+  formatAddress,
+  formatDigest,
+  isValidSuiObjectId,
+} from "@mysten/sui/utils";
+import { Link } from "@kobalte/core/link";
 
 const searchSchema = z.object({
   user: z.string(),
@@ -57,6 +61,7 @@ function RouteComponent() {
     },
 
     onSubmit: async ({ value }) => {
+      console.log("submit", value);
       const upgradeCapId = userPackages.data?.find(
         (cap) => cap.packageId === value.packageId
       )?.upgradeCapId;
@@ -70,7 +75,33 @@ function RouteComponent() {
           upgradeCapId,
         },
         {
-          onSuccess: () => {
+          onSuccess: ({ bugBounty, txDigest }) => {
+            const toastId = toaster.show((props) => (
+              <Toast toastId={props.toastId} class={toastStyles.toast}>
+                <div class={toastStyles.toastContent}>
+                  <div>
+                    <Toast.Title class={toastStyles.toastTitle}>
+                      Bug bounty {formatAddress(bugBounty.id)} has been created
+                    </Toast.Title>
+                    <Toast.Description class={toastStyles.toastDescription}>
+                      Transaction:{" "}
+                      <Link
+                        target="_blank"
+                        rel="noreferrer"
+                        href={`https://${
+                          network.value === "mainnet" ? "" : network + "."
+                        }suivision.xyz/txblock/${txDigest}`}
+                      >
+                        {formatDigest(txDigest)}
+                      </Link>
+                    </Toast.Description>
+                  </div>
+                  <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                    <X />
+                  </Toast.CloseButton>
+                </div>
+              </Toast>
+            ));
             navigate({
               to: "/bug-bounties",
               search: (prev) => ({
@@ -78,6 +109,29 @@ function RouteComponent() {
                 ownedBy: user.value,
               }),
             });
+          },
+          onError: (error) => {
+            const toastId = toaster.show((props) => (
+              <Toast
+                toastId={props.toastId}
+                classList={{
+                  [toastStyles.toast]: true,
+                  [toastStyles.toastError]: true,
+                }}
+              >
+                <div class={toastStyles.toastContent}>
+                  <Toast.Title class={toastStyles.toastTitle}>
+                    Error creating bug bounty
+                  </Toast.Title>
+                  <Toast.Description class={toastStyles.toastDescription}>
+                    {error.message}
+                  </Toast.Description>
+                </div>
+                <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                  <X size={14} />
+                </Toast.CloseButton>
+              </Toast>
+            ));
           },
         }
       );
@@ -87,9 +141,10 @@ function RouteComponent() {
   const store = form.useStore();
   createEffect(() => {
     const values = store().values;
+    const isValidPackageId = isValidSuiObjectId(values.packageId);
     if (
       values.name !== search().name ||
-      values.packageId !== search().packageId
+      (isValidPackageId && values.packageId !== search().packageId)
     ) {
       navigate({
         from: Route.fullPath,
@@ -97,7 +152,7 @@ function RouteComponent() {
         search: (prev) => ({
           ...prev,
           name: values.name,
-          packageId: values.packageId,
+          packageId: isValidPackageId ? values.packageId : prev.packageId,
         }),
         replace: true,
       });
@@ -115,108 +170,48 @@ function RouteComponent() {
             e.stopPropagation();
             form.handleSubmit();
           }}
+          class={formStyles.container}
         >
-          <form.Field name="name">
-            {(field) => (
-              <div class="form-field">
-                <label for={field().name}>Name:</label>
-                <input
-                  id={field().name}
-                  name={field().name}
-                  value={field().state.value}
-                  onBlur={field().handleBlur}
-                  onChange={(e) => field().handleChange(e.target.value)}
-                  type="text"
-                />
-              </div>
-            )}
-          </form.Field>
+          <div class={formStyles.grid}>
+            <form.Field name="name">
+              {(field) => (
+                <>
+                  <label for={field().name}>Name:</label>
+                  <TextField
+                    id={field().name}
+                    name={field().name}
+                    value={field().state.value}
+                    onBlur={field().handleBlur}
+                    onChange={field().handleChange}
+                  >
+                    <TextField.Input class={formStyles.textField} />
+                  </TextField>
+                </>
+              )}
+            </form.Field>
 
-          <form.Field name="packageId">
-            {(field) => (
-              <div class="form-field">
-                <label for={field().name}>Package:</label>
-                <Listbox
-                  id={field().name}
-                  value={field().state.value}
-                  onBlur={field().handleBlur}
-                  multiple={false}
-                  defaultOpen={false}
-                  onSelectChange={(v) => field().handleChange(v as string)}
-                  class="listbox"
-                >
-                  <div class="listbox__container">
-                    <ListboxButton class="listbox__button" type="button">
-                      <span class={"listbox__button-text"}>
-                        {field().state.value}
-                      </span>
-                      <span class="listbox__button-icon">
-                        <ChevronsUpDown
-                          class="listbox__icon"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </ListboxButton>
-                    <DisclosureStateChild>
-                      {({ isOpen }): JSX.Element => (
-                        <Transition
-                          show={isOpen()}
-                          enter="listbox__transition--enter"
-                          enterFrom="listbox__transition--enter-from"
-                          enterTo="listbox__transition--enter-to"
-                          leave="listbox__transition--leave"
-                          leaveFrom="listbox__transition--leave-from"
-                          leaveTo="listbox__transition--leave-to"
-                        >
-                          <ListboxOptions
-                            unmount={false}
-                            class="listbox__options"
-                          >
-                            <For each={userPackages.data}>
-                              {({ packageId }): JSX.Element => (
-                                <ListboxOption
-                                  class="listbox__option"
-                                  value={packageId}
-                                >
-                                  {({ isActive, isSelected }): JSX.Element => (
-                                    <div
-                                      classList={{
-                                        "listbox__option-content": true,
-                                        "listbox__option--active": isActive(),
-                                      }}
-                                    >
-                                      <span
-                                        classList={{
-                                          "listbox__option-text": true,
-                                          "listbox__option-text--selected":
-                                            isSelected(),
-                                        }}
-                                      >
-                                        {packageId}
-                                      </span>
-                                      <Show when={isSelected()}>
-                                        <span class="listbox__check-icon">
-                                          <CheckIcon
-                                            class="listbox__icon"
-                                            aria-hidden="true"
-                                          />
-                                        </span>
-                                      </Show>
-                                    </div>
-                                  )}
-                                </ListboxOption>
-                              )}
-                            </For>
-                          </ListboxOptions>
-                        </Transition>
-                      )}
-                    </DisclosureStateChild>
-                  </div>
-                </Listbox>
-              </div>
-            )}
-          </form.Field>
-          <div class="form-buttons">
+            <form.Field
+              name="packageId"
+              validators={{
+                onChange: ({ value }) => {
+                  isValidSuiObjectId(value) ? undefined : "Invalid package id";
+                },
+              }}
+            >
+              {(field) => (
+                <>
+                  <label for={field().name}>Package:</label>
+                  <PackageSelect
+                    class={formStyles.longField}
+                    packageId={field().state.value}
+                    setPackageId={field().handleChange}
+                    name={field().name}
+                  />
+                </>
+              )}
+            </form.Field>
+          </div>
+          <div class={formStyles.actions}>
             <form.Subscribe>
               {(state) => (
                 <Button
@@ -225,6 +220,7 @@ function RouteComponent() {
                     !state().canSubmit ||
                     walletController.status !== "connected"
                   }
+                  class={buttonStyles.button}
                 >
                   {state().isSubmitting ? "..." : "Create"}
                 </Button>
@@ -234,6 +230,7 @@ function RouteComponent() {
               type="button"
               to="/bug-bounties"
               search={(v) => ({ network: v.network, user: v.user })}
+              class={buttonStyles.button}
             >
               Back
             </LinkButton>

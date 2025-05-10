@@ -8,6 +8,9 @@ body {
   font-family: Arial, sans-serif;
   background: #dde9b3;
   color: rgb(119, 50, 40);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 h1 {
@@ -16,20 +19,27 @@ h1 {
   color: #864beb;
 }
 
+#app {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
 .container {
   display: flex;
+  flex: 1;
+  padding-bottom: 36px;
 }
 
 main {
   margin-top: 10px;
   flex-grow: 1;
   margin-left: 200px;
-  min-height: 500px;
 }
 
 a {
   display: inline;
-  color: inherit; /* blue colors for links too */
+  color: inherit;
   text-decoration: inherit; /* no underline */
 }
 
@@ -58,15 +68,11 @@ a .card:hover {
   background-color: #f0d690;
 }
 
-.warning {
-  color: red;
-  font-weight: bold;
-}
 
 li {
   list-style-type: none;
 }
-
+/*
 button {
   display: inline-block;
   width: fit-content;
@@ -156,28 +162,6 @@ button:disabled {
   color: #333;
 }
 
-.icon-button {
-  padding: 0;
-  height: 26px;
-  background: #c39999;
-  color: rgb(173, 255, 215);
-  border-radius: 0.5rem;
-  border-color: #7c2d12;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-  outline: none;
-}
-
-.icon-button:hover {
-  background: #eab26e;
-}
-
-.icon-button:disabled {
-  background: #edcef0;
-  color: #a1a1aa;
-  cursor: not-allowed;
-}
-
 .checkbox {
   display: flex;
   gap: 5px;
@@ -186,20 +170,6 @@ button:disabled {
 label {
   display: flex;
   flex-direction: column-reverse;
-}
-
-.toolbox {
-  display: flex;
-  gap: 20px;
-}
-
-.toolbox__container {
-  background-color: #fce3bf;
-  padding: 5px !important;
-}
-
-#new-bug-bounty {
-  margin-left: auto;
 }
 
 span:empty::before {
@@ -244,13 +214,7 @@ input[type="text"]:focus {
   gap: 10px;
   justify-content: right;
 }
-
-.line {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-}
-/* Toaster Component */
+  
 .toaster {
   position: absolute;
   left: 0;
@@ -258,7 +222,6 @@ input[type="text"]:focus {
   margin: 1rem;
 }
 
-/* Transition */
 .toaster__transition {
   position: relative;
 }
@@ -291,7 +254,6 @@ input[type="text"]:focus {
   transform: scale(0.5) translateY(100%);
 }
 
-/* Toast Container */
 .toaster__container {
   display: flex;
   flex-direction: column;
@@ -305,7 +267,6 @@ input[type="text"]:focus {
   gap: 0.5rem;
 }
 
-/* Header */
 .toaster__header {
   display: flex;
   align-items: center;
@@ -341,7 +302,6 @@ input[type="text"]:focus {
   outline-offset: 2px;
 }
 
-/* Notifications List */
 .toaster__notifications {
   display: flex;
   flex-direction: column-reverse;
@@ -350,7 +310,6 @@ input[type="text"]:focus {
   border-radius: 0.5rem;
 }
 
-/* Empty State */
 .toaster__empty {
   background-color: rgba(191, 38, 59, 0.2);
   display: flex;
@@ -366,3 +325,4 @@ input[type="text"]:focus {
   border-radius: 0px;
   padding: 0.5rem;
 }
+*/

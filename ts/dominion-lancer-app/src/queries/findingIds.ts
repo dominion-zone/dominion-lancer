@@ -24,10 +24,14 @@ export const findingIdsOptions = (props: FindingIdsProps) =>
   queryOptions({
     queryKey: findingIdsKey(props),
     queryFn: async () => {
+      if (!props.bugBountyId && !props.ownerId) {
+        throw new Error("Either ownerId or bugBountyId must be provided");
+      }
       const config = useConfig(props.network);
       const client = suiClient(props.network);
+      
+      const ownedFindingIds = [];
       if (props.ownerId) {
-        const findingIds = [];
         let cursor = null;
         for (;;) {
           const page = await client.getOwnedObjects({
@@ -42,7 +46,7 @@ export const findingIdsOptions = (props: FindingIdsProps) =>
           });
 
           for (const obj of page.data) {
-            findingIds.push(
+            ownedFindingIds.push(
               (
                 (obj.data!.content as { fields: MoveStruct }).fields as {
                   finding_id: string;
@@ -56,11 +60,10 @@ export const findingIdsOptions = (props: FindingIdsProps) =>
             break;
           }
         }
-      } else {
-        if (!props.bugBountyId) {
-          throw new Error("Either ownerId or bugBountyId must be provided");
-        }
-        const findingIds = [];
+      }
+       
+      const findingIds = [];
+      if (props.bugBountyId) {
         let cursor = null;
         for (;;) {
           const page = await client.queryTransactionBlocks({
@@ -83,7 +86,9 @@ export const findingIdsOptions = (props: FindingIdsProps) =>
                     finding_id: string;
                   }
                 ).finding_id;
-                findingIds.push(findingId);
+                if (!props.ownerId || ownedFindingIds.includes(findingId)) {
+                  findingIds.push(findingId);
+                }
               }
             }
           }
@@ -94,6 +99,10 @@ export const findingIdsOptions = (props: FindingIdsProps) =>
             break;
           }
         }
+      } else {
+        findingIds.push(...ownedFindingIds);
       }
+
+      return findingIds;
     },
   });

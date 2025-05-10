@@ -1,0 +1,51 @@
+.container {
+  max-width: 600px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 0.5rem;
+  align-items: end;
+}
+
+.grid label {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.long-field {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: right;
+  margin-top: 10px;
+}
+
+.file-field {
+  display: flex;
+  gap: 5px;
+}
+
+.text-field {
+  width: 100%;
+  min-width: 0;
+  min-height: 24px;
+  width: 100%;
+  padding-left: 10px;
+  font-size: 16px;
+  background: #fedcab;
+  border-width: 1px;
+  border-color: inherit;
+  border-right: none;
+  border-radius: 6px;
+  outline: none;
+  color: rgb(55, 126, 92);
+}
+
+.text-field:focus-visible {
+  background: #efc592;
+}

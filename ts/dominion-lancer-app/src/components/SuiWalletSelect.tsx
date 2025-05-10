@@ -1,88 +1,60 @@
-import {
-  Component,
-  createEffect,
-  createMemo,
-  JSX,
-  mergeProps,
-  Setter,
-  Show,
-  splitProps,
-} from 'solid-js';
-import {CheckIcon, ChevronsUpDown, ExternalLinkIcon} from 'lucide-solid';
-import {For} from 'solid-js';
-import {isWalletWithRequiredFeatureSet} from '@mysten/wallet-standard';
-import {SuiWallet} from '../contexts/SuiWallet';
-import {Wallet, wallets} from '../stores/wallets';
-import {
-  DisclosureStateChild,
-  Listbox,
-  ListboxButton,
-  ListboxLabel,
-  ListboxOption,
-  ListboxOptions,
-  ListboxSingleProps,
-  Transition,
-} from 'terracotta';
+import { Component, createMemo, Setter } from "solid-js";
+import { CheckIcon, ChevronsUpDown, ExternalLinkIcon } from "lucide-solid";
+import { isWalletWithRequiredFeatureSet } from "@mysten/wallet-standard";
+import { SuiWallet } from "../contexts/SuiWallet";
+import { Wallet, wallets } from "../stores/wallets";
+import { Select } from "@kobalte/core/select";
+import styles from "~/styles/Select.module.css";
 
-export type SuiWalletSelectStyle = {
-  root?: string;
-  container?: string;
-  button?: string;
-  ['button-text']?: string;
-  ['button-icon']?: string;
-  ['transition--enter']?: string;
-  ['transition--enter-from']?: string;
-  ['transition--enter-to']?: string;
-  ['transition--leave']?: string;
-  ['transition--leave-from']?: string;
-  ['transition--leave-to']?: string;
-  options?: string;
-  option?: string;
-  ['option-active']?: string;
-  ['option-content']?: string;
-  ['option-text']?: string;
-  ['option-text--selected']?: string;
-  ['check-icon']?: string;
-  ['link-icon']?: string;
-  icon?: string;
-  installLabel?: string;
-};
-
-export type SuiWalletSelectProps = Omit<
-  ListboxSingleProps<string | null>,
-  'value' | 'onSelectChange'
-> & {
-  style?: SuiWalletSelectStyle;
+export type SuiWalletSelectProps = {
   wallet: SuiWallet | undefined;
   setWallet: Setter<SuiWallet | undefined>;
   walletFilter?: (wallet: Wallet) => boolean;
 };
 
-export const SuiWalletSelect: Component<SuiWalletSelectProps> = props => {
-  const defaultedProps = mergeProps(
-    {
-      get class() {
-        return props.style?.root ?? 'listbox';
-      },
-      defaultOpen: false,
-    },
-    props,
-  );
-  const [myProps, listboxProps] = splitProps(defaultedProps, [
-    'wallet',
-    'setWallet',
-    'walletFilter',
-  ]);
-
-  const collection = createMemo(() => {
+export const SuiWalletSelect: Component<SuiWalletSelectProps> = (props) => {
+  const filteredWallets = createMemo(() => {
     return wallets.filter(
       (wallet): wallet is SuiWallet =>
         isWalletWithRequiredFeatureSet(wallet) &&
-        wallet.chains.some(chain => chain.split(':')[0] === 'sui') &&
-        (!myProps.walletFilter || myProps.walletFilter(wallet)),
+        wallet.chains.some((chain) => chain.split(":")[0] === "sui") &&
+        (!props.walletFilter || props.walletFilter(wallet))
     );
   });
 
+  return (
+    <Select<Wallet>
+      options={filteredWallets()}
+      value={props.wallet}
+      onChange={props.setWallet}
+      optionValue="id"
+      optionTextValue="name"
+      placeholder="..."
+      itemComponent={(props) => (
+        <Select.Item item={props.item} class={styles.selectItem}>
+          <Select.ItemLabel>{props.item.rawValue.name}</Select.ItemLabel>
+          <Select.ItemIndicator class={styles.selectItemIndicator}>
+            <CheckIcon />
+          </Select.ItemIndicator>
+        </Select.Item>
+      )}
+    >
+      <Select.Trigger class={styles.selectTrigger} aria-label="Network">
+        <Select.Value<Wallet> class={styles.selectValue}>
+          {(state) => state.selectedOption().name}
+        </Select.Value>
+        <Select.Icon class={styles.selectIcon}>
+          <ChevronsUpDown size={20} />
+        </Select.Icon>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content class={styles.selectContent}>
+          <Select.Listbox class={styles.selectListbox} />
+        </Select.Content>
+      </Select.Portal>
+    </Select>
+  );
+  /*
   return (
     <Listbox
       value={props.wallet?.id ?? null}
@@ -190,5 +162,5 @@ export const SuiWalletSelect: Component<SuiWalletSelectProps> = props => {
         </DisclosureStateChild>
       </div>
     </Listbox>
-  );
+    */
 };

@@ -1,24 +1,23 @@
-import { UploadFile } from "@solid-primitives/upload";
 import { createForm } from "@tanstack/solid-form";
 import { createFileRoute, createLink } from "@tanstack/solid-router";
 import { zodValidator } from "@tanstack/zod-adapter";
-import { CheckIcon, ChevronsUpDown } from "lucide-solid";
-import { createSignal, For, JSX, Show } from "solid-js";
-import {
-  Button,
-  DisclosureStateChild,
-  Listbox,
-  ListboxButton,
-  ListboxOption,
-  ListboxOptions,
-  Transition,
-} from "terracotta";
 import { z } from "zod";
-import { useSuiNetwork, useSuiUser, useSuiWallet, useSuiWalletController } from "~/contexts";
+import {
+  useSuiNetwork,
+  useSuiUser,
+  useSuiWallet,
+  useSuiWalletController,
+} from "~/contexts";
 import { createFindingMutation } from "~/mutations/createFinding";
 import { bugBountiesQuery } from "~/queries/bugBounties";
 import { Network } from "~/stores/config";
-import { fileUploader } from "@solid-primitives/upload";
+import { FileField } from "@kobalte/core/file-field";
+import BugBountySelect from "~/components/finding/new/BugBountySelect";
+import formStyles from "~/styles/Form.module.css";
+import buttonStyles from "~/styles/Button.module.css";
+import { Button } from "@kobalte/core/button";
+import { createEffect, Show } from "solid-js";
+import { isValidSuiObjectId } from "@mysten/sui/utils";
 
 const searchSchema = z.object({
   user: z.string(),
@@ -46,7 +45,7 @@ function RouteComponent() {
   const form = createForm(() => ({
     defaultValues: {
       bugBountyId: search().bugBountyId || "",
-      files: [] as UploadFile[],
+      files: [] as File[],
       budget: 0n,
     },
 
@@ -72,6 +71,24 @@ function RouteComponent() {
       );
     },
   }));
+
+  const store = form.useStore();
+  createEffect(() => {
+    const values = store().values;
+    const isValidPackageId = isValidSuiObjectId(values.bugBountyId);
+    if (isValidPackageId && values.bugBountyId !== search().bugBountyId) {
+      navigate({
+        from: Route.fullPath,
+        to: ".",
+        search: (prev) => ({
+          ...prev,
+          bugBountyId: values.bugBountyId,
+        }),
+        replace: true,
+      });
+    }
+  });
+
   return (
     <main>
       <article class="card">
@@ -83,122 +100,63 @@ function RouteComponent() {
             e.stopPropagation();
             form.handleSubmit();
           }}
+          class={formStyles.container}
         >
-          <form.Field name="bugBountyId">
-            {(field) => (
-              <div class="form-field">
-                <label for={field().name}>Package:</label>
-                <Listbox
-                  id={field().name}
-                  value={field().state.value}
-                  onBlur={field().handleBlur}
-                  multiple={false}
-                  defaultOpen={false}
-                  onSelectChange={(v) => field().handleChange(v as string)}
-                  class="listbox"
-                >
-                  <div class="listbox__container">
-                    <ListboxButton class="listbox__button" type="button">
-                      <span class={"listbox__button-text"}>
-                        {field().state.value}
+          <div class={formStyles.grid}>
+            <form.Field name="bugBountyId" validators={{
+              onChange: ({value}) => {
+                return isValidSuiObjectId(value) ? undefined : "Invalid bug bounty ID";
+              }
+            }}>
+              {(field) => (
+                <>
+                  <label for={field().name}>Bug bounty:</label>
+                  <BugBountySelect
+                    class={formStyles.longField}
+                    bugBountyId={field().state.value}
+                    setBugBountyId={field().handleChange}
+                    name={field().name}
+                  />
+                </>
+              )}
+            </form.Field>
+            <form.Field name="files">
+              {(field) => (
+                <>
+                  <label for={field().name}>Input:</label>
+                  <FileField
+                    class={formStyles.fileField}
+                    name={field().name}
+                    accept="application/x-tar"
+                    onFileAccept={field().handleChange}
+                  >
+                    <FileField.Trigger class={buttonStyles.button}>
+                      Upload
+                    </FileField.Trigger>
+                    <FileField.HiddenInput />
+                    <Show when={field().state.value.length > 0}>
+                      <span class="file-name">
+                        {field().state.value[0].name}
                       </span>
-                      <span class="listbox__button-icon">
-                        <ChevronsUpDown
-                          class="listbox__icon"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </ListboxButton>
-                    <DisclosureStateChild>
-                      {({ isOpen }): JSX.Element => (
-                        <Transition
-                          show={isOpen()}
-                          enter="listbox__transition--enter"
-                          enterFrom="listbox__transition--enter-from"
-                          enterTo="listbox__transition--enter-to"
-                          leave="listbox__transition--leave"
-                          leaveFrom="listbox__transition--leave-from"
-                          leaveTo="listbox__transition--leave-to"
-                        >
-                          <ListboxOptions
-                            unmount={false}
-                            class="listbox__options"
-                          >
-                            <For each={bugBounties.data}>
-                              {({ id, name }): JSX.Element => (
-                                <ListboxOption
-                                  class="listbox__option"
-                                  value={id}
-                                >
-                                  {({ isActive, isSelected }): JSX.Element => (
-                                    <div
-                                      classList={{
-                                        "listbox__option-content": true,
-                                        "listbox__option--active": isActive(),
-                                      }}
-                                    >
-                                      <span
-                                        classList={{
-                                          "listbox__option-text": true,
-                                          "listbox__option-text--selected":
-                                            isSelected(),
-                                        }}
-                                      >
-                                        {name} ({id})
-                                      </span>
-                                      <Show when={isSelected()}>
-                                        <span class="listbox__check-icon">
-                                          <CheckIcon
-                                            class="listbox__icon"
-                                            aria-hidden="true"
-                                          />
-                                        </span>
-                                      </Show>
-                                    </div>
-                                  )}
-                                </ListboxOption>
-                              )}
-                            </For>
-                          </ListboxOptions>
-                        </Transition>
-                      )}
-                    </DisclosureStateChild>
-                  </div>
-                </Listbox>
-              </div>
-            )}
-          </form.Field>
-          <form.Field name="files">
-            {(field) => (
-              <div class="form-field">
-                <label for={field().name}>Input:</label>
-                <input
-                  id={field().name}
-                  type="file"
-                  accept="application/x-tar"
-                  use:fileUploader={{
-                    userCallback: () => {},
-                    setFiles: field().handleChange,
-                  }}
-                />
-              </div>
-            )}
-          </form.Field>
-          <form.Field name="budget">
-            {(field) => (
-              <div class="form-field">
-                <label for={field().name}>WAL Budget:</label>
-                <input
-                  id={field().name}
-                  type="number"
-                />
-              </div>
-            )}
-          </form.Field>
-          <div class="form-buttons">
+                    </Show>
+                  </FileField>
+                </>
+              )}
+            </form.Field>
+            <form.Field name="budget">
+              {(field) => (
+                <>
+                  <label for={field().name}>WAL Budget:</label>
+                  <input id={field().name} type="number" />
+                </>
+              )}
+            </form.Field>
+          </div>
+          <div class={formStyles.actions}>
             <form.Subscribe>
               {(state) => (
                 <Button
+                  class={buttonStyles.button}
                   type="submit"
                   disabled={
                     !state().canSubmit ||
@@ -213,6 +171,7 @@ function RouteComponent() {
               type="button"
               to="/findings"
               search={(v) => ({ network: v.network, user: v.user })}
+              class={buttonStyles.button}
             >
               Back
             </LinkButton>

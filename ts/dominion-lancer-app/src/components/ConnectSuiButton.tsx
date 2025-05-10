@@ -1,10 +1,10 @@
 import {Component, Match, splitProps, Switch} from 'solid-js';
-import {Button, ButtonProps} from 'terracotta';
 import {SuiWallet} from '../contexts/SuiWallet';
 import {formatAddress} from '@mysten/sui/utils';
 import {SuiWalletControllerConext} from '../contexts/SuiWalletController';
+import { Button, ButtonRootProps } from '@kobalte/core/button';
 
-export type ConnectSuiButtonProps = ButtonProps & {
+export type ConnectSuiButtonProps = ButtonRootProps & {
   wallet: SuiWallet | undefined;
   user: string | undefined;
 } & SuiWalletControllerConext;

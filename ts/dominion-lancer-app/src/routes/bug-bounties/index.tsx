@@ -1,20 +1,13 @@
-import {
-  createFileRoute,
-  createLink,
-  Link,
-  useMatches,
-} from "@tanstack/solid-router";
-import { Check, Plus, Square, SquareCheck, SquarePlus } from "lucide-solid";
+import { createFileRoute, useMatches } from "@tanstack/solid-router";
 import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
-import { Button, Checkbox, CheckboxIndicator } from "terracotta";
 import { useSuiNetwork, useSuiUser } from "~/contexts";
 import { bugBountiesQuery } from "~/queries/bugBounties";
 import { useConfig, Network } from "~/stores/config";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
-import BugBountyToolbox from "~/components/BugBountyToolbox";
+import BugBountyToolbox from "~/components/bugBounty/index/BugBountyToolbox";
 import { normalizeStructTag } from "@mysten/sui/utils";
-import BugBountyCard from "~/components/BugBountyCard";
+import BugBountyCard from "~/components/bugBounty/index/BugBountyCard";
 
 const searchSchema = z.object({
   ownedBy: z.string().optional(),
