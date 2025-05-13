@@ -198,6 +198,8 @@ impl WTestCluster {
     }
 
     pub(crate) async fn dump_db(&self) -> IO<String> {
+        unimplemented!();
+        /*
         async {
             let url = self
                 .0
@@ -224,6 +226,7 @@ impl WTestCluster {
         }
         .await
         .into()
+        */
     }
 
     pub fn get_owned_objects(&self, owner: WSuiAddress) -> IO<Vec<WObjectInfo>> {

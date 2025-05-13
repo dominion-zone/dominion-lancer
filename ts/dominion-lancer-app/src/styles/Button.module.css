@@ -17,12 +17,12 @@
   background: #eab26e;
 }
 
-button:disabled {
+.button:disabled {
   background: #edcef0;
   color: #a1a1aa;
   cursor: help;
 }
 
-button:disabled:hover {
+.button:disabled:hover {
   background: #edcef0;
 }

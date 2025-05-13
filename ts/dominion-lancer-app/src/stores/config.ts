@@ -4,65 +4,104 @@ const config = {
   devnet: {
     runner: {
       package:
-        "0x83ea0f3f23a80398cdd2a2f24fd2b0da053c5e316154945266c9a8921d144628",
+        "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
       adminCap:
-        "0x300f23ca09695ea4621c803ce47bc820bb2d0cf6741f96e689470372f163bf21",
+        "0xd8ce4ca8b9adc39a74687a065ee488d8b83fe87ddf891bdf6f46a206167436f4",
       upgradeCap:
-        "0xaba1b0fae235836e89c8eb1f3596cf52e4d034b152c1cc39452fbe40d3ba5dd5",
+        "0x8f5750c8fcdb5d4a69e4ea206edafef82049789f421b1d8e469776202c74ac3b",
       server: {
         object:
-          "0x4d8e56c1e2ac86f654947c53c44418b12fa9922a1d4fee337e27a59ed2674d18",
+          "0xf6fb0011c0daf829b278ffafa034668a702ecde32e5f89a8ec6afa7a3973a2f3",
+        operatorCap:
+          "0x35509f24b81d9949a413d33228298231595c0019efc0a473dbe41f04c3f5f09d",
         url: "http://localhost:9200",
       },
+      typeOrigins: {
+        server: {
+          AdminCap:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          OperatorCap:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          Server:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          ServerCreatedEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          ServerDeactivatedEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          ServerDestroyedEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+        },
+        escrow: {
+          OwnerCap:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          Escrow:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          EscrowCreatedEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          EscrowLockedEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          EscrowUnlockedEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          EscrowDestroyedEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          EscrowDepositedEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+          EscrowWithdrawnEvent:
+            "0x0d5dd4147810f3e1f55ea973813d7a584dc0870216460a9f3b11e22251c7a820",
+        },
+      },
     },
-    // 5ujKZG9TFyAUiPNtZqP5BYCitwuAsNTCqecPp1W68nKT
     lancer: {
       package:
-        "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+        "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
       upgradeCap:
-        "0xbdc579bd0e1ec573889eebbe19b7a5e9c2d991d21556249737ca4c815bd7b623",
+        "0x7fc8d293736c2f613252f0497a64991932b7a79b6b70db52d68c7f9e40977caa",
       typeOrigins: {
         bugBounty: {
           BugBounty:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
           BugBountyV1:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
           OwnerCap:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
           BugBountyCreatedEvent:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
           BugBountyApprovedEvent:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
         },
         executor: {
           EXECUTOR:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
         },
         finding: {
           FindingCreatedEvent:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
           Finding:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
           FindingV1:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
           OwnerCap:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
-          VerifyExecutorMessage:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
+          VerifyExecutorMessageV1:
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
         },
         upgraderApprove: {
           UpgraderApproveV1:
-            "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
+        },
+        payment: {
+          PaymentV1:
+            "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
         },
       },
     },
     walrus: {
       package:
-        "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+        "0xe98079b13784b6156c7e45f19a011c489d29cee30489c4986758b230408bd6f3",
     },
     nautilus: {
       package:
-        "0x27265d40c15f3123d8823eee1d1d1f34b168f44e8d16b1b077157127ea3b6339",
+        "0x5920e903abb54e7a02303dcb254a1760c460dd824619d12edb0c2d1eb6c6926c",
     },
   },
 };

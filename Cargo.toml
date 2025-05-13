@@ -1,10 +1,44 @@
 [workspace]
 resolver = "2"
 
-members = [
-    "rs/lancer-runner", "rs/lancer-runner-wrapper", "rs/lancer-server"]
+members = ["rs/lancer-runner", "rs/lancer-enclave-server", "rs/lancer-server", "rs/lancer-transport"]
 
 # Dependencies that should be kept in sync through the whole workspace
 [workspace.dependencies]
-anyhow = "1.0.71"
+anyhow = { version = "1.0.71", features = ["backtrace"] }
 clap = { version = "4.4", features = ["derive", "wrap_help"] }
+aes-gcm = "0.10.3"
+axum = { version = "0.8.4", features = ["multipart"] }
+axum-extra = { version = "0.10.1", features = ["multipart"] }
+base64 = "0.22.1"
+rand = "0.8"
+rsa = "0.9.8"
+sha2 = "0.10.9"
+tokio = { version = "1.44.2", features = ["full"] }
+tower = "0.5.2"
+tower-http = { version = "0.6.2", features = ["compression-gzip", "compression-zstd", "cors", "limit"] }
+sui-sdk = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+sui-core = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+sui-framework = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+sui-types = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+shared-crypto = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+move-core-types = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+sui-json-rpc-types = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+sui-keys = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+sui-move-build = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+sui-swarm-config = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+test-cluster = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+walrus-core = { git = "https://github.com/MystenLabs/walrus.git", features = ["utoipa"] }
+walrus-sdk = { git = "https://github.com/MystenLabs/walrus.git" }
+walrus-sui = { git = "https://github.com/MystenLabs/walrus.git", features = ["utoipa"] }
+sqlx = "0.8.5"
+reqwest = { version = "0.12.15", features = ["multipart"] }
+anyhow-http = { version = "0.4.3", features = ["axum", "derive", "json"] }
+serde = { version = "1.0.219", features = ["derive"] }
+bson = "2.14.0"
+async-tempfile = "0.7.0"
+gluon = { git = "https://github.com/gluon-lang/gluon.git", features = ["serialization"] }
+gluon_codegen = { git = "https://github.com/gluon-lang/gluon.git" }
+serde_json = "1.0.140"
+tokio-tar = "0.3.1"
+futures = "0.3.31"

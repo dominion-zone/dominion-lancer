@@ -14,7 +14,7 @@ use dominion_lancer_runner::server::{Server, OperatorCap, AdminCap};
 
 // === Structs ===
 
-public struct OwnerCap has key, store {
+public struct OwnerCap<phantom T> has key, store {
     id: UID,
     escrow_id: ID,
 }
@@ -24,7 +24,7 @@ public struct Escrow<phantom T> has key {
     owner_cap_id: ID,
     server_id: ID,
     balance: Balance<T>,
-    is_locked: bool,
+    locked_for_finding: Option<ID>,
 }
 
 // === Events ===
@@ -48,6 +48,7 @@ public struct EscrowUnlockedEvent has copy, drop {
 
 public struct EscrowDestroyedEvent has copy, drop {
     escrow_id: ID,
+    amount: u64,
 }
 
 
@@ -65,13 +66,14 @@ public struct EscrowWithdrawnEvent has copy, drop {
 
 // === Entry Functions ===
 
-entry fun create_escrow_and_transfer_cap<T>(
-    self: &Server,
+entry fun create_and_transfer_cap<T>(
+    server: &Server,
     coin: Coin<T>,
     ctx: &mut TxContext,
 ) {
-    let owner_cap = self.create_escrow<T>(coin.into_balance(), ctx);
-    transfer::transfer(owner_cap, ctx.sender())
+    let (escrow, owner_cap) = create<T>(server, coin.into_balance(), ctx);
+    transfer::transfer(owner_cap, ctx.sender());
+    transfer::share_object(escrow)
 }
 
 entry fun deposit_coin<T>(
@@ -82,7 +84,7 @@ entry fun deposit_coin<T>(
 }
 
 entry fun withdraw_coin<T>(
-    self: &OwnerCap,
+    self: &OwnerCap<T>,
     escrow: &mut Escrow<T>,
     amount: u64,
     ctx: &mut TxContext,
@@ -91,27 +93,27 @@ entry fun withdraw_coin<T>(
     transfer::public_transfer(balance.into_coin(ctx), ctx.sender());
 }
 
-entry fun unlock_escrow_and_transfer_coin<T>(
+entry fun unlock_and_transfer_coin<T>(
     self: &OperatorCap,
     server: &mut Server,
     escrow: &mut Escrow<T>,
     withdraw_amount: u64,
     ctx: &mut TxContext,
 ) {
-    let balance = unlock_escrow(self, server, escrow, withdraw_amount);
+    let balance = unlock(self, server, escrow, withdraw_amount);
     transfer::public_transfer(balance.into_coin(ctx), ctx.sender());
 }
 
 // === Public Functions ===
 
-public fun create_escrow<T>(
-    self: &Server,
+public fun create<T>(
+    server: &Server,
     balance: Balance<T>,
     ctx: &mut TxContext,
-): OwnerCap {
-    assert!(self.is_active(), 0x11);
+): (Escrow<T>, OwnerCap<T>) {
+    assert!(server.is_active(), 0x11);
     let escrow_uid = object::new(ctx);
-    let owner_cap = OwnerCap {
+    let owner_cap = OwnerCap<T> {
         id: object::new(ctx),
         escrow_id: escrow_uid.to_inner(),
     };
@@ -119,9 +121,9 @@ public fun create_escrow<T>(
     let escrow = Escrow<T> {
         id: escrow_uid,
         owner_cap_id: object::id(&owner_cap),
-        server_id: object::id(self),
+        server_id: object::id(server),
         balance,
-        is_locked: false,
+        locked_for_finding: option::none(),
     };
 
     event::emit(EscrowCreatedEvent {
@@ -130,8 +132,13 @@ public fun create_escrow<T>(
         owner_cap_id: object::id(&owner_cap),
     });
 
-    transfer::share_object(escrow);
-    owner_cap
+    (escrow, owner_cap)
+}
+
+public fun share<T>(
+    self: Escrow<T>,
+) {
+    transfer::share_object(self);
 }
 
 public fun deposit<T>(
@@ -147,12 +154,12 @@ public fun deposit<T>(
 }
 
 public fun withdraw<T>(
-    self: &OwnerCap,
+    self: &OwnerCap<T>,
     escrow: &mut Escrow<T>,
     amount: u64,
 ): Balance<T> {
     escrow.assert_owner_cap(self);
-    assert!(!escrow.is_locked, 0x12);
+    assert!(escrow.locked_for_finding.is_none(), 0x12);
 
     event::emit(EscrowWithdrawnEvent {
         escrow_id: object::id(escrow),
@@ -162,27 +169,39 @@ public fun withdraw<T>(
     escrow.balance.split(amount)
 }
 
-public entry fun destroy_escrow<T>(
-    self: &OwnerCap,
+public fun destroy_escrow<T>(
+    self: &OwnerCap<T>,
     escrow: Escrow<T>,
-) {
+): Balance<T> {
     escrow.assert_owner_cap(self);
-    assert!(!escrow.is_locked, 0x12);
+    assert!(escrow.locked_for_finding.is_none(), 0x12);
     let Escrow { id, balance, .. } = escrow;
-    balance.destroy_zero();
+    let amount = balance.value();
 
     event::emit(EscrowDestroyedEvent {
         escrow_id: id.to_inner(),
+        amount,
     });
 
     id.delete();
+    balance
 }
+
+public entry fun merge<T>(
+    self: &OwnerCap<T>,
+    target: &mut Escrow<T>,
+    source: Escrow<T>,
+) {
+    let balance = destroy_escrow(self, source);
+    target.deposit(balance);    
+}
+
 
 // === View Functions ===
 
 public fun assert_owner_cap<T>(
     self: &Escrow<T>,
-    owner_cap: &OwnerCap,
+    owner_cap: &OwnerCap<T>,
 ) {
     assert!(self.owner_cap_id == object::id(owner_cap), 0x0);
 }
@@ -194,18 +213,24 @@ public fun assert_server<T>(
     assert!(self.server_id == object::id(server), 0x10);
 }
 
+public fun is_locked<T>(
+    self: &Escrow<T>,
+): bool {
+   self.locked_for_finding.is_some()
+}
+
 // === Admin Functions ===
 
 public entry fun lock_escrow<T>(
     self: &OperatorCap,
     server: &mut Server,
     escrow: &mut Escrow<T>,
+    finding_id: ID,
 ) {
     server.assert_operator_cap(self);
     escrow.assert_server(server);
     assert!(server.is_active(), 0x11);
-    assert!(!escrow.is_locked, 0x12);
-    escrow.is_locked = true;
+    escrow.locked_for_finding.fill(finding_id);
     server.increment_locked_escrow_count();
 
     event::emit(EscrowLockedEvent {
@@ -214,7 +239,7 @@ public entry fun lock_escrow<T>(
     });
 }
 
-public fun unlock_escrow<T>(
+public fun unlock<T>(
     self: &OperatorCap,
     server: &mut Server,
     escrow: &mut Escrow<T>,
@@ -222,8 +247,7 @@ public fun unlock_escrow<T>(
 ): Balance<T> {
     server.assert_operator_cap(self);
     escrow.assert_server(server);
-    assert!(escrow.is_locked, 0x12);
-    escrow.is_locked = false;
+    escrow.locked_for_finding.destroy_some();
     server.decrement_locked_escrow_count();
 
     event::emit(EscrowUnlockedEvent {
@@ -235,14 +259,13 @@ public fun unlock_escrow<T>(
     escrow.balance.split(take_amount)
 }
 
-public fun forced_unlock_escrow<T>(
+public fun forced_unlock<T>(
     _: &AdminCap,
     server: &mut Server,
     escrow: &mut Escrow<T>,
 ) {
     escrow.assert_server(server);
-    assert!(escrow.is_locked, 0x12);
-    escrow.is_locked = false;
+    escrow.locked_for_finding.destroy_some();
     server.decrement_locked_escrow_count();
 
     event::emit(EscrowUnlockedEvent {

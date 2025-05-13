@@ -5,7 +5,7 @@ import { bugBountiesQuery } from "~/queries/bugBounties";
 import { useConfig, Network } from "~/stores/config";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
-import BugBountyToolbox from "~/components/bugBounty/index/BugBountyToolbox";
+import BugBountiesToolbox from "~/components/bugBounty/index/BugBountiesToolbox";
 import { normalizeStructTag } from "@mysten/sui/utils";
 import BugBountyCard from "~/components/bugBounty/index/BugBountyCard";
 
@@ -108,8 +108,7 @@ function RouteComponent() {
   return (
     <main>
       <h1>Bug Bounties</h1>
-      <BugBountyToolbox
-        user={user.value}
+      <BugBountiesToolbox
         filterMineChecked={filterMineChecked}
         setFilterMineChecked={setFilterMineChecked}
         filterActiveChecked={filterActiveChecked}

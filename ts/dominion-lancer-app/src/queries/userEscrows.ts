@@ -3,6 +3,8 @@ import { Network, useConfig } from "../stores/config";
 import { suiClient } from "../stores/suiClient";
 import {  } from "../stores/config";
 import { queryClient } from "./client";
+import { SUI_FRAMEWORK_ADDRESS } from "@mysten/sui/utils";
+import { getOwnedEscrows } from "~/sdk/Escrow";
 
 export type UserEscrowsProps = {
   network: Network;
@@ -21,15 +23,7 @@ export const userEscrowsOptions = (props: UserEscrowsProps) =>
     queryFn: async () => {
       const config = useConfig(props.network);
       const client = suiClient(props.network);
-      client.getOwnedObjects({
-        owner: props.user,
-        filter: {
-          StructType: `${config.runner.package}::escrow::Escrow<0x2::sui::SUI>`,
-        },
-        options: {
-          showContent: true,
-        }
-      });
+      return await getOwnedEscrows(config, client, props.user);
     },
   });
 

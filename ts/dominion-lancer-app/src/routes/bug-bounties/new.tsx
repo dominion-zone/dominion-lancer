@@ -89,7 +89,7 @@ function RouteComponent() {
                         target="_blank"
                         rel="noreferrer"
                         href={`https://${
-                          network.value === "mainnet" ? "" : network + "."
+                          network.value === "mainnet" ? "" : network.value + "."
                         }suivision.xyz/txblock/${txDigest}`}
                       >
                         {formatDigest(txDigest)}
@@ -97,17 +97,18 @@ function RouteComponent() {
                     </Toast.Description>
                   </div>
                   <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                    <X />
+                    <X size={14} />
                   </Toast.CloseButton>
                 </div>
               </Toast>
             ));
             navigate({
               to: "/bug-bounties",
-              search: (prev) => ({
-                ...prev,
+              search: {
+                network: network.value as Network,
+                user: user.value,
                 ownedBy: user.value,
-              }),
+              },
             });
           },
           onError: (error) => {

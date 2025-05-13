@@ -10,6 +10,7 @@
   "dependencies": {
     "@kobalte/core": "^0.13.9",
     "@mysten/sui": "^1.29.1",
+    "@mysten/utils": "^0.0.0",
     "@mysten/wallet-standard": "^0.14.9",
     "@solid-primitives/storage": "^4.3.2",
     "@solidjs/start": "^1.1.2",

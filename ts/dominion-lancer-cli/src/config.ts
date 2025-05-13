@@ -2,63 +2,68 @@ export const config = {
   devnet: {
     runner: {
       package:
-        "0x83ea0f3f23a80398cdd2a2f24fd2b0da053c5e316154945266c9a8921d144628",
+        "0xf5d1ac000f1ef52d8c2ffc9f49a0d21213e368ac13d862328b2f060c4841ff3c",
       adminCap:
-        "0x300f23ca09695ea4621c803ce47bc820bb2d0cf6741f96e689470372f163bf21",
+        "0x8f3140fec800fef32a87496ddece86f3f00d1830562b3145d2ea6e1ff83aa880",
       upgradeCap:
-        "0xaba1b0fae235836e89c8eb1f3596cf52e4d034b152c1cc39452fbe40d3ba5dd5",
+        "0x17b39fdc5723a2b5d1a15feca95feb0f3dd17e4aac3e9da6cbeeca120faf5428",
       server: {
         object:
-          "0x4d8e56c1e2ac86f654947c53c44418b12fa9922a1d4fee337e27a59ed2674d18",
+          "0xb0fa62abd2fb667d9e714fb10edc7e1d163c1535edb5e2fcc590db303f94b026",
         url: "http://localhost:9200",
       },
     },
-    // 8KYuqLib5eBtcRN8Q8KExExigsivv4yZoNRcR6rXKARt
     lancer: {
       package:
-        "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+        "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
       upgradeCap:
-        "0x6689a153e74f63f67c4d4415753acd784af99aa0de995ffd50c632d588dd5612",
+        "0x59b77556478a58821f872512fb9ea1e92553390142c728be8a7ffcc093ef14da",
       typeOrigins: {
         bugBounty: {
           BugBounty:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
           BugBountyV1:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
           OwnerCap:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
           BugBountyCreatedEvent:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
           BugBountyApprovedEvent:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
         },
         executor: {
           EXECUTOR:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
         },
         finding: {
+          FindingCreatedEvent:
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
           Finding:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
           FindingV1:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
           OwnerCap:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
           VerifyExecutorMessage:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
         },
         upgraderApprove: {
           UpgraderApproveV1:
-            "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
+        },
+        payment: {
+          PaymentV1:
+            "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
         },
       },
     },
     walrus: {
       package:
-        "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+        "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
     },
     nautilus: {
       package:
-        "0x2ca0197cd152f9821ac46b0b96450765470c060b2ba332c9a49a7f61e54dd13f",
+        "0x154b56e06f699cf6de7d38addcea611efb2c6de3debda72a59a10772590cc222",
     },
   },
 };

@@ -5,7 +5,7 @@ edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 # authors = ["..."]      # e.g., ["Joe Smith (joesmith@noemail.com)", "John Snow (johnsnow@noemail.com)"]
 
 [dependencies]
-Walrus = { git = "https://github.com/MystenLabs/walrus.git", rev = "main", subdir = "contracts/walrus" }
+Walrus = { local = "../walrus" }
 enclave = { git = "https://github.com/MystenLabs/nautilus.git", rev = "main", subdir = "move/enclave" }
 
 # For remote import, use the `{ git = "...", subdir = "...", rev = "..." }`.
