@@ -36,6 +36,7 @@ import {
 } from "lucide-solid";
 import numberFieldStyles from "~/styles/NumberField.module.css";
 import { Link } from "@kobalte/core/link";
+import styles from "~/styles/bugBounty/index/Toolbox.module.css";
 
 const searchSchema = z.object({
   user: z.string(),
@@ -253,13 +254,13 @@ function RouteComponent() {
                   >
                     <NumberField.HiddenInput />
                     <div class={numberFieldStyles.numberFieldGroup}>
-                      <NumberField.DecrementTrigger class="custom-trigger">
+                      <NumberField.DecrementTrigger class={styles.iconButton}>
                         -
                       </NumberField.DecrementTrigger>
                       <NumberField.Input
                         class={numberFieldStyles.numberFieldInput}
                       />
-                      <NumberField.IncrementTrigger class="custom-trigger">
+                      <NumberField.IncrementTrigger class={styles.iconButton}>
                         +
                       </NumberField.IncrementTrigger>
                     </div>
@@ -285,19 +286,22 @@ function RouteComponent() {
                   >
                     <NumberField.HiddenInput />
                     <div class={numberFieldStyles.numberFieldGroup}>
-                      <NumberField.DecrementTrigger class="custom-trigger">
+                      <NumberField.DecrementTrigger class={styles.iconButton}>
                         -
                       </NumberField.DecrementTrigger>
                       <NumberField.Input
                         class={numberFieldStyles.numberFieldInput}
                       />
-                      <NumberField.IncrementTrigger class="custom-trigger">
+                      <NumberField.IncrementTrigger class={styles.iconButton}>
                         +
                       </NumberField.IncrementTrigger>
                     </div>
-                    (
-                    {Number(escrowsBalanceTotal()) / Math.pow(10, SUI_DECIMALS)}{" "}
-                    SUI deposited)
+                    <span>
+                      (
+                      {Number(escrowsBalanceTotal()) /
+                        Math.pow(10, SUI_DECIMALS)}{" "}
+                      SUI deposited)
+                    </span>
                   </NumberField>
                 </>
               )}

@@ -20,6 +20,9 @@ importers:
       '@mysten/wallet-standard':
         specifier: ^0.14.9
         version: 0.14.9(typescript@5.8.3)
+      '@mysten/walrus':
+        specifier: ^0.0.21
+        version: 0.0.21(typescript@5.8.3)
       '@solid-primitives/storage':
         specifier: ^4.3.2
         version: 4.3.2(solid-js@1.9.6)
@@ -50,6 +53,12 @@ importers:
       axios:
         specifier: ^1.9.0
         version: 1.9.0
+      embla-carousel-autoplay:
+        specifier: ^8.6.0
+        version: 8.6.0(embla-carousel@8.6.0)
+      embla-carousel-solid:
+        specifier: ^8.6.0
+        version: 8.6.0(solid-js@1.9.6)
       lucide-solid:
         specifier: ^0.503.0
         version: 0.503.0(solid-js@1.9.6)
@@ -748,6 +757,12 @@ packages:
 
   '@mysten/wallet-standard@0.14.9':
     resolution: {integrity: sha512-rEbuMQOAkT2LapIPh/4rn/GSMN1t0iOO8zQj5bxfRe5yVV+0xDDyI6Rbzov5KW/o8UluVlsd9KPWHapT3jyt5g==}
+
+  '@mysten/walrus-wasm@0.0.6':
+    resolution: {integrity: sha512-rqXopgWqALp8jdVaHeW64P5I7MmzEGy8gCFbfzK8xGgWGpSjKtvVeHJ9EguRVOxALaYtDBVlmMPnoySJi+bLjA==}
+
+  '@mysten/walrus@0.0.21':
+    resolution: {integrity: sha512-DgM01FeCYvs9o3gT9r8wydaIUYiuG6PXOCc2Iu+eybJ+l+Mvx/HBCEkcp6gw8VRXNPF+s1TmqQYcMgMHPfugmQ==}
 
   '@netlify/binary-info@1.0.0':
     resolution: {integrity: sha512-4wMPu9iN3/HL97QblBsBay3E1etIciR84izI3U+4iALY+JHCrI+a2jO0qbAZ/nxKoegypYEaiiqWXylm+/zfrw==}
@@ -1913,6 +1928,9 @@ packages:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
     engines: {node: '>= 12'}
 
+  dataloader@2.2.3:
+    resolution: {integrity: sha512-y2krtASINtPFS1rSDjacrFgn1dcUuoREVabwlOGOe4SdxenREqwjwjElAdwvbGM7kgZz9a3KVicWR7vcz8rnzA==}
+
   dax-sh@0.43.0:
     resolution: {integrity: sha512-rH9zPtgeunTAQnJrh0Q/wZ+uEV5adPffGjJ13Yl/aV4Z3wAQCZqcNspQqa2i3WH+f1yMIBw6a132qpJwLImCDQ==}
 
@@ -2080,6 +2098,24 @@ packages:
 
   electron-to-chromium@1.5.148:
     resolution: {integrity: sha512-8uc1QXwwqayD4mblcsQYZqoi+cOc97A2XmKSBOIRbEAvbp6vrqmSYs4dHD2qVygUgn7Mi0qdKgPaJ9WC8cv63A==}
+
+  embla-carousel-autoplay@8.6.0:
+    resolution: {integrity: sha512-OBu5G3nwaSXkZCo1A6LTaFMZ8EpkYbwIaH+bPqdBnDGQ2fh4+NbzjXjs2SktoPNKCtflfVMc75njaDHOYXcrsA==}
+    peerDependencies:
+      embla-carousel: 8.6.0
+
+  embla-carousel-reactive-utils@8.6.0:
+    resolution: {integrity: sha512-fMVUDUEx0/uIEDM0Mz3dHznDhfX+znCCDCeIophYb1QGVM7YThSWX+wz11zlYwWFOr74b4QLGg0hrGPJeG2s4A==}
+    peerDependencies:
+      embla-carousel: 8.6.0
+
+  embla-carousel-solid@8.6.0:
+    resolution: {integrity: sha512-xQQjPZL+CQ4n2KemoeTu0BD9mk8tkVuSMOe/GEnzKM0lAoXY/akSYBNZ4dvJDE7TMeUCAuI6D9742TTLglGq/A==}
+    peerDependencies:
+      solid-js: ^1.0.0
+
+  embla-carousel@8.6.0:
+    resolution: {integrity: sha512-SjWyZBHJPbqxHOzckOfo8lHisEaJWmwd23XppYFYVh10bU66/Pn5tkVkbkCMZVdbUE5eTCI2nD8OyIP4Z+uwkA==}
 
   emoji-regex-xs@1.0.0:
     resolution: {integrity: sha512-LRlerrMYoIDrT6jgpeZ2YYl/L8EulRTt5hQcYjy5AInh7HWXKimpqx68aknBFpGL2+/IcogTcaydJEgaTmOpDg==}
@@ -4651,6 +4687,20 @@ snapshots:
       - '@gql.tada/vue-support'
       - typescript
 
+  '@mysten/walrus-wasm@0.0.6': {}
+
+  '@mysten/walrus@0.0.21(typescript@5.8.3)':
+    dependencies:
+      '@mysten/bcs': 1.6.1
+      '@mysten/sui': 1.29.1(typescript@5.8.3)
+      '@mysten/utils': 0.0.0
+      '@mysten/walrus-wasm': 0.0.6
+      dataloader: 2.2.3
+    transitivePeerDependencies:
+      - '@gql.tada/svelte-support'
+      - '@gql.tada/vue-support'
+      - typescript
+
   '@netlify/binary-info@1.0.0': {}
 
   '@netlify/blobs@8.2.0': {}
@@ -5993,6 +6043,8 @@ snapshots:
 
   data-uri-to-buffer@4.0.1: {}
 
+  dataloader@2.2.3: {}
+
   dax-sh@0.43.0:
     dependencies:
       '@deno/shim-deno': 0.19.2
@@ -6110,6 +6162,22 @@ snapshots:
   ee-first@1.1.1: {}
 
   electron-to-chromium@1.5.148: {}
+
+  embla-carousel-autoplay@8.6.0(embla-carousel@8.6.0):
+    dependencies:
+      embla-carousel: 8.6.0
+
+  embla-carousel-reactive-utils@8.6.0(embla-carousel@8.6.0):
+    dependencies:
+      embla-carousel: 8.6.0
+
+  embla-carousel-solid@8.6.0(solid-js@1.9.6):
+    dependencies:
+      embla-carousel: 8.6.0
+      embla-carousel-reactive-utils: 8.6.0(embla-carousel@8.6.0)
+      solid-js: 1.9.6
+
+  embla-carousel@8.6.0: {}
 
   emoji-regex-xs@1.0.0: {}
 

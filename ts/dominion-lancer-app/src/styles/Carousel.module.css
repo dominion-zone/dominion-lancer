@@ -1,0 +1,25 @@
+.carousel {
+  overflow: hidden;
+  max-width: 500px;
+  margin-left: 40px;
+  margin-right: 40px;
+}
+.carousel__container {
+  display: flex;
+}
+
+.carousel__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.carousel__slide h3 {
+  text-align: center;
+}
+
+.carousel__slide img {
+  height: 200px;
+}
