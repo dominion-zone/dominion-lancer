@@ -30,7 +30,7 @@ export const filteredFindingIdsOptions = (props: FilteredFindingsProps) =>
       }
       const config = useConfig(props.network);
       const client = suiClient(props.network);
-      
+
       const ownedFindingIds = [];
       if (props.ownedBy) {
         let cursor = null;
@@ -62,7 +62,7 @@ export const filteredFindingIdsOptions = (props: FilteredFindingsProps) =>
           }
         }
       }
-       
+
       const filteredFindingIds = [];
       if (props.bugBountyId) {
         let cursor = null;
@@ -107,3 +107,9 @@ export const filteredFindingIdsOptions = (props: FilteredFindingsProps) =>
       return filteredFindingIds;
     },
   });
+
+export const useFilteredFindingIds = (props: FilteredFindingsProps) =>
+  useQuery(
+    () => filteredFindingIdsOptions(props),
+    () => queryClient
+  );

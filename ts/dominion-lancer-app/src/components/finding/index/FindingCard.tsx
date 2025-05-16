@@ -38,14 +38,13 @@ import { withdrawFindingMutation } from "~/mutations/Finding/withdrawFinding";
 import { publishFindingMutation } from "~/mutations/Finding/publishFinding";
 import { destroyFindingMutation } from "~/mutations/Finding/destroyFinding";
 import { removePaymentMutation } from "~/mutations/Finding/removePayment";
+import { findingQuery } from "~/queries/finding";
 
 export type FindingCardProps = {
-  finding: Finding;
+  findingId: string;
 };
 
 const FindingCard = (props: FindingCardProps) => {
-  const LinkButton = createLink(Button);
-
   const user = useSuiUser();
   const network = useSuiNetwork();
   const bugBounties = bugBountiesQuery({
@@ -54,8 +53,13 @@ const FindingCard = (props: FindingCardProps) => {
   const suiClient = useSuiClient();
   const wallet = useSuiWallet();
 
+  const finding = findingQuery({
+    network: network.value as Network,
+    findingId: props.findingId,
+  });
+
   const bugBounty = () =>
-    bugBounties.data?.find((b) => b.id === props.finding.bugBountyId);
+    bugBounties.data?.find((b) => b.id === finding.data?.bugBountyId);
 
   const walrusClient = () =>
     new WalrusClient({
@@ -68,21 +72,21 @@ const FindingCard = (props: FindingCardProps) => {
   const downloadBlob = downloadBlobMutation();
   const handleDownloadPublicReport = () =>
     downloadBlob.mutateAsync({
-      blobId: props.finding.publicReportBlobId!,
-      name: `public_${formatAddress(props.finding.id)}.tar`,
+      blobId: finding.data!.publicReportBlobId!,
+      name: `public_${formatAddress(props.findingId)}.tar`,
       walrusClient: walrusClient(),
     });
   const handleDownloadPrivateReport = () =>
     downloadBlob.mutateAsync({
-      blobId: props.finding.privateReportBlobId!,
-      name: `private_${formatAddress(props.finding.id)}.tar`,
+      blobId: finding.data!.privateReportBlobId!,
+      name: `private_${formatAddress(props.findingId)}.tar`,
       walrusClient: walrusClient(),
     });
 
   const handleDownloadErrorMessage = () =>
     downloadBlob.mutateAsync({
-      blobId: props.finding.errorMessageBlobId!,
-      name: `error_${formatAddress(props.finding.id)}.txt`,
+      blobId: finding.data!.errorMessageBlobId!,
+      name: `error_${formatAddress(props.findingId)}.txt`,
       walrusClient: walrusClient(),
     });
 
@@ -92,9 +96,9 @@ const FindingCard = (props: FindingCardProps) => {
       network: network.value as Network,
       wallet: wallet.value!,
       user: user.value!,
-      finding: props.finding,
+      finding: finding.data!,
     });
-  }
+  };
 
   const payFinding = payFindingMutation();
   const handlePay = () => {
@@ -102,7 +106,7 @@ const FindingCard = (props: FindingCardProps) => {
       network: network.value as Network,
       wallet: wallet.value!,
       user: user.value!,
-      finding: props.finding,
+      finding: finding.data!,
     });
   };
 
@@ -112,7 +116,7 @@ const FindingCard = (props: FindingCardProps) => {
       network: network.value as Network,
       wallet: wallet.value!,
       user: user.value!,
-      finding: props.finding,
+      finding: finding.data!,
     });
   };
 
@@ -122,7 +126,7 @@ const FindingCard = (props: FindingCardProps) => {
       network: network.value as Network,
       wallet: wallet.value!,
       user: user.value!,
-      finding: props.finding,
+      finding: finding.data!,
     });
   };
 
@@ -132,49 +136,52 @@ const FindingCard = (props: FindingCardProps) => {
       network: network.value as Network,
       wallet: wallet.value!,
       user: user.value!,
-      finding: props.finding,
+      finding: finding.data!,
     });
   };
 
   return (
     <section class="card">
-      <h2>Finding {formatAddress(props.finding.id)}</h2>
+      <h2>Finding {formatAddress(props.findingId)}</h2>
       <div class={formStyles.container}>
         <div class={formStyles.grid}>
-          <label for={`bugBounty${props.finding.id}`}>Bug bounty:</label>
+          <label for={`bugBounty${props.findingId}`}>Bug bounty:</label>
           <RouterLink
-            id={`packageId${props.finding.id}`}
+            id={`packageId${props.findingId}`}
             to="/bug-bounties"
             search={{
               network: network.value as Network,
               user: user.value,
             }}
           >
-            {bugBounty()?.name} ({formatAddress(props.finding.bugBountyId)})
+            {bugBounty()?.name} (
+            {finding.data?.bugBountyId &&
+              formatAddress(finding.data?.bugBountyId)}
+            )
           </RouterLink>
-          <Show when={props.finding.owner}>
-            <label for={`owner${props.finding.id}`}>Owner:</label>
+          <Show when={finding.data?.owner}>
+            <label for={`owner${props.findingId}`}>Owner:</label>
             <Link
-              id={`owner${props.finding.id}`}
+              id={`owner${props.findingId}`}
               href={`https://${
                 network.value === "mainnet" ? "" : network.value + "."
-              }suivision.xyz/address/${props.finding.ownerCapId}`}
+              }suivision.xyz/address/${finding.data?.owner}`}
               target="_blank"
               rel="noreferrer"
             >
-              {props.finding.owner}
+              {finding.data?.owner}
             </Link>
           </Show>
           <Switch>
-            <Match when={props.finding.publicReportBlobId}>
-              <label for={`publicReport${props.finding.id}`}>
+            <Match when={finding.data?.publicReportBlobId}>
+              <label for={`publicReport${props.findingId}`}>
                 Public report:
               </label>
               <Button
                 class={buttonStyles.button}
                 disabled={
                   !isPublicReportReadable({
-                    finding: props.finding,
+                    finding: finding.data,
                     bugBounty: bugBounty(),
                     user: user.value,
                   })
@@ -186,23 +193,23 @@ const FindingCard = (props: FindingCardProps) => {
             </Match>
             <Match
               when={
-                !props.finding.publicReportBlobId &&
-                !props.finding.errorMessageBlobId
+                !finding.data?.publicReportBlobId &&
+                !finding.data?.errorMessageBlobId
               }
             >
-              <label for={`reports${props.finding.id}`}>Reports:</label>
-              <span id={`reports${props.finding.id}`}>Processing...</span>
+              <label for={`reports${props.findingId}`}>Reports:</label>
+              <span id={`reports${props.findingId}`}>Processing...</span>
             </Match>
           </Switch>
-          <Show when={props.finding.privateReportBlobId}>
-            <label for={`privateReport${props.finding.id}`}>
+          <Show when={finding.data?.privateReportBlobId}>
+            <label for={`privateReport${props.findingId}`}>
               Private report:
             </label>
             <Button
               class={buttonStyles.button}
               disabled={
                 !isPrivateReportReadable({
-                  finding: props.finding,
+                  finding: finding.data,
                   bugBounty: bugBounty(),
                   user: user.value,
                 })
@@ -212,15 +219,13 @@ const FindingCard = (props: FindingCardProps) => {
               Download
             </Button>
           </Show>
-          <Show when={props.finding.errorMessageBlobId}>
-            <label for={`errorMessage${props.finding.id}`}>
-              Error message:
-            </label>
+          <Show when={finding.data?.errorMessageBlobId}>
+            <label for={`errorMessage${props.findingId}`}>Error message:</label>
             <Button
               class={buttonStyles.button}
               disabled={
                 !isErrorMessageReadable({
-                  finding: props.finding,
+                  finding: finding.data,
                   user: user.value,
                 })
               }
@@ -229,14 +234,17 @@ const FindingCard = (props: FindingCardProps) => {
               Download
             </Button>
           </Show>
-          <label for={`payment${props.finding.id}`}>Payment:</label>
+          <label for={`payment${props.findingId}`}>Payment:</label>
           <Show
-            when={props.finding.payments.length > 0}
+            when={finding.data?.payments.length || 0 > 0}
             fallback={
-              <span id={`payment${props.finding.id}`}>
+              <span id={`payment${props.findingId}`}>
                 <Button
                   class={buttonStyles.button}
-                  disabled={props.finding.isPublished}
+                  disabled={
+                    finding.data?.isPublished ||
+                    finding.data?.owner !== user.value
+                  }
                 >
                   Add
                 </Button>
@@ -244,7 +252,7 @@ const FindingCard = (props: FindingCardProps) => {
             }
           >
             <span
-              id={`payment${props.finding.id}`}
+              id={`payment${props.findingId}`}
               style={{
                 display: "flex",
                 "flex-direction": "row",
@@ -253,7 +261,7 @@ const FindingCard = (props: FindingCardProps) => {
               }}
             >
               <ul style={{ display: "inline-block" }}>
-                <For each={props.finding.payments}>
+                <For each={finding.data?.payments}>
                   {(p) => (
                     <li>
                       {Number(p.payed) / Math.pow(10, SUI_DECIMALS)} /{" "}
@@ -265,39 +273,39 @@ const FindingCard = (props: FindingCardProps) => {
               </ul>
               <Button
                 class={buttonStyles.button}
-                disabled={props.finding.isPublished}
+                disabled={finding.data?.isPublished}
                 onClick={handleRemovePayment}
               >
                 Remove
               </Button>
               <Button
                 class={buttonStyles.button}
-                disabled={isPaid(props.finding)}
+                disabled={isPaid(finding.data)}
                 onClick={handlePay}
               >
                 Pay
               </Button>
               <Button
                 class={buttonStyles.button}
-                disabled={hasFundsToWithdraw(props.finding)}
+                disabled={hasFundsToWithdraw(finding.data)}
                 onClick={handleWithdraw}
               >
                 Withdraw
               </Button>
             </span>
           </Show>
-          <label for={`payment${props.finding.id}`}>Publicity:</label>
+          <label for={`payment${props.findingId}`}>Publicity:</label>
           <Show
-            when={!props.finding.isPublished}
+            when={!finding.data?.isPublished}
             fallback={<span>Published</span>}
           >
             <span style={{ display: "flex", gap: "10px" }}>
               <Button
                 class={buttonStyles.button}
                 disabled={
-                  !props.finding.publicReportBlobId ||
+                  !finding.data?.publicReportBlobId ||
                   !user.value ||
-                  user.value !== props.finding.owner
+                  user.value !== finding.data?.owner
                 }
                 onClick={handlePublish}
               >
@@ -306,9 +314,9 @@ const FindingCard = (props: FindingCardProps) => {
               <Button
                 class={buttonStyles.button}
                 disabled={
-                  props.finding.isPublished ||
+                  finding.data?.isPublished ||
                   !user.value ||
-                  user.value !== props.finding.owner
+                  user.value !== finding.data?.owner
                 }
                 onClick={handleDestroy}
               >

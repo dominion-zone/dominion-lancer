@@ -24,19 +24,28 @@ export const findingStatus = (finding: Finding): FindingStatus => {
   return "Draft";
 };
 
-export const isPaid = (finding: Finding) => {
+export const isPaid = (finding?: Finding) => {
+  if (!finding) {
+    return false;
+  }
   return finding.payedCount >= finding.payments.length;
 };
 
-export const hasFundsToWithdraw = (finding: Finding) => {
+export const hasFundsToWithdraw = (finding?: Finding) => {
+  if (!finding) {
+    return false;
+  }
   return Boolean(finding.payments.find((p) => p.payed > 0n));
 };
 
 export const isPublicReportReadable = (props: {
-  finding: Finding;
+  finding?: Finding;
   bugBounty?: BugBounty;
   user?: string;
 }) => {
+  if (!props.finding) {
+    return false;
+  }
   if (props.bugBounty && props.finding.bugBountyId !== props.bugBounty.id) {
     throw new Error(
       `Finding ${props.finding.id} does not belong to Bug Bounty ${props.bugBounty.id}`
@@ -52,10 +61,13 @@ export const isPublicReportReadable = (props: {
 };
 
 export const isPrivateReportReadable = (props: {
-  finding: Finding;
+  finding?: Finding;
   bugBounty?: BugBounty;
   user?: string;
 }) => {
+  if (!props.finding) {
+    return false;
+  }
   if (props.bugBounty && props.finding.bugBountyId !== props.bugBounty.id) {
     throw new Error(
       `Finding ${props.finding.id} does not belong to Bug Bounty ${props.bugBounty.id}`
@@ -71,9 +83,12 @@ export const isPrivateReportReadable = (props: {
 };
 
 export const isErrorMessageReadable = (props: {
-  finding: Finding;
+  finding?: Finding;
   user?: string;
 }) => {
+  if (!props.finding) {
+    return false;
+  }
   return Boolean(
     props.finding.errorMessageBlobId &&
       props.user &&

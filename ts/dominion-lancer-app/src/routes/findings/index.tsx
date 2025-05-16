@@ -6,8 +6,11 @@ import FindingsToolbox from "~/components/finding/index/FindingsToolbox";
 import { useSuiUser } from "~/contexts";
 import { findingStatus, FindingStatus } from "~/sdk/Finding";
 import { For, Show } from "solid-js";
-import { filteredFindingsQuery } from "~/queries/filteredFindings";
 import FindingCard from "~/components/finding/index/FindingCard";
+import {
+  filteredFindingIdsKey,
+  useFilteredFindingIds,
+} from "~/queries/filteredFindingIds";
 
 const searchSchema = z.object({
   ownedBy: z.string().optional(),
@@ -76,19 +79,11 @@ function RouteComponent() {
     });
   };
 
-  const findings = filteredFindingsQuery({
+  const findingIds = useFilteredFindingIds({
     network: search().network,
     ownedBy: search().ownedBy,
     bugBountyId: search().bugBountyId,
   });
-
-  const filteredFinding = () =>
-    findings.data?.filter((finding) => {
-      if (filterStatus()) {
-        return findingStatus(finding) === filterStatus();
-      }
-      return true;
-    });
 
   return (
     <main>
@@ -109,8 +104,8 @@ function RouteComponent() {
           </div>
         }
       >
-        <For each={filteredFinding()}>
-          {(finding) => <FindingCard finding={finding} />}
+        <For each={findingIds.data}>
+          {(findingId) => <FindingCard findingId={findingId} />}
         </For>
       </Show>
     </main>

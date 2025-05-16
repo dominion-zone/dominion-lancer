@@ -19,7 +19,6 @@ import execTx from "~/utils/execTx";
 import { Escrow } from "~/sdk/Escrow";
 import { filteredFindingIdsKey } from "~/queries/filteredFindingIds";
 import { userEscrowsKey } from "~/queries/userEscrows";
-import { filteredFindingsKey } from "~/queries/filteredFindings";
 import { Finding } from "~/sdk/Finding";
 
 export type CreateFindingProps = {
@@ -222,7 +221,13 @@ export const createFindingMutation = () => {
           isPublished: false,
           payments:
             props.paymentSui > 0n
-              ? [{ payed: 0n, requested: props.paymentSui, type: `${SUI_FRAMEWORK_ADDRESS}::sui::SUI` }]
+              ? [
+                  {
+                    payed: 0n,
+                    requested: props.paymentSui,
+                    type: `${SUI_FRAMEWORK_ADDRESS}::sui::SUI`,
+                  },
+                ]
               : [],
           payedCount: 0n,
         };
@@ -232,41 +237,11 @@ export const createFindingMutation = () => {
           txDigest: response.digest,
         };
       },
-      onSuccess: (data, props) => {
-        const userFindingIdsKey = filteredFindingIdsKey({
-          network: props.network,
-          ownedBy: props.user,
-        });
-        const bugBoutyFindingIdsKey = filteredFindingIdsKey({
-          network: props.network,
-          bugBountyId: props.bugBountyId,
-        });
-        const userFindingsKey = filteredFindingsKey({
-          network: props.network,
-          ownedBy: props.user,
-        });
-        const bugBountyFindingsKey = filteredFindingsKey({
-          network: props.network,
-          bugBountyId: props.bugBountyId,
-        });
-        const escrowsKey = userEscrowsKey({
-          network: props.network,
-          user: props.user,
-        });
-        queryClient.invalidateQueries({
-          queryKey: userFindingIdsKey,
-        });
-        queryClient.invalidateQueries({
-          queryKey: bugBoutyFindingIdsKey,
-        });
-        queryClient.invalidateQueries({
-          queryKey: userFindingsKey,
-        });
-        queryClient.invalidateQueries({
-          queryKey: bugBountyFindingsKey,
-        });
-        queryClient.invalidateQueries({
-          queryKey: escrowsKey,
+      onSuccess: async (data, props) => {
+        await queryClient.invalidateQueries({
+          predicate: (query) =>
+            query.queryKey[0] === props.network &&
+            query.queryKey[1] === "filteredFindingIds",
         });
       },
     }),

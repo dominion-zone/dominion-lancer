@@ -58,14 +58,15 @@ export const destroyFindingMutation = () =>
     },
     onSuccess: async (data, props) => {
       await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey[0] === props.network &&
-          query.queryKey[1] === "filteredFindingIds",
+        queryKey: findingKey({
+          network: props.network,
+          findingId: props.finding.id,
+        }),
       });
       await queryClient.invalidateQueries({
         predicate: (query) =>
           query.queryKey[0] === props.network &&
-          query.queryKey[1] === "filteredFindings",
+          query.queryKey[1] === "filteredFindingIds",
       });
       return data;
     },

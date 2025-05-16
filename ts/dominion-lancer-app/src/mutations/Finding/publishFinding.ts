@@ -45,12 +45,18 @@ export const publishFindingMutation = () =>
 
       return response;
     },
-    onSuccess: (data, props) => {
-      queryClient.invalidateQueries({
+    onSuccess: async (data, props) => {
+      await queryClient.invalidateQueries({
         queryKey: findingKey({
           network: props.network,
           findingId: props.finding.id,
         }),
+      });
+
+      await queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === props.network &&
+          query.queryKey[1] === "filteredFindingIds",
       });
       return data;
     },

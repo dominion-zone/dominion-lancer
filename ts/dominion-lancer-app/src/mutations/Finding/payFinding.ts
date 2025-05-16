@@ -45,8 +45,8 @@ export const payFindingMutation = () =>
       const response = await execTx({
         tx: {
           toJSON() {
-            return tx.toJSON({client});
-          }
+            return tx.toJSON({ client });
+          },
         },
         wallet: props.wallet,
         user: props.user,
@@ -59,12 +59,17 @@ export const payFindingMutation = () =>
 
       return response;
     },
-    onSuccess: (data, props) => {
-      queryClient.invalidateQueries({
+    onSuccess: async (data, props) => {
+      await queryClient.invalidateQueries({
         queryKey: findingKey({
           network: props.network,
           findingId: props.finding.id,
         }),
+      });
+      await queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === props.network &&
+          query.queryKey[1] === "filteredFindingIds",
       });
       return data;
     },
