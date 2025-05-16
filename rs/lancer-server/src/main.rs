@@ -49,11 +49,12 @@ async fn get_public_key() -> String {
 
 #[tokio::main]
 async fn main() {
-    // build our application with a single route
+    let (server, worker) = Server::new().await.unwrap();
+
     let app = Router::new()
         .route("/public_key", get(get_public_key))
         .route("/new_finding", post(post_new_finding))
-        .with_state(Arc::new(Server::new().await))
+        .with_state(server)
         .layer(
             CorsLayer::new()
                 // allow `GET` and `POST` when accessing the resource
@@ -81,4 +82,5 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:9200").await.unwrap();
     println!("Listening on http://localhost:9200");
     axum::serve(listener, app).await.unwrap();
+    worker.await.unwrap().unwrap();
 }

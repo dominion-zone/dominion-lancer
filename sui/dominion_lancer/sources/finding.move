@@ -18,6 +18,7 @@ use wal::wal::WAL;
 use enclave::enclave::{Enclave};
 
 use sui::event;
+use sui::coin::Coin;
 
 // === Errors ===
 
@@ -232,6 +233,49 @@ entry fun seal_approve_with_owner_cap(
     }
 }
 
+entry fun pay_coin<C>(
+    self: &mut Finding,
+    coin: Coin<C>,
+) {
+    self.pay(coin.into_balance())
+}
+
+entry fun withdraw_coin<C>(
+    self: &OwnerCap,
+    finding: &mut Finding,
+    ctx: &mut TxContext,
+) {
+    let balance = self.withdraw<C>(finding);
+    transfer::public_transfer(balance.into_coin(ctx), ctx.sender())
+}
+
+entry fun destroy_v1_and_transfer_wal(
+    self: OwnerCap,
+    finding: Finding,
+    ctx: &mut TxContext,
+) {
+    let balance = destroy_v1(self, finding);
+    if (balance.value() > 0) {
+        transfer::public_transfer(balance.into_coin(ctx), ctx.sender())
+    } else {
+        balance.destroy_zero()
+    }
+}
+
+entry fun set_payment_and_withdraw<C>(
+    self: &OwnerCap,
+    finding: &mut Finding,
+    requested: u64,
+    ctx: &mut TxContext,
+) {
+    let balance = self.set_payment_v1<C>(finding, requested);
+    if (balance.value() > 0) {
+        transfer::public_transfer(balance.into_coin(ctx), ctx.sender())
+    } else {
+        balance.destroy_zero()
+    }
+}
+
 // === Public Functions ===
 
 public fun create_v1(
@@ -280,7 +324,7 @@ public fun share(
     transfer::share_object(self);
 }
 
-public fun add_payment<C>(
+public entry fun add_payment<C>(
     self: &OwnerCap,
     finding: &mut Finding,
     requested: u64,
@@ -313,34 +357,48 @@ public fun add_payment<C>(
 }
 
 public fun set_payment<C>(
+    _: &OwnerCap,
+    _: &mut Finding,
+    _: u64,
+) {
+    abort EUnknownVersion
+}
+
+public fun set_payment_v1<C>(
     self: &OwnerCap,
     finding: &mut Finding,
     requested: u64,
-) {
+): Balance<C> {
     assert!(!finding.is_published(), EAlreadyPublished);
     self.assert_owner_cap(finding);
     let coin_type = type_name::get<C>();
     match (finding.inner.version()) {
         1 => {
             let finding: &mut FindingV1 = finding.inner.load_value_mut();
-            if (finding.payments.contains(coin_type)) {
-                let payment:& mut PaymentV1<C> = finding.payments.borrow_mut(coin_type);
-                if (payment.paid.value() >= payment.requested) {
+            let balance = if (finding.payments.contains(coin_type)) {
+                let PaymentV1<C> { paid, requested } = finding.payments.remove(coin_type);
+                if (paid.value() >= requested) {
                     finding.payed_count = finding.payed_count - 1;
                 };
-                payment.requested = requested;
-                if (payment.paid.value() >= payment.requested) {
+
+                if (paid.value() >= requested) {
                     finding.payed_count = finding.payed_count + 1;
                 };
+                paid
             } else {
+                balance::zero()
+            };
+            let requested = requested - balance.value().min(requested);
+            if (requested > 0) {
                 finding.payments.add(coin_type, PaymentV1<C> {
                     requested,
                     paid: balance::zero(),
                 });
-            }
+            };
+            balance
         },
         _ => abort EUnknownVersion,
-    };
+    }
 }
 
 public fun commit(
@@ -492,7 +550,7 @@ public fun report_error_for_testing(
     };
 }
 
-public fun publish(
+public entry fun publish(
     self: &OwnerCap,
     finding: &mut Finding,
 ) {

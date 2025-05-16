@@ -36,7 +36,7 @@ import toastStyles from "~/styles/Toast.module.css";
 const Devtools = clientOnly(() => import("../components/Devtools"));
 
 const rootSearchSchema = z.object({
-  network: z.enum(networks).default("devnet"),
+  network: z.enum(networks).default(networks[0]),
   user: z.string().optional(),
 });
 

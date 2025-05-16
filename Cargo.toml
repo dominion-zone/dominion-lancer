@@ -21,6 +21,7 @@ sui-sdk = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
 sui-core = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
 sui-framework = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
 sui-types = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
+sui-config = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
 shared-crypto = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
 move-core-types = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }
 sui-json-rpc-types = { git = "https://github.com/MystenLabs/sui", tag = "testnet-v1.48.0" }

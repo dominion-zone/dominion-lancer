@@ -4883,6 +4883,8 @@ dependencies = [
  "sha2 0.10.9",
  "shared-crypto",
  "sqlx",
+ "sui-config",
+ "sui-keys",
  "sui-sdk",
  "sui-types",
  "tokio",

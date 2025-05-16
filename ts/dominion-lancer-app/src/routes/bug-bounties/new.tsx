@@ -10,7 +10,7 @@ import {
 } from "~/contexts";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
-import { createBugBountyMutation } from "~/mutations/createBugBounty";
+import { createBugBountyMutation } from "~/mutations/BugBounty/createBugBounty";
 import { Network } from "~/stores/config";
 import PackageSelect from "~/components/bugBounty/new/PackageSelect";
 import formStyles from "~/styles/Form.module.css";
@@ -213,6 +213,14 @@ function RouteComponent() {
             </form.Field>
           </div>
           <div class={formStyles.actions}>
+            <LinkButton
+              type="button"
+              to="/bug-bounties"
+              search={(v) => ({ network: v.network, user: v.user })}
+              class={buttonStyles.button}
+            >
+              Back
+            </LinkButton>
             <form.Subscribe>
               {(state) => (
                 <Button
@@ -227,14 +235,6 @@ function RouteComponent() {
                 </Button>
               )}
             </form.Subscribe>
-            <LinkButton
-              type="button"
-              to="/bug-bounties"
-              search={(v) => ({ network: v.network, user: v.user })}
-              class={buttonStyles.button}
-            >
-              Back
-            </LinkButton>
           </div>
         </form>
       </article>

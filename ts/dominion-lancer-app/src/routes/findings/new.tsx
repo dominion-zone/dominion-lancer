@@ -8,7 +8,7 @@ import {
   useSuiWallet,
   useSuiWalletController,
 } from "~/contexts";
-import { createFindingMutation } from "~/mutations/createFinding";
+import { createFindingMutation } from "~/mutations/Finding/createFinding";
 import { bugBountiesQuery } from "~/queries/bugBounties";
 import { Network } from "~/stores/config";
 import { FileField } from "@kobalte/core/file-field";
@@ -64,9 +64,6 @@ function RouteComponent() {
     network: network.value as Network,
     user: user.value!,
   });
-  createEffect(() => {
-    console.log("Escrows", escrows.data);
-  });
   const escrowsBalanceTotal = () =>
     escrows.data?.reduce(
       (acc, escrow) => (escrow.isLocked ? acc : acc + escrow.balance),
@@ -77,8 +74,8 @@ function RouteComponent() {
     defaultValues: {
       bugBountyId: search().bugBountyId || "",
       files: [] as File[],
-      paymentSui: 1,
-      budgetSui: 1,
+      paymentSui: 0.1,
+      budgetSui: 0.1,
     },
 
     onSubmit: async ({ value }) => {
@@ -91,7 +88,7 @@ function RouteComponent() {
           bugBountyId: value.bugBountyId,
           paymentSui: BigInt(value.paymentSui * Math.pow(10, SUI_DECIMALS)),
           topupSui:
-            BigInt(value.budgetSui) * BigInt(Math.pow(10, SUI_DECIMALS)) -
+            BigInt(value.budgetSui * Math.pow(10, SUI_DECIMALS)) -
             escrowsBalanceTotal(),
           escrows: escrows.data!,
         },

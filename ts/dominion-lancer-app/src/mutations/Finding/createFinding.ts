@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/solid-query";
-import { queryClient } from "../queries/client";
-import { serverPkOptions, serverPkQuery } from "../queries/serverPk";
-import { useConfig, Network } from "../stores/config";
+import { queryClient } from "../../queries/client";
+import { serverPkOptions, serverPkQuery } from "../../queries/serverPk";
+import { useConfig, Network } from "../../stores/config";
 import axios from "axios";
 import { SuiWallet, useSuiWallet } from "~/contexts";
 import {
@@ -45,7 +45,6 @@ export const createFindingMutation = () => {
         const serverPublicKey = await queryClient.ensureQueryData(
           serverPkOptions({ network: props.network })
         );
-        console.log("Public key", serverPublicKey.toString());
         const aesKey = await crypto.subtle.generateKey(
           { name: "AES-GCM", length: 256 },
           true,
@@ -105,7 +104,7 @@ export const createFindingMutation = () => {
 
         const tx = new Transaction();
         tx.setSender(props.user);
-        
+
         const [findingArg, ownerCapArg] = tx.moveCall({
           target: `${config.lancer.package}::finding::create_v1`,
           arguments: [
@@ -116,17 +115,17 @@ export const createFindingMutation = () => {
 
         if (props.paymentSui > 0n) {
           tx.moveCall({
-              target: `${config.lancer.package}::finding::add_payment`,
-              arguments: [ownerCapArg, findingArg, tx.pure.u64(props.paymentSui)],
-              typeArguments: [`${SUI_FRAMEWORK_ADDRESS}::sui::SUI`],
-            });
+            target: `${config.lancer.package}::finding::add_payment`,
+            arguments: [ownerCapArg, findingArg, tx.pure.u64(props.paymentSui)],
+            typeArguments: [`${SUI_FRAMEWORK_ADDRESS}::sui::SUI`],
+          });
         }
 
         tx.transferObjects([ownerCapArg], props.user);
         tx.moveCall({
           target: `${config.lancer.package}::finding::share`,
           arguments: [findingArg],
-          typeArguments: []
+          typeArguments: [],
         });
 
         const escrowArgs = props.escrows.map((escrow) => tx.object(escrow.id));
@@ -168,7 +167,7 @@ export const createFindingMutation = () => {
 
         const response = await execTx({
           tx: {
-            toJSON: () => tx.toJSON({ client })
+            toJSON: () => tx.toJSON({ client }),
           },
           wallet: props.wallet,
           user: props.user,
@@ -215,7 +214,17 @@ export const createFindingMutation = () => {
           bugBountyId: findingCreatedEvent.bug_bounty_id,
           ownerCapId: findingCreatedEvent.owner_cap_id,
           submissionHash: new Uint8Array(submissionHash),
-          walFunds: 0n
+          walFunds: 0n,
+          owner: props.user,
+          publicReportBlobId: null,
+          privateReportBlobId: null,
+          errorMessageBlobId: null,
+          isPublished: false,
+          payments:
+            props.paymentSui > 0n
+              ? [{ payed: 0n, requested: props.paymentSui, type: `${SUI_FRAMEWORK_ADDRESS}::sui::SUI` }]
+              : [],
+          payedCount: 0n,
         };
 
         return {

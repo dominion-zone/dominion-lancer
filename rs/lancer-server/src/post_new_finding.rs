@@ -70,7 +70,7 @@ pub async fn post_new_finding_handler(
     );
 
     let finding = server
-        .client
+        .sui_client
         .read_api()
         .get_object_with_options(finding_id, SuiObjectDataOptions::new().with_content())
         .await?
@@ -113,7 +113,7 @@ pub async fn post_new_finding_handler(
     };
 
     let inner = server
-        .client
+        .sui_client
         .read_api()
         .get_dynamic_field_object(
             inner_id,
