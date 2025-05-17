@@ -45,7 +45,10 @@ export const getOwnedEscrows = async (
       },
     });
     for (const escrow of raw) {
-      const fileds = (escrow.data!.content as { fields: MoveStruct })
+      if (!escrow.data) {
+        continue;
+      }
+      const fields = (escrow.data!.content as { fields: MoveStruct })
         .fields as {
         id: { id: string };
         owner_cap_id: string;
@@ -53,13 +56,13 @@ export const getOwnedEscrows = async (
         balance: string;
         is_locked: boolean;
       };
-      if (fileds.server_id === config.runner.server.object) {
+      if (fields.server_id === config.runner.server.object) {
         escrows.push({
-          id: fileds.id.id,
-          ownerCapId: fileds.owner_cap_id,
-          serverId: fileds.server_id,
-          balance: BigInt(fileds.balance),
-          isLocked: fileds.is_locked,
+          id: fields.id.id,
+          ownerCapId: fields.owner_cap_id,
+          serverId: fields.server_id,
+          balance: BigInt(fields.balance),
+          isLocked: fields.is_locked,
         });
       }
     }

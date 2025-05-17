@@ -4,13 +4,9 @@ import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import FindingsToolbox from "~/components/finding/index/FindingsToolbox";
 import { useSuiUser } from "~/contexts";
-import { findingStatus, FindingStatus, getFindings } from "~/sdk/Finding";
-import { For, Show } from "solid-js";
+import { findingStatus, FindingStatus } from "~/sdk/Finding";
+import { For } from "solid-js";
 import FindingCard from "~/components/finding/index/FindingCard";
-import { suiClient } from "~/stores/suiClient";
-import { queryClient } from "~/queries/client";
-import { findingIdsOptions } from "~/queries/findingIds";
-import { findingKey, findingOptions } from "~/queries/finding";
 import { useFindings } from "~/queries/findings";
 
 const searchSchema = z.object({
@@ -22,28 +18,6 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/finding/")({
   component: RouteComponent,
   validateSearch: zodValidator(searchSchema),
-  loaderDeps: ({ search }) => ({
-    network: search.network,
-    ownedBy: search.ownedBy,
-  }),
-  loader: async ({ deps }) => {
-    const client = suiClient(deps.network);
-    const ids = await queryClient.ensureQueryData(
-      findingIdsOptions({ network: deps.network, ownedBy: deps.ownedBy })
-    );
-    console.log("Finding IDs", ids);
-    const findings = await getFindings({
-      client,
-      ids,
-    });
-    console.log("Findings", findings);
-    for (const finding of findings) {
-      queryClient.setQueryData(
-        findingKey({ network: deps.network, findingId: finding.id }),
-        finding
-      );
-    }
-  },
 });
 
 function RouteComponent() {

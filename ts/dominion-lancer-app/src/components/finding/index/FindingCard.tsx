@@ -32,6 +32,7 @@ import { useFinding } from "~/queries/finding";
 import { useBugBounty } from "~/queries/bugBounty";
 import { Toast, toaster } from "@kobalte/core/toast";
 import toastStyles from "~/styles/Toast.module.css";
+import styles from "~/styles/bugBounty/index/Card.module.css";
 
 export type FindingCardProps = {
   findingId: string;
@@ -494,13 +495,28 @@ const FindingCard = (props: FindingCardProps) => {
   return (
     <section class="card">
       <h2>
-        Finding{" "}
-        <Show when={!props.solo} fallback={props.findingId}>
+        <Show
+          when={!props.solo}
+          fallback={
+            <span>
+              Finding{" "}
+              <Link
+                href={`https://${
+                  network.value === "mainnet" ? "" : network.value + "."
+                }suivision.xyz/object/${props.findingId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                ({formatAddress(props.findingId)})
+              </Link>
+            </span>
+          }
+        >
           <RouterLink
             to="/finding/$findingId"
             params={{ findingId: props.findingId }}
           >
-            {formatAddress(props.findingId)}
+            Finding {formatAddress(props.findingId)}
           </RouterLink>
         </Show>
       </h2>
@@ -684,22 +700,24 @@ const FindingCard = (props: FindingCardProps) => {
               >
                 Destroy
               </Button>
-              <Show when={props.solo}>
-                <LinkButton
-                  to="/finding"
-                  search={{
-                    network: network.value as Network,
-                    user: user.value,
-                    bugBountyId: finding.data?.bugBountyId,
-                  }}
-                >
-                  All
-                </LinkButton>
-              </Show>
             </span>
           </Show>
         </div>
       </div>
+      <Show when={props.solo}>
+        <div class={styles.line}>
+          <LinkButton
+            class={buttonStyles.button}
+            to="/finding"
+            search={{
+              network: network.value as Network,
+              user: user.value,
+            }}
+          >
+            All
+          </LinkButton>
+        </div>
+      </Show>
     </section>
   );
 };

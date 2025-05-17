@@ -1,4 +1,4 @@
-import { MoveStruct, ObjectOwner, SuiClient } from "@mysten/sui/client";
+import { MoveStruct, SuiClient } from "@mysten/sui/client";
 import { Config } from "~/stores/config";
 
 export type BugBounty = {
@@ -172,7 +172,7 @@ export const getBugBounty = async ({
     client,
   });
 };
-
+/*
 export const getBugBounties = async ({
   client,
   ids,
@@ -187,12 +187,17 @@ export const getBugBounties = async ({
     },
   });
   return await Promise.all(
-    ids.map((id, i) =>
-      parseBugBounty({
-        id,
-        client,
-        fields: (outers[i].data?.content as { fields: MoveStruct }).fields,
-      })
-    ).filter((p) => p) as Promise<BugBounty>[]
+    ids
+      .map(
+        (id, i) =>
+          outers[i].data &&
+          parseBugBounty({
+            id,
+            client,
+            fields: (outers[i].data?.content as { fields: MoveStruct }).fields,
+          })
+      )
+      .filter((p) => p) as Promise<BugBounty>[]
   );
 };
+*/

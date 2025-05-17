@@ -334,7 +334,7 @@ export const getFinding = async ({
     fields: (outer.data!.content as { fields: MoveStruct }).fields,
   });
 };
-
+/*
 export const getFindings = async ({
   client,
   ids,
@@ -362,3 +362,4 @@ export const getFindings = async ({
       .filter((p) => p) as Promise<Finding>[]
   );
 };
+*/

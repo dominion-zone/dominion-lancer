@@ -1,8 +1,8 @@
 import { Button } from "@kobalte/core/button";
-import { normalizeStructTag } from "@mysten/sui/utils";
+import { formatAddress, normalizeStructTag } from "@mysten/sui/utils";
 import { createLink } from "@tanstack/solid-router";
 import { Square, SquareCheck } from "lucide-solid";
-import { Show } from "solid-js";
+import { createEffect, Show } from "solid-js";
 import { useSuiNetwork, useSuiUser } from "~/contexts";
 import { Network, useConfig } from "~/stores/config";
 import styles from "~/styles/bugBounty/index/Card.module.css";
@@ -10,9 +10,11 @@ import formStyles from "~/styles/Form.module.css";
 import buttonStyles from "~/styles/Button.module.css";
 import { Link } from "@kobalte/core/link";
 import { useBugBounty } from "~/queries/bugBounty";
+import { Link as RouterLink } from "@tanstack/solid-router";
 
 export type BugBountyCardProps = {
   bugBountyId: string;
+  solo?: boolean;
 };
 
 const BugBountyCard = (props: BugBountyCardProps) => {
@@ -38,7 +40,32 @@ const BugBountyCard = (props: BugBountyCardProps) => {
 
   return (
     <section class="card">
-      <h2>{bugBounty.data?.name}</h2>
+      <h2>
+        <Show
+          when={!props.solo}
+          fallback={
+            <span>
+              {bugBounty.data?.name}{" "}
+              <Link
+                href={`https://${
+                  network.value === "mainnet" ? "" : network.value + "."
+                }suivision.xyz/object/${props.bugBountyId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                ({formatAddress(props.bugBountyId)})
+              </Link>
+            </span>
+          }
+        >
+          <RouterLink
+            to="/bug-bounty/$bugBountyId"
+            params={{ bugBountyId: props.bugBountyId }}
+          >
+            {bugBounty.data?.name}
+          </RouterLink>
+        </Show>
+      </h2>
       <div class={formStyles.container}>
         <div class={formStyles.grid}>
           <label for={`packageId${props.bugBountyId}`}>Package:</label>
@@ -105,6 +132,18 @@ const BugBountyCard = (props: BugBountyCardProps) => {
           >
             Report
           </LinkButton>
+          <Show when={props.solo}>
+            <LinkButton
+              class={buttonStyles.button}
+              to="/bug-bounty"
+              search={{
+                network: network.value as Network,
+                user: user.value,
+              }}
+            >
+              All
+            </LinkButton>
+          </Show>
         </div>
       </div>
     </section>

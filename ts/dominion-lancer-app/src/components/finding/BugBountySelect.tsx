@@ -23,6 +23,7 @@ const BugBountySelect = (props: BugBountySelectProps) => {
   const { filtered } = useBugBounties(() => ({
     network: network.value as Network,
   }));
+  const value = () => filtered().find(({ id }) => id === myProps.bugBountyId) || undefined;
   const onInputChange = (value: string) => {
     if (value === "") {
       props.setBugBountyId(null);
@@ -32,7 +33,7 @@ const BugBountySelect = (props: BugBountySelectProps) => {
     <Combobox<BugBounty>
       {...comboboxProps}
       options={filtered()}
-      value={filtered().find(({ id }) => id === myProps.bugBountyId) || undefined}
+      value={value()}
       onChange={(v) => props.setBugBountyId(v?.id || null)}
       onInputChange={onInputChange}
       placeholder="Enter a bug bounty id…"

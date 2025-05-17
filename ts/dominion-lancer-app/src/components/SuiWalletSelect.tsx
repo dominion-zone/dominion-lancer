@@ -29,6 +29,7 @@ export const SuiWalletSelect: Component<SuiWalletSelectProps> = (props) => {
       onChange={props.setWallet}
       optionValue="id"
       optionTextValue="name"
+      disallowEmptySelection
       placeholder="..."
       itemComponent={(props) => (
         <Select.Item item={props.item} class={styles.selectItem}>

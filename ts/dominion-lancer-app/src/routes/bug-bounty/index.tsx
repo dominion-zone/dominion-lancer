@@ -1,17 +1,12 @@
 import { createFileRoute, useMatches } from "@tanstack/solid-router";
-import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
-import { useSuiClient, useSuiNetwork, useSuiUser } from "~/contexts";
+import { For } from "solid-js";
+import { useSuiNetwork, useSuiUser } from "~/contexts";
 import { useConfig, Network } from "~/stores/config";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import BugBountiesToolbox from "~/components/bugBounty/index/BugBountiesToolbox";
 import { normalizeStructTag } from "@mysten/sui/utils";
 import BugBountyCard from "~/components/bugBounty/index/BugBountyCard";
-import { queryClient } from "~/queries/client";
-import { bugBountyIdsOptions } from "~/queries/bugBountyIds";
-import { getBugBounties } from "~/sdk/BugBounty";
-import { suiClient } from "~/stores/suiClient";
-import { bugBountyKey } from "~/queries/bugBounty";
 import { useBugBounties } from "~/queries/bugBounties";
 
 const searchSchema = z.object({
@@ -23,20 +18,6 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/bug-bounty/")({
   component: RouteComponent,
   validateSearch: zodValidator(searchSchema),
-  loaderDeps: ({ search }) => ({ network: search.network, ownedBy: search.ownedBy }),
-  loader: async ({ deps }) => {
-    const client = suiClient(deps.network);
-    const ids = await queryClient.ensureQueryData(
-      bugBountyIdsOptions({ network: deps.network, ownedBy: deps.ownedBy }),
-    );
-    const bugBounties = await getBugBounties({ client, ids });
-    for (const bugBounty of bugBounties) {
-      queryClient.setQueryData(
-        bugBountyKey({ network: deps.network, bugBountyId: bugBounty.id }),
-        bugBounty
-      );
-    }
-  },
 });
 
 function RouteComponent() {
@@ -113,7 +94,8 @@ function RouteComponent() {
             normalizeStructTag(v) ===
             normalizeStructTag(
               `${
-                useConfig(network.value as Network).lancer.typeOrigins.upgraderApprove.UpgraderApproveV1
+                useConfig(network.value as Network).lancer.typeOrigins
+                  .upgraderApprove.UpgraderApproveV1
               }::upgrader_approve::UpgraderApproveV1`
             )
         )

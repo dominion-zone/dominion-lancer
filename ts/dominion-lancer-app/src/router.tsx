@@ -3,19 +3,22 @@ import { routeTree } from "./routeTree.gen";
 
 export function createRouter() {
   const router = createTanstackSolidRouter({
-    defaultErrorComponent: err => <div>{err.error.stack}</div>,
+    defaultErrorComponent: err => <main>{err.error.stack}</main>,
     defaultNotFoundComponent: () => {
       return (
-        <div>
+        <main>
           <p>Not found!</p>
           <Link to="/">Go home</Link>
-        </div>
+        </main>
       )
     },
     routeTree,
     defaultPreload: "intent",
     defaultStaleTime: 5000,
-    scrollRestoration: true
+    scrollRestoration: true,
+    defaultOnCatch: (err) => {
+      console.error(err);
+    }
   });
   return router;
 }
