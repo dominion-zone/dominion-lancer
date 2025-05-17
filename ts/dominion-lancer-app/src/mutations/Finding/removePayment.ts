@@ -49,12 +49,14 @@ export const removePaymentMutation = () =>
       return { txDigest: response.digest };
     },
     onSuccess: async (data, props) => {
-      await queryClient.invalidateQueries({
-        queryKey: findingKey({
+      queryClient.setQueryData(
+        findingKey({
           network: props.network,
           findingId: props.finding.id,
         }),
-      });
+        (old: Finding | undefined) =>
+          old ? { ...old, payments: [], payedCount: 0n } : old
+      );
       return data;
     },
   }));

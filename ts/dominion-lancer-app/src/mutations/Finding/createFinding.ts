@@ -1,23 +1,15 @@
 import { useMutation } from "@tanstack/solid-query";
 import { queryClient } from "../../queries/client";
-import { serverPkOptions, serverPkQuery } from "../../queries/serverPk";
+import { serverPkOptions } from "../../queries/serverPk";
 import { useConfig, Network } from "../../stores/config";
 import axios from "axios";
-import { SuiWallet, useSuiWallet } from "~/contexts";
-import {
-  fromBase58,
-  fromBase64,
-  toBase58,
-  toBase64,
-  fromHex,
-  toHex,
-} from "@mysten/utils";
+import { SuiWallet } from "~/contexts";
+import { fromHex } from "@mysten/utils";
 import { coinWithBalance, Transaction } from "@mysten/sui/transactions";
 import { SUI_FRAMEWORK_ADDRESS } from "@mysten/sui/utils";
 import { suiClient } from "~/stores/suiClient";
 import execTx from "~/utils/execTx";
 import { Escrow } from "~/sdk/Escrow";
-import { userEscrowsKey } from "~/queries/userEscrows";
 import { Finding } from "~/sdk/Finding";
 import { findingKey } from "~/queries/finding";
 import { findingIdsKey } from "~/queries/findingIds";
@@ -34,7 +26,6 @@ export type CreateFindingProps = {
 };
 
 export const createFindingMutation = () => {
-  const wallet = useSuiWallet();
   return useMutation(
     () => ({
       mutationKey: ["createFinding"],
@@ -238,7 +229,7 @@ export const createFindingMutation = () => {
           txDigest: response.digest,
         };
       },
-      onSuccess: async ({finding}, props) => {
+      onSuccess: async ({ finding }, props) => {
         queryClient.setQueryData(
           findingKey({
             network: props.network,

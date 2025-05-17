@@ -48,7 +48,7 @@ function RouteComponent() {
     value: boolean | ((_: boolean) => boolean)
   ) => {
     if (typeof value === "function") {
-      value = value(filterMineChecked());
+      value = value(filterActiveChecked());
     }
     navigate({
       from: matches()[matches().length - 1].fullPath,

@@ -46,12 +46,13 @@ export const publishFindingMutation = () =>
       return { txDigest: response.digest };
     },
     onSuccess: async (data, props) => {
-      await queryClient.invalidateQueries({
-        queryKey: findingKey({
+      queryClient.setQueryData(
+        findingKey({
           network: props.network,
           findingId: props.finding.id,
         }),
-      });
-      return data;
+        (old: Finding | undefined) =>
+          old ? { ...old, isPublished: true } : old
+      );
     },
   }));

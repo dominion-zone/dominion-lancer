@@ -318,6 +318,7 @@ function RouteComponent() {
                   type="submit"
                   disabled={
                     !state().canSubmit ||
+                    !user.value ||
                     walletController.status !== "connected"
                   }
                 >

@@ -2,7 +2,7 @@ import { Button } from "@kobalte/core/button";
 import { formatAddress, normalizeStructTag } from "@mysten/sui/utils";
 import { createLink } from "@tanstack/solid-router";
 import { Square, SquareCheck } from "lucide-solid";
-import { createEffect, Show } from "solid-js";
+import { Show } from "solid-js";
 import { useSuiNetwork, useSuiUser } from "~/contexts";
 import { Network, useConfig } from "~/stores/config";
 import styles from "~/styles/bugBounty/index/Card.module.css";

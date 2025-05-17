@@ -8,6 +8,7 @@ import {
   useSuiNetwork,
   useSuiUser,
   useSuiWallet,
+  useSuiWalletController,
 } from "~/contexts";
 import { Network } from "~/stores/config";
 import formStyles from "~/styles/Form.module.css";
@@ -45,6 +46,7 @@ const FindingCard = (props: FindingCardProps) => {
   const network = useSuiNetwork();
   const suiClient = useSuiClient();
   const wallet = useSuiWallet();
+  const walletController = useSuiWalletController();
 
   const finding = useFinding({
     network: network.value as Network,
@@ -216,7 +218,7 @@ const FindingCard = (props: FindingCardProps) => {
             >
               <div class={toastStyles.toastContent}>
                 <Toast.Title class={toastStyles.toastTitle}>
-                  Error creating bug bounty
+                  Error removing payment
                 </Toast.Title>
                 <Toast.Description class={toastStyles.toastDescription}>
                   {error.message}
@@ -281,7 +283,7 @@ const FindingCard = (props: FindingCardProps) => {
             >
               <div class={toastStyles.toastContent}>
                 <Toast.Title class={toastStyles.toastTitle}>
-                  Error creating bug bounty
+                  Error paying finding
                 </Toast.Title>
                 <Toast.Description class={toastStyles.toastDescription}>
                   {error.message}
@@ -346,7 +348,7 @@ const FindingCard = (props: FindingCardProps) => {
             >
               <div class={toastStyles.toastContent}>
                 <Toast.Title class={toastStyles.toastTitle}>
-                  Error creating bug bounty
+                  Error publishing finding
                 </Toast.Title>
                 <Toast.Description class={toastStyles.toastDescription}>
                   {error.message}
@@ -411,7 +413,7 @@ const FindingCard = (props: FindingCardProps) => {
             >
               <div class={toastStyles.toastContent}>
                 <Toast.Title class={toastStyles.toastTitle}>
-                  Error creating bug bounty
+                  Error destroying finding
                 </Toast.Title>
                 <Toast.Description class={toastStyles.toastDescription}>
                   {error.message}
@@ -476,7 +478,7 @@ const FindingCard = (props: FindingCardProps) => {
             >
               <div class={toastStyles.toastContent}>
                 <Toast.Title class={toastStyles.toastTitle}>
-                  Error creating bug bounty
+                  Error withdrawing finding payment
                 </Toast.Title>
                 <Toast.Description class={toastStyles.toastDescription}>
                   {error.message}
@@ -621,6 +623,8 @@ const FindingCard = (props: FindingCardProps) => {
                   class={buttonStyles.button}
                   disabled={
                     finding.data?.isPublished ||
+                    !user.value ||
+                    walletController.status !== "connected" ||
                     finding.data?.owner !== user.value
                   }
                 >
@@ -651,21 +655,35 @@ const FindingCard = (props: FindingCardProps) => {
               </ul>
               <Button
                 class={buttonStyles.button}
-                disabled={finding.data?.isPublished}
+                disabled={
+                  finding.data?.isPublished ||
+                  !user.value ||
+                  walletController.status !== "connected" ||
+                  finding.data?.owner !== user.value
+                }
                 onClick={handleRemovePayment}
               >
                 Remove
               </Button>
               <Button
                 class={buttonStyles.button}
-                disabled={isPaid(finding.data)}
+                disabled={
+                  isPaid(finding.data) ||
+                  !user.value ||
+                  walletController.status !== "connected"
+                }
                 onClick={handlePay}
               >
                 Pay
               </Button>
               <Button
                 class={buttonStyles.button}
-                disabled={hasFundsToWithdraw(finding.data)}
+                disabled={
+                  hasFundsToWithdraw(finding.data) ||
+                  !user.value ||
+                  walletController.status !== "connected" ||
+                  finding.data?.owner !== user.value
+                }
                 onClick={handleWithdraw}
               >
                 Withdraw
@@ -683,7 +701,8 @@ const FindingCard = (props: FindingCardProps) => {
                 disabled={
                   !finding.data?.publicReportBlobId ||
                   !user.value ||
-                  user.value !== finding.data?.owner
+                  user.value !== finding.data?.owner ||
+                  walletController.status !== "connected"
                 }
                 onClick={handlePublish}
               >
@@ -694,7 +713,8 @@ const FindingCard = (props: FindingCardProps) => {
                 disabled={
                   finding.data?.isPublished ||
                   !user.value ||
-                  user.value !== finding.data?.owner
+                  user.value !== finding.data?.owner ||
+                  walletController.status !== "connected"
                 }
                 onClick={handleDestroy}
               >
