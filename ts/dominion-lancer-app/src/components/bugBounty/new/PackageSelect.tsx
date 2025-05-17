@@ -3,7 +3,6 @@ import { Updater } from "@tanstack/solid-form";
 import { CheckIcon, ChevronsUpDown } from "lucide-solid";
 import { Setter, splitProps } from "solid-js";
 import { useSuiNetwork, useSuiUser } from "~/contexts";
-import { bugBountiesQuery } from "~/queries/bugBounties";
 import { Network } from "~/stores/config";
 import styles from "../../../styles/Combobox.module.css";
 import { formatAddress } from "@mysten/sui/utils";
@@ -28,10 +27,10 @@ const PackageSelect = (props: PackageSelectProps) => {
   ]);
   const network = useSuiNetwork();
   const user = useSuiUser();
-  const userPackages = userPackagesQuery({
+  const userPackages = userPackagesQuery(() => ({
     network: network.value,
     user: user.value!,
-  });
+  }));
   const onInputChange = (value: string) => {
     if (value === "") {
       props.setPackageId(null);

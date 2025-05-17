@@ -1,10 +1,9 @@
 import { queryOptions, useQuery } from "@tanstack/solid-query";
 import { Network, useConfig } from "../stores/config";
 import { suiClient } from "../stores/suiClient";
-import {  } from "../stores/config";
 import { queryClient } from "./client";
-import { SUI_FRAMEWORK_ADDRESS } from "@mysten/sui/utils";
 import { getOwnedEscrows } from "~/sdk/Escrow";
+import { Accessor } from "solid-js";
 
 export type UserEscrowsProps = {
   network: Network;
@@ -27,8 +26,8 @@ export const userEscrowsOptions = (props: UserEscrowsProps) =>
     },
   });
 
-export const userEscrowsQuery = (props: UserEscrowsProps) =>
+export const userEscrowsQuery = (props: Accessor<UserEscrowsProps>) =>
   useQuery(
-    () => userEscrowsOptions(props),
+    () => userEscrowsOptions(props()),
     () => queryClient
   );

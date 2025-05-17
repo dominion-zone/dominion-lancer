@@ -49,7 +49,7 @@ export const withdrawFindingMutation = () =>
         },
       });
 
-      return response;
+      return { txDigest: response.digest };
     },
     onSuccess: (data, props) => {
       queryClient.invalidateQueries({

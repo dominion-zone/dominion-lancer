@@ -1,13 +1,18 @@
 import { createFileRoute, useMatches } from "@tanstack/solid-router";
 import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
-import { useSuiNetwork, useSuiUser } from "~/contexts";
-import { bugBountiesQuery } from "~/queries/bugBounties";
+import { useSuiClient, useSuiNetwork, useSuiUser } from "~/contexts";
 import { useConfig, Network } from "~/stores/config";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import BugBountiesToolbox from "~/components/bugBounty/index/BugBountiesToolbox";
 import { normalizeStructTag } from "@mysten/sui/utils";
 import BugBountyCard from "~/components/bugBounty/index/BugBountyCard";
+import { queryClient } from "~/queries/client";
+import { bugBountyIdsOptions } from "~/queries/bugBountyIds";
+import { getBugBounties } from "~/sdk/BugBounty";
+import { suiClient } from "~/stores/suiClient";
+import { bugBountyKey } from "~/queries/bugBounty";
+import { useBugBounties } from "~/queries/bugBounties";
 
 const searchSchema = z.object({
   ownedBy: z.string().optional(),
@@ -15,17 +20,28 @@ const searchSchema = z.object({
   approved: z.boolean().optional(),
 });
 
-export const Route = createFileRoute("/bug-bounties/")({
+export const Route = createFileRoute("/bug-bounty/")({
   component: RouteComponent,
   validateSearch: zodValidator(searchSchema),
+  loaderDeps: ({ search }) => ({ network: search.network, ownedBy: search.ownedBy }),
+  loader: async ({ deps }) => {
+    const client = suiClient(deps.network);
+    const ids = await queryClient.ensureQueryData(
+      bugBountyIdsOptions({ network: deps.network, ownedBy: deps.ownedBy }),
+    );
+    const bugBounties = await getBugBounties({ client, ids });
+    for (const bugBounty of bugBounties) {
+      queryClient.setQueryData(
+        bugBountyKey({ network: deps.network, bugBountyId: bugBounty.id }),
+        bugBounty
+      );
+    }
+  },
 });
 
 function RouteComponent() {
   const user = useSuiUser();
   const network = useSuiNetwork();
-  const bugBounties = bugBountiesQuery({
-    network: network.value as Network,
-  });
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const matches = useMatches();
@@ -81,29 +97,32 @@ function RouteComponent() {
     });
   };
 
-  const filteredBugBounties = () => {
-    let bounties = bugBounties.data || [];
-    if (filterMineChecked() && user.value) {
-      bounties = bounties.filter((bounty) => bounty.owner === user.value);
-    }
-    if (filterActiveChecked()) {
-      bounties = bounties.filter((bounty) => bounty.isActive);
-    }
-    if (filterApprovedChecked()) {
-      bounties = bounties.filter((bounty) =>
-        bounty.approves.find(
+  const { filtered } = useBugBounties(() => ({
+    network: network.value as Network,
+    filter: (bugBounty) => {
+      if (filterMineChecked() && user.value && bugBounty.owner !== user.value) {
+        return false;
+      }
+      if (filterActiveChecked() && !bugBounty.isActive) {
+        return false;
+      }
+      if (
+        filterApprovedChecked() &&
+        !bugBounty.approves.find(
           (v) =>
             normalizeStructTag(v) ===
             normalizeStructTag(
               `${
-                useConfig().lancer.typeOrigins.upgraderApprove.UpgraderApproveV1
+                useConfig(network.value as Network).lancer.typeOrigins.upgraderApprove.UpgraderApproveV1
               }::upgrader_approve::UpgraderApproveV1`
             )
         )
-      );
-    }
-    return bounties;
-  };
+      ) {
+        return false;
+      }
+      return true;
+    },
+  }));
 
   return (
     <main>
@@ -116,8 +135,8 @@ function RouteComponent() {
         filterApprovedChecked={filterApprovedChecked}
         setFilterApprovedChecked={setFilterApprovedChecked}
       />
-      <For each={filteredBugBounties()}>
-        {(bugBounty) => <BugBountyCard bugBounty={bugBounty} />}
+      <For each={filtered()}>
+        {(bugBounty) => <BugBountyCard bugBountyId={bugBounty.id} />}
       </For>
     </main>
   );

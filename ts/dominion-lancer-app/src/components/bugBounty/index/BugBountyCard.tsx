@@ -4,15 +4,15 @@ import { createLink } from "@tanstack/solid-router";
 import { Square, SquareCheck } from "lucide-solid";
 import { Show } from "solid-js";
 import { useSuiNetwork, useSuiUser } from "~/contexts";
-import { BugBounty } from "~/sdk/BugBounty";
-import { useConfig } from "~/stores/config";
+import { Network, useConfig } from "~/stores/config";
 import styles from "~/styles/bugBounty/index/Card.module.css";
 import formStyles from "~/styles/Form.module.css";
 import buttonStyles from "~/styles/Button.module.css";
 import { Link } from "@kobalte/core/link";
+import { useBugBounty } from "~/queries/bugBounty";
 
 export type BugBountyCardProps = {
-  bugBounty: BugBounty;
+  bugBountyId: string;
 };
 
 const BugBountyCard = (props: BugBountyCardProps) => {
@@ -20,9 +20,13 @@ const BugBountyCard = (props: BugBountyCardProps) => {
 
   const user = useSuiUser();
   const network = useSuiNetwork();
+  const bugBounty = useBugBounty(() => ({
+    network: network.value as Network,
+    bugBountyId: props.bugBountyId,
+  }));
 
   const isApproved = () =>
-    props.bugBounty.approves.find(
+    bugBounty.data?.approves.find(
       (v) =>
         normalizeStructTag(v) ===
         normalizeStructTag(
@@ -34,31 +38,31 @@ const BugBountyCard = (props: BugBountyCardProps) => {
 
   return (
     <section class="card">
-      <h2>{props.bugBounty.name}</h2>
+      <h2>{bugBounty.data?.name}</h2>
       <div class={formStyles.container}>
         <div class={formStyles.grid}>
-          <label for={`packageId${props.bugBounty.id}`}>Package:</label>
+          <label for={`packageId${props.bugBountyId}`}>Package:</label>
           <Link
-            id={`packageId${props.bugBounty.id}`}
+            id={`packageId${props.bugBountyId}`}
             href={`https://${
               network.value === "mainnet" ? "" : network.value + "."
-            }suivision.xyz/package/${props.bugBounty.packageId}`}
+            }suivision.xyz/package/${bugBounty.data?.packageId}`}
             target="_blank"
             rel="noreferrer"
           >
-            {props.bugBounty.packageId}
+            {bugBounty.data?.packageId}
           </Link>
-          <Show when={props.bugBounty.owner}>
-            <label for={`ownedBy${props.bugBounty.id}`}>Owned by:</label>
+          <Show when={bugBounty.data?.owner}>
+            <label for={`ownedBy${props.bugBountyId}`}>Owned by:</label>
             <Link
-              id={`ownedBy${props.bugBounty.id}`}
+              id={`ownedBy${props.bugBountyId}`}
               href={`https://${
                 network.value === "mainnet" ? "" : network.value + "."
-              }suivision.xyz/account/${props.bugBounty.owner}`}
+              }suivision.xyz/account/${bugBounty.data?.owner}`}
               target="_blank"
               rel="noreferrer"
             >
-              {props.bugBounty.owner}
+              {bugBounty.data?.owner}
             </Link>
           </Show>
         </div>
@@ -66,7 +70,7 @@ const BugBountyCard = (props: BugBountyCardProps) => {
           <label>
             Active:
             <Show
-              when={props.bugBounty.isActive}
+              when={bugBounty.data?.isActive}
               fallback={<Square size={18} />}
             >
               <SquareCheck size={18} />
@@ -80,24 +84,24 @@ const BugBountyCard = (props: BugBountyCardProps) => {
           </label>
           <LinkButton
             class={buttonStyles.button}
-            to="/findings"
+            to="/finding"
             search={(v) => ({
               network: v.network,
               user: v.user,
-              bugBountyId: props.bugBounty.id,
+              bugBountyId: props.bugBountyId,
             })}
           >
             Findings
           </LinkButton>
           <LinkButton
             class={buttonStyles.button}
-            to="/findings/new"
+            to="/finding/new"
             search={(v) => ({
               network: v.network,
               user: v.user!,
-              bugBountyId: props.bugBounty.id,
+              bugBountyId: props.bugBountyId,
             })}
-            disabled={!props.bugBounty.isActive || !user.value}
+            disabled={!bugBounty.data?.isActive || !user.value}
           >
             Report
           </LinkButton>

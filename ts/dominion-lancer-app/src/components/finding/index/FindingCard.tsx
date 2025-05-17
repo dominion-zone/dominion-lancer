@@ -1,12 +1,7 @@
 import { Button } from "@kobalte/core/button";
-import {
-  formatAddress,
-  normalizeStructTag,
-  parseStructTag,
-  SUI_DECIMALS,
-} from "@mysten/sui/utils";
+import { formatAddress, formatDigest, SUI_DECIMALS } from "@mysten/sui/utils";
 import { createLink } from "@tanstack/solid-router";
-import { Square, SquareCheck } from "lucide-solid";
+import { Square, SquareCheck, X } from "lucide-solid";
 import { For, Match, Show, Switch } from "solid-js";
 import {
   useSuiClient,
@@ -14,23 +9,18 @@ import {
   useSuiUser,
   useSuiWallet,
 } from "~/contexts";
-import { BugBounty } from "~/sdk/BugBounty";
-import { Network, useConfig } from "~/stores/config";
-import styles from "~/styles/bugBounty/index/Card.module.css";
+import { Network } from "~/stores/config";
 import formStyles from "~/styles/Form.module.css";
 import buttonStyles from "~/styles/Button.module.css";
 import { Link } from "@kobalte/core/link";
 import { Link as RouterLink } from "@tanstack/solid-router";
 import {
-  Finding,
   hasFundsToWithdraw,
   isErrorMessageReadable,
   isPaid,
   isPrivateReportReadable,
   isPublicReportReadable,
 } from "~/sdk/Finding";
-import { queryClient } from "~/queries/client";
-import { bugBountiesQuery } from "~/queries/bugBounties";
 import { WalrusClient } from "@mysten/walrus";
 import { downloadBlobMutation } from "~/mutations/downloadBlob";
 import { payFindingMutation } from "~/mutations/Finding/payFinding";
@@ -38,28 +28,32 @@ import { withdrawFindingMutation } from "~/mutations/Finding/withdrawFinding";
 import { publishFindingMutation } from "~/mutations/Finding/publishFinding";
 import { destroyFindingMutation } from "~/mutations/Finding/destroyFinding";
 import { removePaymentMutation } from "~/mutations/Finding/removePayment";
-import { findingQuery } from "~/queries/finding";
+import { useFinding } from "~/queries/finding";
+import { useBugBounty } from "~/queries/bugBounty";
+import { Toast, toaster } from "@kobalte/core/toast";
+import toastStyles from "~/styles/Toast.module.css";
 
 export type FindingCardProps = {
   findingId: string;
+  solo?: boolean;
 };
 
 const FindingCard = (props: FindingCardProps) => {
+  const LinkButton = createLink(Button);
   const user = useSuiUser();
   const network = useSuiNetwork();
-  const bugBounties = bugBountiesQuery({
-    network: network.value as Network,
-  });
   const suiClient = useSuiClient();
   const wallet = useSuiWallet();
 
-  const finding = findingQuery({
+  const finding = useFinding({
     network: network.value as Network,
     findingId: props.findingId,
   });
 
-  const bugBounty = () =>
-    bugBounties.data?.find((b) => b.id === finding.data?.bugBountyId);
+  const bugBounty = useBugBounty(() => ({
+    network: network.value as Network,
+    bugBountyId: finding.data?.bugBountyId,
+  }));
 
   const walrusClient = () =>
     new WalrusClient({
@@ -71,90 +65,458 @@ const FindingCard = (props: FindingCardProps) => {
 
   const downloadBlob = downloadBlobMutation();
   const handleDownloadPublicReport = () =>
-    downloadBlob.mutateAsync({
-      blobId: finding.data!.publicReportBlobId!,
-      name: `public_${formatAddress(props.findingId)}.tar`,
-      walrusClient: walrusClient(),
-    });
+    downloadBlob.mutateAsync(
+      {
+        blobId: finding.data!.publicReportBlobId!,
+        name: `public_${formatAddress(props.findingId)}.tar`,
+        walrusClient: walrusClient(),
+      },
+      {
+        onError: (error) => {
+          const toastId = toaster.show((props) => (
+            <Toast
+              toastId={props.toastId}
+              classList={{
+                [toastStyles.toast]: true,
+                [toastStyles.toastError]: true,
+              }}
+            >
+              <div class={toastStyles.toastContent}>
+                <Toast.Title class={toastStyles.toastTitle}>
+                  Error downloading public report
+                </Toast.Title>
+                <Toast.Description class={toastStyles.toastDescription}>
+                  {error.message}
+                </Toast.Description>
+              </div>
+              <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                <X size={14} />
+              </Toast.CloseButton>
+            </Toast>
+          ));
+        },
+      }
+    );
+
   const handleDownloadPrivateReport = () =>
-    downloadBlob.mutateAsync({
-      blobId: finding.data!.privateReportBlobId!,
-      name: `private_${formatAddress(props.findingId)}.tar`,
-      walrusClient: walrusClient(),
-    });
+    downloadBlob.mutateAsync(
+      {
+        blobId: finding.data!.privateReportBlobId!,
+        name: `private_${formatAddress(props.findingId)}.tar`,
+        walrusClient: walrusClient(),
+      },
+      {
+        onError: (error) => {
+          const toastId = toaster.show((props) => (
+            <Toast
+              toastId={props.toastId}
+              classList={{
+                [toastStyles.toast]: true,
+                [toastStyles.toastError]: true,
+              }}
+            >
+              <div class={toastStyles.toastContent}>
+                <Toast.Title class={toastStyles.toastTitle}>
+                  Error downloading private report
+                </Toast.Title>
+                <Toast.Description class={toastStyles.toastDescription}>
+                  {error.message}
+                </Toast.Description>
+              </div>
+              <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                <X size={14} />
+              </Toast.CloseButton>
+            </Toast>
+          ));
+        },
+      }
+    );
 
   const handleDownloadErrorMessage = () =>
-    downloadBlob.mutateAsync({
-      blobId: finding.data!.errorMessageBlobId!,
-      name: `error_${formatAddress(props.findingId)}.txt`,
-      walrusClient: walrusClient(),
-    });
+    downloadBlob.mutateAsync(
+      {
+        blobId: finding.data!.errorMessageBlobId!,
+        name: `error_${formatAddress(props.findingId)}.txt`,
+        walrusClient: walrusClient(),
+      },
+      {
+        onError: (error) => {
+          const toastId = toaster.show((props) => (
+            <Toast
+              toastId={props.toastId}
+              classList={{
+                [toastStyles.toast]: true,
+                [toastStyles.toastError]: true,
+              }}
+            >
+              <div class={toastStyles.toastContent}>
+                <Toast.Title class={toastStyles.toastTitle}>
+                  Error downloading error message
+                </Toast.Title>
+                <Toast.Description class={toastStyles.toastDescription}>
+                  {error.message}
+                </Toast.Description>
+              </div>
+              <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                <X size={14} />
+              </Toast.CloseButton>
+            </Toast>
+          ));
+        },
+      }
+    );
 
   const removePayment = removePaymentMutation();
   const handleRemovePayment = () => {
-    removePayment.mutateAsync({
-      network: network.value as Network,
-      wallet: wallet.value!,
-      user: user.value!,
-      finding: finding.data!,
-    });
+    removePayment.mutateAsync(
+      {
+        network: network.value as Network,
+        wallet: wallet.value!,
+        user: user.value!,
+        finding: finding.data!,
+      },
+      {
+        onSuccess: ({ txDigest }, mutationProps) => {
+          const toastId = toaster.show((props) => (
+            <Toast toastId={props.toastId} class={toastStyles.toast}>
+              <div class={toastStyles.toastContent}>
+                <div>
+                  <Toast.Title class={toastStyles.toastTitle}>
+                    Finding {mutationProps.finding.id}: payment removed
+                  </Toast.Title>
+                  <Toast.Description class={toastStyles.toastDescription}>
+                    Transaction:{" "}
+                    <Link
+                      target="_blank"
+                      rel="noreferrer"
+                      href={`https://${
+                        network.value === "mainnet" ? "" : network.value + "."
+                      }suivision.xyz/txblock/${txDigest}`}
+                    >
+                      {formatDigest(txDigest)}
+                    </Link>
+                  </Toast.Description>
+                </div>
+                <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                  <X size={14} />
+                </Toast.CloseButton>
+              </div>
+            </Toast>
+          ));
+        },
+        onError: (error) => {
+          const toastId = toaster.show((props) => (
+            <Toast
+              toastId={props.toastId}
+              classList={{
+                [toastStyles.toast]: true,
+                [toastStyles.toastError]: true,
+              }}
+            >
+              <div class={toastStyles.toastContent}>
+                <Toast.Title class={toastStyles.toastTitle}>
+                  Error creating bug bounty
+                </Toast.Title>
+                <Toast.Description class={toastStyles.toastDescription}>
+                  {error.message}
+                </Toast.Description>
+              </div>
+              <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                <X size={14} />
+              </Toast.CloseButton>
+            </Toast>
+          ));
+        },
+      }
+    );
   };
 
   const payFinding = payFindingMutation();
   const handlePay = () => {
-    payFinding.mutateAsync({
-      network: network.value as Network,
-      wallet: wallet.value!,
-      user: user.value!,
-      finding: finding.data!,
-    });
+    payFinding.mutateAsync(
+      {
+        network: network.value as Network,
+        wallet: wallet.value!,
+        user: user.value!,
+        finding: finding.data!,
+      },
+      {
+        onSuccess: ({ txDigest }, mutationProps) => {
+          const toastId = toaster.show((props) => (
+            <Toast toastId={props.toastId} class={toastStyles.toast}>
+              <div class={toastStyles.toastContent}>
+                <div>
+                  <Toast.Title class={toastStyles.toastTitle}>
+                    Finding {mutationProps.finding.id} paid
+                  </Toast.Title>
+                  <Toast.Description class={toastStyles.toastDescription}>
+                    Transaction:{" "}
+                    <Link
+                      target="_blank"
+                      rel="noreferrer"
+                      href={`https://${
+                        network.value === "mainnet" ? "" : network.value + "."
+                      }suivision.xyz/txblock/${txDigest}`}
+                    >
+                      {formatDigest(txDigest)}
+                    </Link>
+                  </Toast.Description>
+                </div>
+                <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                  <X size={14} />
+                </Toast.CloseButton>
+              </div>
+            </Toast>
+          ));
+        },
+        onError: (error) => {
+          const toastId = toaster.show((props) => (
+            <Toast
+              toastId={props.toastId}
+              classList={{
+                [toastStyles.toast]: true,
+                [toastStyles.toastError]: true,
+              }}
+            >
+              <div class={toastStyles.toastContent}>
+                <Toast.Title class={toastStyles.toastTitle}>
+                  Error creating bug bounty
+                </Toast.Title>
+                <Toast.Description class={toastStyles.toastDescription}>
+                  {error.message}
+                </Toast.Description>
+              </div>
+              <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                <X size={14} />
+              </Toast.CloseButton>
+            </Toast>
+          ));
+        },
+      }
+    );
   };
 
   const publishFinding = publishFindingMutation();
   const handlePublish = () => {
-    publishFinding.mutateAsync({
-      network: network.value as Network,
-      wallet: wallet.value!,
-      user: user.value!,
-      finding: finding.data!,
-    });
+    publishFinding.mutateAsync(
+      {
+        network: network.value as Network,
+        wallet: wallet.value!,
+        user: user.value!,
+        finding: finding.data!,
+      },
+      {
+        onSuccess: ({ txDigest }, mutationProps) => {
+          const toastId = toaster.show((props) => (
+            <Toast toastId={props.toastId} class={toastStyles.toast}>
+              <div class={toastStyles.toastContent}>
+                <div>
+                  <Toast.Title class={toastStyles.toastTitle}>
+                    Finding {mutationProps.finding.id} published
+                  </Toast.Title>
+                  <Toast.Description class={toastStyles.toastDescription}>
+                    Transaction:{" "}
+                    <Link
+                      target="_blank"
+                      rel="noreferrer"
+                      href={`https://${
+                        network.value === "mainnet" ? "" : network.value + "."
+                      }suivision.xyz/txblock/${txDigest}`}
+                    >
+                      {formatDigest(txDigest)}
+                    </Link>
+                  </Toast.Description>
+                </div>
+                <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                  <X size={14} />
+                </Toast.CloseButton>
+              </div>
+            </Toast>
+          ));
+        },
+        onError: (error) => {
+          const toastId = toaster.show((props) => (
+            <Toast
+              toastId={props.toastId}
+              classList={{
+                [toastStyles.toast]: true,
+                [toastStyles.toastError]: true,
+              }}
+            >
+              <div class={toastStyles.toastContent}>
+                <Toast.Title class={toastStyles.toastTitle}>
+                  Error creating bug bounty
+                </Toast.Title>
+                <Toast.Description class={toastStyles.toastDescription}>
+                  {error.message}
+                </Toast.Description>
+              </div>
+              <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                <X size={14} />
+              </Toast.CloseButton>
+            </Toast>
+          ));
+        },
+      }
+    );
   };
 
   const destroyFinding = destroyFindingMutation();
   const handleDestroy = () => {
-    destroyFinding.mutateAsync({
-      network: network.value as Network,
-      wallet: wallet.value!,
-      user: user.value!,
-      finding: finding.data!,
-    });
+    destroyFinding.mutateAsync(
+      {
+        network: network.value as Network,
+        wallet: wallet.value!,
+        user: user.value!,
+        finding: finding.data!,
+      },
+      {
+        onSuccess: ({ txDigest }, mutationProps) => {
+          const toastId = toaster.show((props) => (
+            <Toast toastId={props.toastId} class={toastStyles.toast}>
+              <div class={toastStyles.toastContent}>
+                <div>
+                  <Toast.Title class={toastStyles.toastTitle}>
+                    Finding {mutationProps.finding.id} destroyed
+                  </Toast.Title>
+                  <Toast.Description class={toastStyles.toastDescription}>
+                    Transaction:{" "}
+                    <Link
+                      target="_blank"
+                      rel="noreferrer"
+                      href={`https://${
+                        network.value === "mainnet" ? "" : network.value + "."
+                      }suivision.xyz/txblock/${txDigest}`}
+                    >
+                      {formatDigest(txDigest)}
+                    </Link>
+                  </Toast.Description>
+                </div>
+                <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                  <X size={14} />
+                </Toast.CloseButton>
+              </div>
+            </Toast>
+          ));
+        },
+        onError: (error) => {
+          const toastId = toaster.show((props) => (
+            <Toast
+              toastId={props.toastId}
+              classList={{
+                [toastStyles.toast]: true,
+                [toastStyles.toastError]: true,
+              }}
+            >
+              <div class={toastStyles.toastContent}>
+                <Toast.Title class={toastStyles.toastTitle}>
+                  Error creating bug bounty
+                </Toast.Title>
+                <Toast.Description class={toastStyles.toastDescription}>
+                  {error.message}
+                </Toast.Description>
+              </div>
+              <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                <X size={14} />
+              </Toast.CloseButton>
+            </Toast>
+          ));
+        },
+      }
+    );
   };
 
   const withdrawFinding = withdrawFindingMutation();
   const handleWithdraw = () => {
-    withdrawFinding.mutateAsync({
-      network: network.value as Network,
-      wallet: wallet.value!,
-      user: user.value!,
-      finding: finding.data!,
-    });
+    withdrawFinding.mutateAsync(
+      {
+        network: network.value as Network,
+        wallet: wallet.value!,
+        user: user.value!,
+        finding: finding.data!,
+      },
+      {
+        onSuccess: ({ txDigest }, mutationProps) => {
+          const toastId = toaster.show((props) => (
+            <Toast toastId={props.toastId} class={toastStyles.toast}>
+              <div class={toastStyles.toastContent}>
+                <div>
+                  <Toast.Title class={toastStyles.toastTitle}>
+                    Finding {mutationProps.finding.id}: payment withdrawn
+                  </Toast.Title>
+                  <Toast.Description class={toastStyles.toastDescription}>
+                    Transaction:{" "}
+                    <Link
+                      target="_blank"
+                      rel="noreferrer"
+                      href={`https://${
+                        network.value === "mainnet" ? "" : network.value + "."
+                      }suivision.xyz/txblock/${txDigest}`}
+                    >
+                      {formatDigest(txDigest)}
+                    </Link>
+                  </Toast.Description>
+                </div>
+                <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                  <X size={14} />
+                </Toast.CloseButton>
+              </div>
+            </Toast>
+          ));
+        },
+        onError: (error) => {
+          const toastId = toaster.show((props) => (
+            <Toast
+              toastId={props.toastId}
+              classList={{
+                [toastStyles.toast]: true,
+                [toastStyles.toastError]: true,
+              }}
+            >
+              <div class={toastStyles.toastContent}>
+                <Toast.Title class={toastStyles.toastTitle}>
+                  Error creating bug bounty
+                </Toast.Title>
+                <Toast.Description class={toastStyles.toastDescription}>
+                  {error.message}
+                </Toast.Description>
+              </div>
+              <Toast.CloseButton class={toastStyles.toastCloseButton}>
+                <X size={14} />
+              </Toast.CloseButton>
+            </Toast>
+          ));
+        },
+      }
+    );
   };
 
   return (
     <section class="card">
-      <h2>Finding {formatAddress(props.findingId)}</h2>
+      <h2>
+        Finding{" "}
+        <Show when={!props.solo} fallback={props.findingId}>
+          <RouterLink
+            to="/finding/$findingId"
+            params={{ findingId: props.findingId }}
+          >
+            {formatAddress(props.findingId)}
+          </RouterLink>
+        </Show>
+      </h2>
       <div class={formStyles.container}>
         <div class={formStyles.grid}>
           <label for={`bugBounty${props.findingId}`}>Bug bounty:</label>
           <RouterLink
             id={`packageId${props.findingId}`}
-            to="/bug-bounties"
+            to="/bug-bounty/$bugBountyId"
+            params={{ bugBountyId: finding.data?.bugBountyId! }}
             search={{
               network: network.value as Network,
               user: user.value,
             }}
           >
-            {bugBounty()?.name} (
+            {bugBounty.data?.name} (
             {finding.data?.bugBountyId &&
               formatAddress(finding.data?.bugBountyId)}
             )
@@ -182,7 +544,7 @@ const FindingCard = (props: FindingCardProps) => {
                 disabled={
                   !isPublicReportReadable({
                     finding: finding.data,
-                    bugBounty: bugBounty(),
+                    bugBounty: bugBounty.data,
                     user: user.value,
                   })
                 }
@@ -210,7 +572,7 @@ const FindingCard = (props: FindingCardProps) => {
               disabled={
                 !isPrivateReportReadable({
                   finding: finding.data,
-                  bugBounty: bugBounty(),
+                  bugBounty: bugBounty.data,
                   user: user.value,
                 })
               }
@@ -322,6 +684,18 @@ const FindingCard = (props: FindingCardProps) => {
               >
                 Destroy
               </Button>
+              <Show when={props.solo}>
+                <LinkButton
+                  to="/finding"
+                  search={{
+                    network: network.value as Network,
+                    user: user.value,
+                    bugBountyId: finding.data?.bugBountyId,
+                  }}
+                >
+                  All
+                </LinkButton>
+              </Show>
             </span>
           </Show>
         </div>

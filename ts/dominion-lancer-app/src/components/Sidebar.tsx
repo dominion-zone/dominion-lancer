@@ -19,7 +19,7 @@ const Sidebar = (props: SidebarProps) => {
         </li>
         <li>
           <Link
-            to="/findings"
+            to="/finding"
             search={(v) => ({ network: v.network, user: v.user, ownedBy: v.user })}
             activeProps={{ class: styles.disabled }}
           >
@@ -28,7 +28,7 @@ const Sidebar = (props: SidebarProps) => {
         </li>
         <li>
           <Link
-            to="/bug-bounties"
+            to="/bug-bounty"
             search={(v) => ({ network: v.network, user: v.user })}
             activeProps={{ class: styles.disabled }}
           >

@@ -43,7 +43,7 @@ export const publishFindingMutation = () =>
         },
       });
 
-      return response;
+      return { txDigest: response.digest };
     },
     onSuccess: async (data, props) => {
       await queryClient.invalidateQueries({
@@ -51,12 +51,6 @@ export const publishFindingMutation = () =>
           network: props.network,
           findingId: props.finding.id,
         }),
-      });
-
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey[0] === props.network &&
-          query.queryKey[1] === "filteredFindingIds",
       });
       return data;
     },

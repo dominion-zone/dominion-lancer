@@ -33,7 +33,7 @@ const searchSchema = z.object({
   packageId: z.string().optional().default(""),
 });
 
-export const Route = createFileRoute("/bug-bounties/new")({
+export const Route = createFileRoute("/bug-bounty/new")({
   component: RouteComponent,
   validateSearch: zodValidator(searchSchema),
 });
@@ -43,10 +43,10 @@ function RouteComponent() {
 
   const network = useSuiNetwork();
   const user = useSuiUser();
-  const userPackages = userPackagesQuery({
+  const userPackages = userPackagesQuery(() => ({
     network: network.value,
     user: user.value!,
-  });
+  }));
   const wallet = useSuiWallet();
   const walletController = useSuiWalletController();
   const navigate = Route.useNavigate();
@@ -61,7 +61,6 @@ function RouteComponent() {
     },
 
     onSubmit: async ({ value }) => {
-      console.log("submit", value);
       const upgradeCapId = userPackages.data?.find(
         (cap) => cap.packageId === value.packageId
       )?.upgradeCapId;
@@ -103,11 +102,11 @@ function RouteComponent() {
               </Toast>
             ));
             navigate({
-              to: "/bug-bounties",
+              to: "/bug-bounty/$bugBountyId",
+              params: { bugBountyId: bugBounty.id },
               search: {
                 network: network.value as Network,
                 user: user.value,
-                ownedBy: user.value,
               },
             });
           },
@@ -215,11 +214,11 @@ function RouteComponent() {
           <div class={formStyles.actions}>
             <LinkButton
               type="button"
-              to="/bug-bounties"
+              to="/bug-bounty"
               search={(v) => ({ network: v.network, user: v.user })}
               class={buttonStyles.button}
             >
-              Back
+              Cancel
             </LinkButton>
             <form.Subscribe>
               {(state) => (

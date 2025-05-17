@@ -1,9 +1,9 @@
 import { queryOptions, useQuery } from "@tanstack/solid-query";
 import { Network } from "../stores/config";
-import { suiClient } from "../stores/suiClient";
 import { useConfig } from "../stores/config";
 import { queryClient } from "./client";
 import axios from "axios";
+import { Accessor } from "solid-js";
 
 export type ServerPkProps = {
   network: Network;
@@ -45,8 +45,8 @@ export const serverPkOptions = (props: ServerPkProps) =>
     },
   });
 
-export const serverPkQuery = (props: ServerPkProps) =>
+export const serverPkQuery = (props: Accessor<ServerPkProps>) =>
   useQuery(
-    () => serverPkOptions(props),
+    () => serverPkOptions(props()),
     () => queryClient
   );

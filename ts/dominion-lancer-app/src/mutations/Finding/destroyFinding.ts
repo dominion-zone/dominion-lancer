@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/solid-query";
 import { SuiWallet } from "~/contexts";
 import { queryClient } from "~/queries/client";
 import { findingKey } from "~/queries/finding";
+import { findingIdsKey } from "~/queries/findingIds";
 import { Finding } from "~/sdk/Finding";
 import { Network, useConfig } from "~/stores/config";
 import { suiClient } from "~/stores/suiClient";
@@ -54,20 +55,31 @@ export const destroyFindingMutation = () =>
         },
       });
 
-      return response;
+      return { txDigest: response.digest };
     },
     onSuccess: async (data, props) => {
-      await queryClient.invalidateQueries({
-        queryKey: findingKey({
+      queryClient.setQueryData(
+        findingKey({
           network: props.network,
           findingId: props.finding.id,
         }),
-      });
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey[0] === props.network &&
-          query.queryKey[1] === "filteredFindingIds",
-      });
+        undefined
+      );
+      queryClient.setQueryData(
+        findingIdsKey({
+          network: props.network,
+          ownedBy: props.user,
+        }),
+        (old: string[] | undefined) =>
+          old?.filter((id) => id !== props.finding.id)
+      );
+      queryClient.setQueryData(
+        findingIdsKey({
+          network: props.network,
+        }),
+        (old: string[] | undefined) =>
+          old?.filter((id) => id !== props.finding.id)
+      );
       return data;
     },
   }));

@@ -52,7 +52,7 @@ const FindingsToolbox = (props: FindingsToolboxProps) => {
 
         <LinkButton
           disabled={!user.value}
-          to="/bug-bounties/new"
+          to="/finding/new"
           search={(v) => ({ network: v.network, user: v.user! })}
           classList={{ [styles.iconButton]: true }}
         >

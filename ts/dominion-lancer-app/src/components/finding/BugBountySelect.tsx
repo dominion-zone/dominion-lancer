@@ -3,11 +3,11 @@ import { Updater } from "@tanstack/solid-form";
 import { CheckIcon, ChevronsUpDown } from "lucide-solid";
 import { Setter, splitProps } from "solid-js";
 import { useSuiNetwork } from "~/contexts";
-import { bugBountiesQuery } from "~/queries/bugBounties";
 import { BugBounty } from "~/sdk/BugBounty";
 import { Network } from "~/stores/config";
 import styles from "~/styles/Combobox.module.css";
 import { formatAddress } from "@mysten/sui/utils";
+import { useBugBounties } from "~/queries/bugBounties";
 
 export type BugBountySelectProps = {
   bugBountyId: string | null;
@@ -20,9 +20,9 @@ const BugBountySelect = (props: BugBountySelectProps) => {
     "setBugBountyId",
   ]);
   const network = useSuiNetwork();
-  const bugBounties = bugBountiesQuery({
+  const { filtered } = useBugBounties(() => ({
     network: network.value as Network,
-  });
+  }));
   const onInputChange = (value: string) => {
     if (value === "") {
       props.setBugBountyId(null);
@@ -31,11 +31,8 @@ const BugBountySelect = (props: BugBountySelectProps) => {
   return (
     <Combobox<BugBounty>
       {...comboboxProps}
-      options={bugBounties.data || []}
-      value={
-        bugBounties.data?.find(({ id }) => id === myProps.bugBountyId) ||
-        undefined
-      }
+      options={filtered()}
+      value={filtered().find(({ id }) => id === myProps.bugBountyId) || undefined}
       onChange={(v) => props.setBugBountyId(v?.id || null)}
       onInputChange={onInputChange}
       placeholder="Enter a bug bounty id…"

@@ -1,7 +1,8 @@
 import { Transaction } from "@mysten/sui/transactions";
 import { useMutation } from "@tanstack/solid-query";
 import { SuiWallet } from "~/contexts";
-import { bugBountiesKey } from "~/queries/bugBounties";
+import { bugBountyKey } from "~/queries/bugBounty";
+import { bugBountyIdsKey } from "~/queries/bugBountyIds";
 import { queryClient } from "~/queries/client";
 import { BugBounty } from "~/sdk/BugBounty";
 import { useConfig, Network } from "~/stores/config";
@@ -79,22 +80,26 @@ export const createBugBountyMutation = () => {
         txDigest: response.digest,
       };
     },
-    onSuccess: ({bugBounty}, props) => {
+    onSuccess: async ({ bugBounty }, props) => {
       {
-        const queryKey = bugBountiesKey({ network: props.network });
         queryClient.setQueryData(
-          queryKey,
-          (oldData?: BugBounty[]): BugBounty[] | undefined => {
-            if (oldData === undefined) {
-              return undefined;
-            }
-            if (oldData.find((b) => b.id === bugBounty.id)) {
-              return oldData;
-            }
-            return [bugBounty, ...oldData];
+          bugBountyKey({ network: props.network, bugBountyId: bugBounty.id }),
+          bugBounty
+        );
+        queryClient.setQueryData(
+          bugBountyIdsKey({ network: props.network }),
+          (old: string[] | undefined) => {
+            if (old === undefined) return undefined;
+            return [...old, bugBounty.id];
           }
         );
-        queryClient.invalidateQueries({queryKey});
+        queryClient.setQueryData(
+          bugBountyIdsKey({ network: props.network, ownedBy: props.user }),
+          (old: string[] | undefined) => {
+            if (old === undefined) return undefined;
+            return [...old, bugBounty.id];
+          }
+        );
       }
     },
   }));

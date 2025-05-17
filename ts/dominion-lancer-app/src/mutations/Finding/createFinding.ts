@@ -17,9 +17,10 @@ import { SUI_FRAMEWORK_ADDRESS } from "@mysten/sui/utils";
 import { suiClient } from "~/stores/suiClient";
 import execTx from "~/utils/execTx";
 import { Escrow } from "~/sdk/Escrow";
-import { filteredFindingIdsKey } from "~/queries/filteredFindingIds";
 import { userEscrowsKey } from "~/queries/userEscrows";
 import { Finding } from "~/sdk/Finding";
+import { findingKey } from "~/queries/finding";
+import { findingIdsKey } from "~/queries/findingIds";
 
 export type CreateFindingProps = {
   network: Network;
@@ -237,12 +238,33 @@ export const createFindingMutation = () => {
           txDigest: response.digest,
         };
       },
-      onSuccess: async (data, props) => {
-        await queryClient.invalidateQueries({
-          predicate: (query) =>
-            query.queryKey[0] === props.network &&
-            query.queryKey[1] === "filteredFindingIds",
-        });
+      onSuccess: async ({finding}, props) => {
+        queryClient.setQueryData(
+          findingKey({
+            network: props.network,
+            findingId: finding.id,
+          }),
+          finding
+        );
+        queryClient.setQueryData(
+          findingIdsKey({
+            network: props.network,
+            ownedBy: props.user,
+          }),
+          (old: string[] | undefined) => {
+            if (old === undefined) return undefined;
+            return [...old, finding.id];
+          }
+        );
+        queryClient.setQueryData(
+          findingIdsKey({
+            network: props.network,
+          }),
+          (old: string[] | undefined) => {
+            if (old === undefined) return undefined;
+            return [...old, finding.id];
+          }
+        );
       },
     }),
     () => queryClient

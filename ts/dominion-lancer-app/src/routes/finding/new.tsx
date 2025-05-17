@@ -9,7 +9,6 @@ import {
   useSuiWalletController,
 } from "~/contexts";
 import { createFindingMutation } from "~/mutations/Finding/createFinding";
-import { bugBountiesQuery } from "~/queries/bugBounties";
 import { Network } from "~/stores/config";
 import { FileField } from "@kobalte/core/file-field";
 import BugBountySelect from "~/components/finding/BugBountySelect";
@@ -43,7 +42,7 @@ const searchSchema = z.object({
   bugBountyId: z.string().optional().default(""),
 });
 
-export const Route = createFileRoute("/findings/new")({
+export const Route = createFileRoute("/finding/new")({
   component: RouteComponent,
   validateSearch: zodValidator(searchSchema),
 });
@@ -53,17 +52,14 @@ function RouteComponent() {
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
   const network = useSuiNetwork();
-  const bugBounties = bugBountiesQuery({
-    network: network.value as Network,
-  });
   const wallet = useSuiWallet();
   const walletController = useSuiWalletController();
   const user = useSuiUser();
   const mutation = createFindingMutation();
-  const escrows = userEscrowsQuery({
+  const escrows = userEscrowsQuery(() => ({
     network: network.value as Network,
     user: user.value!,
-  });
+  }));
   const escrowsBalanceTotal = () =>
     escrows.data?.reduce(
       (acc, escrow) => (escrow.isLocked ? acc : acc + escrow.balance),
@@ -121,11 +117,13 @@ function RouteComponent() {
               </Toast>
             ));
             navigate({
-              to: "/findings",
+              to: "/finding/$findingId",
+              params: {
+                findingId: finding.id,
+              },
               search: {
                 network: network.value as Network,
                 user: user.value,
-                ownedBy: user.value,
               },
             });
           },
@@ -305,6 +303,14 @@ function RouteComponent() {
             </form.Field>
           </div>
           <div class={formStyles.actions}>
+            <LinkButton
+              type="button"
+              to="/finding"
+              search={(v) => ({ network: v.network, user: v.user })}
+              class={buttonStyles.button}
+            >
+              Cancel
+            </LinkButton>
             <form.Subscribe>
               {(state) => (
                 <Button
@@ -319,14 +325,6 @@ function RouteComponent() {
                 </Button>
               )}
             </form.Subscribe>
-            <LinkButton
-              type="button"
-              to="/findings"
-              search={(v) => ({ network: v.network, user: v.user })}
-              class={buttonStyles.button}
-            >
-              Back
-            </LinkButton>
           </div>
         </form>
       </article>

@@ -15,10 +15,12 @@ import { Route as RoadmapImport } from './routes/roadmap'
 import { Route as DocsImport } from './routes/docs'
 import { Route as ContactsImport } from './routes/contacts'
 import { Route as IndexImport } from './routes/index'
-import { Route as FindingsIndexImport } from './routes/findings/index'
-import { Route as BugBountiesIndexImport } from './routes/bug-bounties/index'
-import { Route as FindingsNewImport } from './routes/findings/new'
-import { Route as BugBountiesNewImport } from './routes/bug-bounties/new'
+import { Route as FindingIndexImport } from './routes/finding/index'
+import { Route as BugBountyIndexImport } from './routes/bug-bounty/index'
+import { Route as FindingNewImport } from './routes/finding/new'
+import { Route as FindingFindingIdImport } from './routes/finding/$findingId'
+import { Route as BugBountyNewImport } from './routes/bug-bounty/new'
+import { Route as BugBountyBugBountyIdImport } from './routes/bug-bounty/$bugBountyId'
 
 // Create/Update Routes
 
@@ -46,27 +48,39 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const FindingsIndexRoute = FindingsIndexImport.update({
-  id: '/findings/',
-  path: '/findings/',
+const FindingIndexRoute = FindingIndexImport.update({
+  id: '/finding/',
+  path: '/finding/',
   getParentRoute: () => rootRoute,
 } as any)
 
-const BugBountiesIndexRoute = BugBountiesIndexImport.update({
-  id: '/bug-bounties/',
-  path: '/bug-bounties/',
+const BugBountyIndexRoute = BugBountyIndexImport.update({
+  id: '/bug-bounty/',
+  path: '/bug-bounty/',
   getParentRoute: () => rootRoute,
 } as any)
 
-const FindingsNewRoute = FindingsNewImport.update({
-  id: '/findings/new',
-  path: '/findings/new',
+const FindingNewRoute = FindingNewImport.update({
+  id: '/finding/new',
+  path: '/finding/new',
   getParentRoute: () => rootRoute,
 } as any)
 
-const BugBountiesNewRoute = BugBountiesNewImport.update({
-  id: '/bug-bounties/new',
-  path: '/bug-bounties/new',
+const FindingFindingIdRoute = FindingFindingIdImport.update({
+  id: '/finding/$findingId',
+  path: '/finding/$findingId',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const BugBountyNewRoute = BugBountyNewImport.update({
+  id: '/bug-bounty/new',
+  path: '/bug-bounty/new',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const BugBountyBugBountyIdRoute = BugBountyBugBountyIdImport.update({
+  id: '/bug-bounty/$bugBountyId',
+  path: '/bug-bounty/$bugBountyId',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -102,32 +116,46 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof RoadmapImport
       parentRoute: typeof rootRoute
     }
-    '/bug-bounties/new': {
-      id: '/bug-bounties/new'
-      path: '/bug-bounties/new'
-      fullPath: '/bug-bounties/new'
-      preLoaderRoute: typeof BugBountiesNewImport
+    '/bug-bounty/$bugBountyId': {
+      id: '/bug-bounty/$bugBountyId'
+      path: '/bug-bounty/$bugBountyId'
+      fullPath: '/bug-bounty/$bugBountyId'
+      preLoaderRoute: typeof BugBountyBugBountyIdImport
       parentRoute: typeof rootRoute
     }
-    '/findings/new': {
-      id: '/findings/new'
-      path: '/findings/new'
-      fullPath: '/findings/new'
-      preLoaderRoute: typeof FindingsNewImport
+    '/bug-bounty/new': {
+      id: '/bug-bounty/new'
+      path: '/bug-bounty/new'
+      fullPath: '/bug-bounty/new'
+      preLoaderRoute: typeof BugBountyNewImport
       parentRoute: typeof rootRoute
     }
-    '/bug-bounties/': {
-      id: '/bug-bounties/'
-      path: '/bug-bounties'
-      fullPath: '/bug-bounties'
-      preLoaderRoute: typeof BugBountiesIndexImport
+    '/finding/$findingId': {
+      id: '/finding/$findingId'
+      path: '/finding/$findingId'
+      fullPath: '/finding/$findingId'
+      preLoaderRoute: typeof FindingFindingIdImport
       parentRoute: typeof rootRoute
     }
-    '/findings/': {
-      id: '/findings/'
-      path: '/findings'
-      fullPath: '/findings'
-      preLoaderRoute: typeof FindingsIndexImport
+    '/finding/new': {
+      id: '/finding/new'
+      path: '/finding/new'
+      fullPath: '/finding/new'
+      preLoaderRoute: typeof FindingNewImport
+      parentRoute: typeof rootRoute
+    }
+    '/bug-bounty/': {
+      id: '/bug-bounty/'
+      path: '/bug-bounty'
+      fullPath: '/bug-bounty'
+      preLoaderRoute: typeof BugBountyIndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/finding/': {
+      id: '/finding/'
+      path: '/finding'
+      fullPath: '/finding'
+      preLoaderRoute: typeof FindingIndexImport
       parentRoute: typeof rootRoute
     }
   }
@@ -140,10 +168,12 @@ export interface FileRoutesByFullPath {
   '/contacts': typeof ContactsRoute
   '/docs': typeof DocsRoute
   '/roadmap': typeof RoadmapRoute
-  '/bug-bounties/new': typeof BugBountiesNewRoute
-  '/findings/new': typeof FindingsNewRoute
-  '/bug-bounties': typeof BugBountiesIndexRoute
-  '/findings': typeof FindingsIndexRoute
+  '/bug-bounty/$bugBountyId': typeof BugBountyBugBountyIdRoute
+  '/bug-bounty/new': typeof BugBountyNewRoute
+  '/finding/$findingId': typeof FindingFindingIdRoute
+  '/finding/new': typeof FindingNewRoute
+  '/bug-bounty': typeof BugBountyIndexRoute
+  '/finding': typeof FindingIndexRoute
 }
 
 export interface FileRoutesByTo {
@@ -151,10 +181,12 @@ export interface FileRoutesByTo {
   '/contacts': typeof ContactsRoute
   '/docs': typeof DocsRoute
   '/roadmap': typeof RoadmapRoute
-  '/bug-bounties/new': typeof BugBountiesNewRoute
-  '/findings/new': typeof FindingsNewRoute
-  '/bug-bounties': typeof BugBountiesIndexRoute
-  '/findings': typeof FindingsIndexRoute
+  '/bug-bounty/$bugBountyId': typeof BugBountyBugBountyIdRoute
+  '/bug-bounty/new': typeof BugBountyNewRoute
+  '/finding/$findingId': typeof FindingFindingIdRoute
+  '/finding/new': typeof FindingNewRoute
+  '/bug-bounty': typeof BugBountyIndexRoute
+  '/finding': typeof FindingIndexRoute
 }
 
 export interface FileRoutesById {
@@ -163,10 +195,12 @@ export interface FileRoutesById {
   '/contacts': typeof ContactsRoute
   '/docs': typeof DocsRoute
   '/roadmap': typeof RoadmapRoute
-  '/bug-bounties/new': typeof BugBountiesNewRoute
-  '/findings/new': typeof FindingsNewRoute
-  '/bug-bounties/': typeof BugBountiesIndexRoute
-  '/findings/': typeof FindingsIndexRoute
+  '/bug-bounty/$bugBountyId': typeof BugBountyBugBountyIdRoute
+  '/bug-bounty/new': typeof BugBountyNewRoute
+  '/finding/$findingId': typeof FindingFindingIdRoute
+  '/finding/new': typeof FindingNewRoute
+  '/bug-bounty/': typeof BugBountyIndexRoute
+  '/finding/': typeof FindingIndexRoute
 }
 
 export interface FileRouteTypes {
@@ -176,30 +210,36 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/docs'
     | '/roadmap'
-    | '/bug-bounties/new'
-    | '/findings/new'
-    | '/bug-bounties'
-    | '/findings'
+    | '/bug-bounty/$bugBountyId'
+    | '/bug-bounty/new'
+    | '/finding/$findingId'
+    | '/finding/new'
+    | '/bug-bounty'
+    | '/finding'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/contacts'
     | '/docs'
     | '/roadmap'
-    | '/bug-bounties/new'
-    | '/findings/new'
-    | '/bug-bounties'
-    | '/findings'
+    | '/bug-bounty/$bugBountyId'
+    | '/bug-bounty/new'
+    | '/finding/$findingId'
+    | '/finding/new'
+    | '/bug-bounty'
+    | '/finding'
   id:
     | '__root__'
     | '/'
     | '/contacts'
     | '/docs'
     | '/roadmap'
-    | '/bug-bounties/new'
-    | '/findings/new'
-    | '/bug-bounties/'
-    | '/findings/'
+    | '/bug-bounty/$bugBountyId'
+    | '/bug-bounty/new'
+    | '/finding/$findingId'
+    | '/finding/new'
+    | '/bug-bounty/'
+    | '/finding/'
   fileRoutesById: FileRoutesById
 }
 
@@ -208,10 +248,12 @@ export interface RootRouteChildren {
   ContactsRoute: typeof ContactsRoute
   DocsRoute: typeof DocsRoute
   RoadmapRoute: typeof RoadmapRoute
-  BugBountiesNewRoute: typeof BugBountiesNewRoute
-  FindingsNewRoute: typeof FindingsNewRoute
-  BugBountiesIndexRoute: typeof BugBountiesIndexRoute
-  FindingsIndexRoute: typeof FindingsIndexRoute
+  BugBountyBugBountyIdRoute: typeof BugBountyBugBountyIdRoute
+  BugBountyNewRoute: typeof BugBountyNewRoute
+  FindingFindingIdRoute: typeof FindingFindingIdRoute
+  FindingNewRoute: typeof FindingNewRoute
+  BugBountyIndexRoute: typeof BugBountyIndexRoute
+  FindingIndexRoute: typeof FindingIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -219,10 +261,12 @@ const rootRouteChildren: RootRouteChildren = {
   ContactsRoute: ContactsRoute,
   DocsRoute: DocsRoute,
   RoadmapRoute: RoadmapRoute,
-  BugBountiesNewRoute: BugBountiesNewRoute,
-  FindingsNewRoute: FindingsNewRoute,
-  BugBountiesIndexRoute: BugBountiesIndexRoute,
-  FindingsIndexRoute: FindingsIndexRoute,
+  BugBountyBugBountyIdRoute: BugBountyBugBountyIdRoute,
+  BugBountyNewRoute: BugBountyNewRoute,
+  FindingFindingIdRoute: FindingFindingIdRoute,
+  FindingNewRoute: FindingNewRoute,
+  BugBountyIndexRoute: BugBountyIndexRoute,
+  FindingIndexRoute: FindingIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -239,10 +283,12 @@ export const routeTree = rootRoute
         "/contacts",
         "/docs",
         "/roadmap",
-        "/bug-bounties/new",
-        "/findings/new",
-        "/bug-bounties/",
-        "/findings/"
+        "/bug-bounty/$bugBountyId",
+        "/bug-bounty/new",
+        "/finding/$findingId",
+        "/finding/new",
+        "/bug-bounty/",
+        "/finding/"
       ]
     },
     "/": {
@@ -257,17 +303,23 @@ export const routeTree = rootRoute
     "/roadmap": {
       "filePath": "roadmap.tsx"
     },
-    "/bug-bounties/new": {
-      "filePath": "bug-bounties/new.tsx"
+    "/bug-bounty/$bugBountyId": {
+      "filePath": "bug-bounty/$bugBountyId.tsx"
     },
-    "/findings/new": {
-      "filePath": "findings/new.tsx"
+    "/bug-bounty/new": {
+      "filePath": "bug-bounty/new.tsx"
     },
-    "/bug-bounties/": {
-      "filePath": "bug-bounties/index.tsx"
+    "/finding/$findingId": {
+      "filePath": "finding/$findingId.tsx"
     },
-    "/findings/": {
-      "filePath": "findings/index.tsx"
+    "/finding/new": {
+      "filePath": "finding/new.tsx"
+    },
+    "/bug-bounty/": {
+      "filePath": "bug-bounty/index.tsx"
+    },
+    "/finding/": {
+      "filePath": "finding/index.tsx"
     }
   }
 }

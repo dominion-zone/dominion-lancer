@@ -4,13 +4,14 @@ import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import FindingsToolbox from "~/components/finding/index/FindingsToolbox";
 import { useSuiUser } from "~/contexts";
-import { findingStatus, FindingStatus } from "~/sdk/Finding";
+import { findingStatus, FindingStatus, getFindings } from "~/sdk/Finding";
 import { For, Show } from "solid-js";
 import FindingCard from "~/components/finding/index/FindingCard";
-import {
-  filteredFindingIdsKey,
-  useFilteredFindingIds,
-} from "~/queries/filteredFindingIds";
+import { suiClient } from "~/stores/suiClient";
+import { queryClient } from "~/queries/client";
+import { findingIdsOptions } from "~/queries/findingIds";
+import { findingKey, findingOptions } from "~/queries/finding";
+import { useFindings } from "~/queries/findings";
 
 const searchSchema = z.object({
   ownedBy: z.string().optional(),
@@ -18,9 +19,31 @@ const searchSchema = z.object({
   status: z.enum(["Draft", "Active", "Error"]).optional(),
 });
 
-export const Route = createFileRoute("/findings/")({
+export const Route = createFileRoute("/finding/")({
   component: RouteComponent,
   validateSearch: zodValidator(searchSchema),
+  loaderDeps: ({ search }) => ({
+    network: search.network,
+    ownedBy: search.ownedBy,
+  }),
+  loader: async ({ deps }) => {
+    const client = suiClient(deps.network);
+    const ids = await queryClient.ensureQueryData(
+      findingIdsOptions({ network: deps.network, ownedBy: deps.ownedBy })
+    );
+    console.log("Finding IDs", ids);
+    const findings = await getFindings({
+      client,
+      ids,
+    });
+    console.log("Findings", findings);
+    for (const finding of findings) {
+      queryClient.setQueryData(
+        findingKey({ network: deps.network, findingId: finding.id }),
+        finding
+      );
+    }
+  },
 });
 
 function RouteComponent() {
@@ -79,11 +102,22 @@ function RouteComponent() {
     });
   };
 
-  const findingIds = useFilteredFindingIds({
+  const { filtered } = useFindings(() => ({
     network: search().network,
     ownedBy: search().ownedBy,
-    bugBountyId: search().bugBountyId,
-  });
+    filter: (finding) => {
+      if (filterMineChecked() && finding.owner !== search().ownedBy) {
+        return false;
+      }
+      if (filterBugBountyId() && finding.bugBountyId !== search().bugBountyId) {
+        return false;
+      }
+      if (filterStatus() && findingStatus(finding) !== filterStatus()) {
+        return false;
+      }
+      return true;
+    },
+  }));
 
   return (
     <main>
@@ -96,18 +130,10 @@ function RouteComponent() {
         filterStatus={filterStatus}
         setFilterStatus={setFilterStatus}
       />
-      <Show
-        when={Boolean(filterMineChecked() || filterBugBountyId())}
-        fallback={
-          <div class="card">
-            <h2>Select one of mine or bug bounty filters </h2>
-          </div>
-        }
-      >
-        <For each={findingIds.data}>
-          {(findingId) => <FindingCard findingId={findingId} />}
-        </For>
-      </Show>
+
+      <For each={filtered()}>
+        {(finding) => <FindingCard findingId={finding.id} />}
+      </For>
     </main>
   );
 }

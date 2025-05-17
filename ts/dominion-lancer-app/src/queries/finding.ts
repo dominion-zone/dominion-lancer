@@ -1,5 +1,3 @@
-import { MoveStruct } from "@mysten/sui/client";
-import { deriveDynamicFieldID } from "@mysten/sui/utils";
 import { queryOptions, useQuery } from "@tanstack/solid-query";
 import { getFinding } from "~/sdk/Finding";
 import { Network } from "~/stores/config";
@@ -21,13 +19,12 @@ export const findingOptions = (props: FindingProps) =>
   queryOptions({
     queryKey: findingKey(props),
     queryFn: async () => {
-      // const config = useConfig(props.network);
       const client = suiClient(props.network);
-      return await getFinding(client, props.findingId)
+      return await getFinding({client, id: props.findingId})
     },
   });
 
-export const findingQuery = (props: FindingProps) =>
+export const useFinding = (props: FindingProps) =>
   useQuery(
     () => findingOptions(props),
     () => queryClient

@@ -77,7 +77,7 @@ const BugBountiesToolbox = (props: BugBountiesToolboxProps) => {
 
         <LinkButton
           disabled={!user.value}
-          to="/bug-bounties/new"
+          to="/bug-bounty/new"
           search={(v) => ({ network: v.network, user: v.user! })}
           classList={{ [styles.iconButton]: true }}
         >

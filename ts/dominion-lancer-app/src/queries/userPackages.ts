@@ -2,6 +2,7 @@ import { MoveStruct, MoveValue } from "@mysten/sui/client";
 import { queryOptions, useQuery } from "@tanstack/solid-query";
 import { suiClient } from "~/stores/suiClient";
 import { queryClient } from "./client";
+import { Accessor } from "solid-js";
 
 export type UserPackagesProps = {
   network: string;
@@ -58,8 +59,8 @@ export const userPackagesOptions = (props: UserPackagesProps) =>
     },
   });
 
-export const userPackagesQuery = (props: UserPackagesProps) =>
+export const userPackagesQuery = (props: Accessor<UserPackagesProps>) =>
   useQuery(
-    () => userPackagesOptions(props),
+    () => userPackagesOptions(props()),
     () => queryClient
   );
