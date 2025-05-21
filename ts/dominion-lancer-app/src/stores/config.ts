@@ -66,7 +66,7 @@ const config = {
           "0xf872c04363d282f8751c08f367349aa82ec0b85f38f9d0daa63b2c296f36575e",
         operatorCap:
           "0x08df34e5922df3f41a174f603f3c2e28b1461eb351ceccf64f6e0b27766926a9",
-        url: "http://localhost:9200",
+        url: "https://api.lancer.dominion.zone",
       },
       typeOrigins: {
         server: {

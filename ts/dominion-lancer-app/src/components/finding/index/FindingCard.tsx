@@ -679,7 +679,7 @@ const FindingCard = (props: FindingCardProps) => {
               <Button
                 class={buttonStyles.button}
                 disabled={
-                  hasFundsToWithdraw(finding.data) ||
+                  !hasFundsToWithdraw(finding.data) ||
                   !user.value ||
                   walletController.status !== "connected" ||
                   finding.data?.owner !== user.value
