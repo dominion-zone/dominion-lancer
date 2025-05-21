@@ -2,7 +2,6 @@ dist
 build
 node_modules
 target
-rs/lancer-runner/examples/simple/output
 .wrangler
 .output
 .vercel
