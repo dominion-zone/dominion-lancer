@@ -517,6 +517,7 @@ const FindingCard = (props: FindingCardProps) => {
           <RouterLink
             to="/finding/$findingId"
             params={{ findingId: props.findingId }}
+            search={(v) => ({ network: v.network, user: v.user })}
           >
             Finding {formatAddress(props.findingId)}
           </RouterLink>

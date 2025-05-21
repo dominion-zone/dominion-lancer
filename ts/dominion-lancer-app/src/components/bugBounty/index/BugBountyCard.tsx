@@ -61,6 +61,7 @@ const BugBountyCard = (props: BugBountyCardProps) => {
           <RouterLink
             to="/bug-bounty/$bugBountyId"
             params={{ bugBountyId: props.bugBountyId }}
+            search={(v) => ({ network: v.network, user: v.user })}
           >
             {bugBounty.data?.name}
           </RouterLink>

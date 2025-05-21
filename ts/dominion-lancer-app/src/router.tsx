@@ -1,16 +1,21 @@
-import { createRouter as createTanstackSolidRouter, Link } from "@tanstack/solid-router";
+import {
+  createRouter as createTanstackSolidRouter,
+  Link,
+} from "@tanstack/solid-router";
 import { routeTree } from "./routeTree.gen";
 
 export function createRouter() {
   const router = createTanstackSolidRouter({
-    defaultErrorComponent: err => <main>{err.error.stack}</main>,
+    defaultErrorComponent: (err) => <main>{err.error.stack}</main>,
     defaultNotFoundComponent: () => {
       return (
         <main>
           <p>Not found!</p>
-          <Link to="/">Go home</Link>
+          <Link to="/" search={(s) => ({ network: s.network, user: s.user })}>
+            Go home
+          </Link>
         </main>
-      )
+      );
     },
     routeTree,
     defaultPreload: "intent",
@@ -18,7 +23,7 @@ export function createRouter() {
     scrollRestoration: true,
     defaultOnCatch: (err) => {
       console.error(err);
-    }
+    },
   });
   return router;
 }

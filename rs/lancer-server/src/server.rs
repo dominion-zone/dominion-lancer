@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use lancer_transport::task::LancerRunTask;
 use move_core_types::account_address::AccountAddress;
@@ -25,8 +25,8 @@ impl Server {
         let (task_sender, receiver) = mpsc::channel(8);
         let reqwest = reqwest::Client::new();
         let config = load_configuration(
-            Some("/home/aankor/.walrus/client_config_testnet.yaml"),
-            None,
+            Some(env::current_dir()?.join("walrus.yaml")),
+            Some("testnet"),
         )?;
         println!("Config: {:?}", config);
         let sui_client = SuiClientBuilder::default().build_testnet().await?;

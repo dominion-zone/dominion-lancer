@@ -1,27 +1,23 @@
-use std::num::NonZero;
+use std::{num::NonZero, sync::Arc};
 
 use base64::prelude::*;
 use rsa::RsaPrivateKey;
 use rsa::pkcs8::EncodePublicKey;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use walrus_core::{encoding::{EncodingConfig, EncodingConfigTrait}, BlobId, EncodingType, DEFAULT_ENCODING};
+use walrus_core::{
+    BlobId, DEFAULT_ENCODING, EncodingType,
+    encoding::{EncodingConfig, EncodingConfigTrait},
+};
 
-// use crate::task::{Status, Task};
+use crate::task::Task;
 
 pub struct Server {
     pub rsa_private_key: RsaPrivateKey,
     pub encoding_config: EncodingConfig,
-    //  pub task: RwLock<Option<Task>>,
+    pub task: RwLock<Option<Arc<Task>>>,
 }
 
-/*
-#[derive(Clone, Serialize, Deserialize)]
-pub struct TaskStatus {
-    pub id: Vec<u8>, // signature
-    pub status: Status,
-}
-    */
 
 impl Server {
     pub fn new() -> Self {
@@ -30,7 +26,7 @@ impl Server {
         Server {
             rsa_private_key,
             encoding_config: EncodingConfig::new(NonZero::new(1000).unwrap()),
-            // task: RwLock::new(None),
+            task: RwLock::new(None),
         }
     }
 

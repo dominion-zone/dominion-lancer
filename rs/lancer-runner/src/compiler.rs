@@ -27,7 +27,8 @@ impl Deref for WPackage {
 impl WPackage {
     fn compile(path: &str) -> IO<Self> {
         (|| {
-            let builder = BuildConfig::new_for_testing();
+            let mut builder = BuildConfig::new_for_testing();
+            builder.config.skip_fetch_latest_git_deps = true;
             let r = builder
                 .build(path.as_ref())
                 .map_err(|err| err.to_string())?;
