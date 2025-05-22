@@ -37,6 +37,11 @@ const EInvalidStatus: u64 = 13;
 
 // === Constants ===
 
+const PUBLIC_RERPORT_FIELD: u8 = 0;
+const PRIVATE_RERPORT_FIELD: u8 = 1;
+const ERROR_MESSAGE_FIELD: u8 = 2;
+
+
 // === Structs ===
 
 public struct PaymentV1<phantom C> has store {
@@ -115,16 +120,6 @@ public struct FindingDestroyedEvent has copy, drop {
     finding_id: ID,
 }
 
-public struct SealApprovedPublicWithBugBountyEvent has copy, drop {
-    finding_id: ID,
-    bug_bounty_id: ID,
-}
-
-public struct SealApprovedPrivateWithBugBountyEvent has copy, drop {
-    finding_id: ID,
-    bug_bounty_id: ID,
-}
-
 public struct SealApprovedPublicWithOwnerCapEvent has copy, drop {
     finding_id: ID,
     owner_cap_id: ID,
@@ -133,6 +128,21 @@ public struct SealApprovedPublicWithOwnerCapEvent has copy, drop {
 public struct SealApprovedPrivateWithOwnerCapEvent has copy, drop {
     finding_id: ID,
     owner_cap_id: ID,
+}
+
+public struct SealApprovedErrorWithOwnerCapEvent has copy, drop {
+    finding_id: ID,
+    owner_cap_id: ID,
+}
+
+public struct SealApprovedPublicWithBugBountyEvent has copy, drop {
+    finding_id: ID,
+    bug_bounty_id: ID,
+}
+
+public struct SealApprovedPrivateWithBugBountyEvent has copy, drop {
+    finding_id: ID,
+    bug_bounty_id: ID,
 }
 
 public struct FindingPaidEvent has copy, drop {
@@ -161,6 +171,36 @@ entry fun create_v1_and_transfer_cap(
     transfer::transfer(owner_cap, ctx.sender());
 }
 
+entry fun seal_approve_with_owner_cap(
+    id: vector<u8>,
+    owner_cap: &OwnerCap,
+    finding: &Finding,
+) {
+    owner_cap.assert_owner_cap(finding);
+
+    let field = approve(id, finding);
+    match (field) {
+        PUBLIC_RERPORT_FIELD => {
+            event::emit(SealApprovedPublicWithOwnerCapEvent {
+                finding_id: object::id(finding),
+                owner_cap_id: object::id(owner_cap),
+            });
+        },
+        PRIVATE_RERPORT_FIELD => {
+            event::emit(SealApprovedPrivateWithOwnerCapEvent {
+                finding_id: object::id(finding),
+                owner_cap_id: object::id(owner_cap),
+            });
+        },
+        ERROR_MESSAGE_FIELD => {
+            event::emit(SealApprovedErrorWithOwnerCapEvent {
+                finding_id: object::id(finding),
+                owner_cap_id: object::id(owner_cap),
+            });
+        },
+        _ => abort EInvalidDecryptId
+    }
+}
 
 entry fun seal_approve_with_bug_bounty(
     id: vector<u8>,
@@ -169,67 +209,22 @@ entry fun seal_approve_with_bug_bounty(
 ) {
     assert!(finding.is_published(), ENotPublished);
     assert!(finding.bug_bounty_id() == bug_bounty_owner_cap.bug_bounty_id(), EInvalidBugBounty);
-    let is_paid = finding.is_paid();
-    let finding_id = object::id(finding);
-
-    let mut prepared: BCS = bcs::new(id);
-    let id = prepared.peel_u256();
-
-    match (finding.inner.version()) {
-        1 => {
-            let finding: &FindingV1 = finding.inner.load_value();
-            if (finding.private_report_blob.is_some() &&
-                id == finding.private_report_blob.borrow().blob_id()) {
-                assert!(is_paid, ENotPaid);
-                event::emit(SealApprovedPrivateWithBugBountyEvent {
-                    finding_id,
-                    bug_bounty_id: object::id(bug_bounty_owner_cap),
-                });
-            } else if (finding.public_report_blob.is_some() &&
-                id == finding.public_report_blob.borrow().blob_id()) {
-                event::emit(SealApprovedPublicWithBugBountyEvent {
-                    finding_id,
-                    bug_bounty_id: object::id(bug_bounty_owner_cap),
-                });
-            } else {
-                abort EInvalidDecryptId
-            }
+    let field = approve(id, finding);
+    match (field) {
+        PUBLIC_RERPORT_FIELD => {
+            event::emit(SealApprovedPublicWithBugBountyEvent {
+                finding_id: object::id(finding),
+                bug_bounty_id: object::id(bug_bounty_owner_cap),
+            });
         },
-        _ => abort EUnknownVersion
-    };
-}
-
-entry fun seal_approve_with_owner_cap(
-    id: vector<u8>,
-    owner_cap: &OwnerCap,
-    finding: &Finding,
-) {
-    owner_cap.assert_owner_cap(finding);
-
-    let mut prepared: BCS = bcs::new(id);
-    let id = prepared.peel_u256();
-    let finding_id = object::id(finding);
-
-    match (finding.inner.version()) {
-        1 => {
-            let finding: &FindingV1 = finding.inner.load_value();
-            if (finding.private_report_blob.is_some() &&
-                id == finding.private_report_blob.borrow().blob_id()) {
-                event::emit(SealApprovedPrivateWithOwnerCapEvent {
-                    finding_id,
-                    owner_cap_id: object::id(owner_cap),
-                });
-            } else if (finding.public_report_blob.is_some() &&
-                id == finding.public_report_blob.borrow().blob_id()) {
-                event::emit(SealApprovedPublicWithOwnerCapEvent {
-                    finding_id,
-                    owner_cap_id: object::id(owner_cap),
-                });
-            } else {
-                abort EInvalidDecryptId
-            }
+        PRIVATE_RERPORT_FIELD => {
+            assert!(finding.is_paid(), ENotPaid);
+            event::emit(SealApprovedPrivateWithBugBountyEvent {
+                finding_id: object::id(finding),
+                bug_bounty_id: object::id(bug_bounty_owner_cap),
+            });
         },
-        _ => abort EUnknownVersion,
+        _ => abort EInvalidDecryptId
     }
 }
 
@@ -797,5 +792,34 @@ public fun assert_owner_cap(
 // === Package Functions ===
 
 // === Private Functions ===
+
+fun approve(
+    mut id: vector<u8>,
+    finding: &Finding,
+): u8 {
+    let finding_id = object::id(finding);
+
+    let field = id.pop_back();
+    let id = object::id_from_bytes(id);
+    assert!(id == finding_id, EInvalidDecryptId);
+
+    match (finding.inner.version()) {
+        1 => {
+            let finding: &FindingV1 = finding.inner.load_value();
+            match (field) {
+                PUBLIC_RERPORT_FIELD =>
+                    assert!(finding.public_report_blob.is_some(), EInvalidDecryptId),
+                PRIVATE_RERPORT_FIELD =>
+                    assert!(finding.private_report_blob.is_some(), EInvalidDecryptId),
+                ERROR_MESSAGE_FIELD =>
+                    assert!(finding.error_message_blob.is_some(), EInvalidDecryptId),
+                _ => abort EInvalidDecryptId
+            }
+        },
+        _ => abort EUnknownVersion
+    };
+
+    field
+}
 
 // === Test Functions ===

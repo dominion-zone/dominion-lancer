@@ -1,9 +1,12 @@
-use std::{env, sync::Arc};
+use std::{env, str::FromStr, sync::Arc};
 
 use lancer_transport::task::LancerRunTask;
 use move_core_types::account_address::AccountAddress;
-use sui_config::{sui_config_dir, PersistedConfig, SUI_CLIENT_CONFIG};
-use sui_sdk::{sui_client_config::SuiClientConfig, wallet_context::WalletContext, SuiClient, SuiClientBuilder};
+use sui_config::{PersistedConfig, SUI_CLIENT_CONFIG, sui_config_dir};
+use sui_sdk::{
+    rpc_types::{SuiData, SuiObjectDataOptions}, sui_client_config::SuiClientConfig, wallet_context::WalletContext, SuiClient, SuiClientBuilder
+};
+use sui_types::base_types::ObjectID;
 use tokio::{sync::mpsc, task::JoinHandle};
 use walrus_sdk::{client::Client as WalrusClient, config::load_configuration};
 use walrus_sui::client::SuiContractClient;
@@ -50,10 +53,56 @@ impl Server {
         let walrus =
             WalrusClient::new_contract_client(config, refresh_handle, walrus_sui_client).await?;
 
+        // TODO: remove this
+        /*
+        {
+            let object_ids = vec![
+                ObjectID::from_str(
+                    "0xb35a7228d8cf224ad1e828c0217c95a5153bafc2906d6f9c178197dce26fbcf8",
+                )
+                .unwrap(),
+                ObjectID::from_str(
+                    "0x2d6cde8a9d9a65bde3b0a346566945a63b4bfb70e9a06c41bdb70807e2502b06",
+                )
+                .unwrap(),
+            ];
+            let objects = sui_client
+                .read_api()
+                .multi_get_object_with_options(
+                    object_ids.to_vec(),
+                    SuiObjectDataOptions::full_content(),
+                )
+                .await
+                .unwrap();
+
+            let pks: Vec<String> = objects
+                .into_iter()
+                .map(|o| {
+                    o.data
+                        .unwrap()
+                        .content
+                        .unwrap()
+                        .try_as_move()
+                        .unwrap()
+                        .fields
+                        .field_value("pk")
+                        .unwrap()
+                        .to_json_value()
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|v| v.as_u64().unwrap() as u8)
+                        .collect::<Vec<_>>()
+                })
+                .map(|v| hex::encode(&v))
+                .collect();
+            println!("Public keys: {:?}", pks);
+        }*/
+
         let server = Arc::new(Server {
             sui_client,
             lancer_id: AccountAddress::from_hex_literal(
-                "0xaf3dd531a92b3ff2b78ce6eed4e92405c808fe38cb3a7aba7d9451eb6265962a",
+                "0xb472abe6694550c624e46715a1aa9bdd1ad060bb50ee6ebccb068a9922d24d87",
             )
             .unwrap(),
             runner_id: AccountAddress::from_hex_literal(

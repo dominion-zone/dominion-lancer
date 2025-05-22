@@ -63,13 +63,13 @@ impl Server {
 
         let mut blobs = vec![];
         if let Some(public_report) = response.public_report {
-            blobs.push((PUBLIC_TAR_PATH.into(), public_report));
+            blobs.push((PUBLIC_TAR_PATH.into(), bcs::to_bytes(&public_report)?));
         }
         if let Some(private_report) = response.private_report {
-            blobs.push((PRIVATE_TAR_PATH.into(), private_report));
+            blobs.push((PRIVATE_TAR_PATH.into(), bcs::to_bytes(&private_report)?));
         }
         if let Some(error_message) = response.error_message {
-            blobs.push((ERROR_MESSAGE_PATH.into(), error_message));
+            blobs.push((ERROR_MESSAGE_PATH.into(), bcs::to_bytes(&error_message)?));
         }
         print!(
             "Storing blobs {:?}",
@@ -131,34 +131,62 @@ impl Server {
             }
         }
 
+        let finding = self
+            .sui_client
+            .read_api()
+            .get_object_with_options(task.finding_id, SuiObjectDataOptions::new().with_owner())
+            .await?;
+
+        let finding_arg = pt.obj(ObjectArg::SharedObject {
+            id: task.finding_id,
+            initial_shared_version: finding.owner().unwrap().start_version().unwrap(),
+            mutable: true,
+        })?;
+        let enclave_id_arg = pt.pure(AccountAddress::ZERO)?;
+        let timestamp_ms_arg = pt.pure(0u64)?;
+
+        let blob_type = TypeTag::from_str(&format!(
+            "{}::blob::Blob",
+            self.walrus
+                .sui_client()
+                .read_client()
+                .get_system_package_id()
+        ))
+        .unwrap();
+
         if let Some(error_blob_object_id) = error_blob_object_id {
-            todo!("Handle error");
+            let error_blob_arg = {
+                let blob_obj = self
+                    .sui_client
+                    .read_api()
+                    .get_object_with_options(error_blob_object_id, SuiObjectDataOptions::new())
+                    .await?;
+                pt.obj(ObjectArg::ImmOrOwnedObject(
+                    blob_obj.object_ref_if_exists().unwrap(),
+                ))?
+            };
+
+            pt.programmable_move_call(
+                self.lancer_id.into(),
+                Identifier::new("finding")?,
+                Identifier::new("report_error_for_testing")?,
+                vec![],
+                vec![
+                    finding_arg,
+                    error_blob_arg,
+                    enclave_id_arg,
+                    timestamp_ms_arg,
+                ],
+            );
         } else {
-            let finding = self
-                .sui_client
-                .read_api()
-                .get_object_with_options(task.finding_id, SuiObjectDataOptions::new().with_owner())
-                .await?;
-
-            let finding_arg = pt.obj(ObjectArg::SharedObject {
-                id: task.finding_id,
-                initial_shared_version: finding.owner().unwrap().start_version().unwrap(),
-                mutable: true,
-            })?;
-
-            let blob_type = TypeTag::from_str(&format!(
-                "{}::blob::Blob",
-                self.walrus
-                    .sui_client()
-                    .read_client()
-                    .get_system_package_id()
-            ))
-            .unwrap();
             let public_report_blob_arg = {
                 let blob_obj = self
                     .sui_client
                     .read_api()
-                    .get_object_with_options(public_blob_object_id.unwrap(), SuiObjectDataOptions::new())
+                    .get_object_with_options(
+                        public_blob_object_id.unwrap(),
+                        SuiObjectDataOptions::new(),
+                    )
                     .await?;
                 pt.obj(ObjectArg::ImmOrOwnedObject(
                     blob_obj.object_ref_if_exists().unwrap(),
@@ -190,9 +218,6 @@ impl Server {
                     vec![],
                 )
             };
-
-            let enclave_id_arg = pt.pure(AccountAddress::ZERO)?;
-            let timestamp_ms_arg = pt.pure(0u64)?;
             pt.programmable_move_call(
                 self.lancer_id.into(),
                 Identifier::new("finding")?,
@@ -206,22 +231,23 @@ impl Server {
                     timestamp_ms_arg,
                 ],
             );
-
-            let (sender, gas_object) = self.wallet.get_one_gas_object().await.unwrap().unwrap();
-            let gas_price = self.wallet.get_reference_gas_price().await.unwrap();
-            let r = self.wallet
-                .execute_transaction_must_succeed(self.wallet.sign_transaction(
-                    &TransactionData::new_programmable(
-                        sender,
-                        vec![gas_object],
-                        pt.finish(),
-                        1000000000,
-                        gas_price,
-                    ),
-                ))
-                .await;
-            println!("Transaction: {}", r.digest);
         }
+
+        let (sender, gas_object) = self.wallet.get_one_gas_object().await.unwrap().unwrap();
+        let gas_price = self.wallet.get_reference_gas_price().await.unwrap();
+        let r = self
+            .wallet
+            .execute_transaction_must_succeed(self.wallet.sign_transaction(
+                &TransactionData::new_programmable(
+                    sender,
+                    vec![gas_object],
+                    pt.finish(),
+                    1000000000,
+                    gas_price,
+                ),
+            ))
+            .await;
+        println!("Transaction: {}", r.digest);
         Ok(())
     }
 }

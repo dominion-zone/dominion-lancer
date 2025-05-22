@@ -1,0 +1,17 @@
+{
+  "seal": {
+    "key_servers": [
+      "0xb35a7228d8cf224ad1e828c0217c95a5153bafc2906d6f9c178197dce26fbcf8",
+      "0x2d6cde8a9d9a65bde3b0a346566945a63b4bfb70e9a06c41bdb70807e2502b06"
+    ],
+    "public_keys": {
+      "BonehFranklinBLS12381": [
+        "oEC1VIuwQo+6FZiVwHCAy/3HbvAbuIyiztXIWwd4LgmXCh9WhOKg3T0+Mb62y9fqAsSaN5SybG09n/3JnkmEzJgdDXLpM8KvMwkha/cBHp6Cx7aCdogvGLoOp/RadyHb",
+        "qMtvWQJ9FOCj6X6hvXmqapQvNv/INfUCVZHGgNWYpVQfCH+ss5+xKh2dcbOlEJQrF2Dl9mhfhmYKTDixeJKLttA2Kmx+JEmFUngyx4OotRldt0P/IoneOyMiba2GzXDx"
+      ]
+    },
+    "treshold": 1
+  },
+  "walrus_shards": 1000,
+  "lancer_id": "0xaf3dd531a92b3ff2b78ce6eed4e92405c808fe38cb3a7aba7d9451eb6265962a"
+}

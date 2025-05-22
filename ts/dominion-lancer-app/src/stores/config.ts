@@ -9,8 +9,9 @@ const config = {
         "0x871fd3c66ebf503ee8b4bc9cd60706c8c816f37c6530fe0a92aa1638094bc72e",
     },
     lancer: {
+      originalPackage: "0xaf3dd531a92b3ff2b78ce6eed4e92405c808fe38cb3a7aba7d9451eb6265962a",
       package:
-        "0x3c399c9c4f8a45a6b3f84149bbea6dd4d0bd75f1da17c81553f5ac87eebbf5a2",
+        "0xb472abe6694550c624e46715a1aa9bdd1ad060bb50ee6ebccb068a9922d24d87",
       upgradeCap:
         "0xfc89f748d17f49cd81bf3cbabe99d65d5a9f56b964f9a295dc0a80aa46feb372",
       enclaveCap:

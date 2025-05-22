@@ -29,4 +29,7 @@ anyhow-http = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true }
 bson = { workspace = true }
+hex = { workspace = true }
+seal = { workspace = true }
 lancer-transport = { path = "../lancer-transport" }
+bcs = { workspace = true }

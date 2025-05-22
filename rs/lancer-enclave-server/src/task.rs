@@ -12,8 +12,9 @@ use anyhow_http::response::HttpJsonResult;
 use async_tempfile::TempDir;
 use axum::{Json, extract::State, http::header, response::IntoResponse};
 use axum_extra::extract::Multipart;
-use lancer_transport::response::LancerRunResponse;
+use lancer_transport::response::{EncryptedBlobData, LancerRunResponse};
 use rsa::{Oaep, RsaPrivateKey};
+use seal::{EncryptionInput, seal_encrypt};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sui_types::base_types::ObjectID;
@@ -55,6 +56,10 @@ where
 
     Ok(())
 }
+
+const PUBLIC_FIELD: u8 = 0;
+const PRIVATE_FIELD: u8 = 1;
+const ERROR_FIELD: u8 = 2;
 
 pub struct Task {
     pub submission_hash: Vec<u8>,
@@ -268,6 +273,60 @@ impl Task {
         Ok(output)
     }
 
+    pub async fn prepare_response(
+        &self,
+        RunnerOutput {
+            public_report,
+            private_report,
+            error_message,
+        }: RunnerOutput,
+        server: Arc<Server>,
+    ) -> anyhow::Result<LancerRunResponse> {
+        let id_base = self.finding_id.to_vec();
+        let public_report = if let Some(report) = public_report {
+            Some(server.encrypt(
+                [id_base.clone(), vec![PUBLIC_FIELD]].concat(),
+                EncryptionInput::Aes256Gcm {
+                    data: report,
+                    aad: Some(id_base.clone()),
+                },
+            )?)
+        } else {
+            None
+        };
+
+        let private_report = if let Some(report) = private_report {
+            Some(server.encrypt(
+                [id_base.clone(), vec![PRIVATE_FIELD]].concat(),
+                EncryptionInput::Aes256Gcm {
+                    data: report,
+                    aad: Some(id_base.clone()),
+                },
+            )?)
+        } else {
+            None
+        };
+
+        let error_message = if let Some(report) = error_message {
+            Some(server.encrypt(
+                [id_base.clone(), vec![ERROR_FIELD]].concat(),
+                EncryptionInput::Aes256Gcm {
+                    data: report,
+                    aad: Some(id_base.clone()),
+                },
+            )?)
+        } else {
+            None
+        };
+
+        Ok(LancerRunResponse {
+            public_report,
+            private_report,
+            error_message,
+            signature: self.submission_hash.clone(),
+        })
+    }
+
     /*
         // TODO: encrypt the reports
         public_report.as_ref().map(|report| {
@@ -300,21 +359,11 @@ impl Task {
         let task = Arc::new(task);
 
         if let Some(old_task) = server.task.write().await.replace(task.clone()) {
-            old_task.runner_killer.send(())?;
+            let _ = old_task.runner_killer.send(()); // igonre error
         }
 
-        let RunnerOutput {
-            public_report,
-            private_report,
-            error_message,
-        } = results.await?;
+        let runner_output = results.await?;
 
-        // TODO: encryption
-        Ok(LancerRunResponse {
-            public_report,
-            private_report,
-            error_message,
-            signature: task.submission_hash.clone(),
-        })
+        task.prepare_response(runner_output, server.clone()).await
     }
 }

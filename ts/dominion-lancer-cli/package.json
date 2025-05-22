@@ -11,7 +11,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.10.0",
   "dependencies": {
-    "@mysten/sui": "^1.29.1",
+    "@mysten/sui": "^1.30.0",
     "commander": "^13.1.0",
     "expand-tilde": "^2.0.2",
     "mz": "^2.7.0",

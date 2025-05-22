@@ -2,7 +2,7 @@ import { Button } from "@kobalte/core/button";
 import { formatAddress, formatDigest, SUI_DECIMALS } from "@mysten/sui/utils";
 import { createLink } from "@tanstack/solid-router";
 import { Square, SquareCheck, X } from "lucide-solid";
-import { For, Match, Show, Switch } from "solid-js";
+import { createMemo, For, Match, Show, Switch } from "solid-js";
 import {
   useSuiClient,
   useSuiNetwork,
@@ -58,21 +58,18 @@ const FindingCard = (props: FindingCardProps) => {
     bugBountyId: finding.data?.bugBountyId,
   }));
 
-  const walrusClient = () =>
-    new WalrusClient({
-      network: "testnet",
-      suiClient: suiClient(),
-      wasmUrl:
-        "https://unpkg.com/@mysten/walrus-wasm@latest/web/walrus_wasm_bg.wasm",
-    });
+  const isOwner = () => createMemo(() => finding.data?.owner === user.value);
 
   const downloadBlob = downloadBlobMutation();
   const handleDownloadPublicReport = () =>
     downloadBlob.mutateAsync(
       {
-        blobId: finding.data!.publicReportBlobId!,
-        name: `public_${formatAddress(props.findingId)}.tar`,
-        walrusClient: walrusClient(),
+        network: network.value as Network,
+        user: user.value!,
+        finding: finding.data!,
+        bugBounty: isOwner() ? undefined : bugBounty.data,
+        fieldKind: "publicReport",
+        wallet: wallet.value!,
       },
       {
         onError: (error) => {
@@ -103,10 +100,13 @@ const FindingCard = (props: FindingCardProps) => {
 
   const handleDownloadPrivateReport = () =>
     downloadBlob.mutateAsync(
-      {
-        blobId: finding.data!.privateReportBlobId!,
-        name: `private_${formatAddress(props.findingId)}.tar`,
-        walrusClient: walrusClient(),
+     {
+        network: network.value as Network,
+        user: user.value!,
+        finding: finding.data!,
+        bugBounty: isOwner() ? undefined : bugBounty.data,
+        fieldKind: "privateReport",
+        wallet: wallet.value!,
       },
       {
         onError: (error) => {
@@ -138,9 +138,11 @@ const FindingCard = (props: FindingCardProps) => {
   const handleDownloadErrorMessage = () =>
     downloadBlob.mutateAsync(
       {
-        blobId: finding.data!.errorMessageBlobId!,
-        name: `error_${formatAddress(props.findingId)}.txt`,
-        walrusClient: walrusClient(),
+        network: network.value as Network,
+        user: user.value!,
+        finding: finding.data!,
+        fieldKind: "errorMessage",
+        wallet: wallet.value!,
       },
       {
         onError: (error) => {

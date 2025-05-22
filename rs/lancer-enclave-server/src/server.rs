@@ -1,31 +1,39 @@
-use std::{num::NonZero, sync::Arc};
+use std::{num::NonZero, str::FromStr, sync::Arc};
 
 use base64::prelude::*;
+use lancer_transport::response::EncryptedBlobData;
 use rsa::RsaPrivateKey;
 use rsa::pkcs8::EncodePublicKey;
+use seal::{
+    EncryptedObject, EncryptionInput, IBEPublicKeys,
+    ibe::{self, PublicKey},
+    seal_encrypt,
+};
 use serde::{Deserialize, Serialize};
+use sui_types::base_types::ObjectID;
 use tokio::sync::RwLock;
 use walrus_core::{
     BlobId, DEFAULT_ENCODING, EncodingType,
     encoding::{EncodingConfig, EncodingConfigTrait},
 };
 
-use crate::task::Task;
+use crate::{config::Config, task::Task};
 
 pub struct Server {
     pub rsa_private_key: RsaPrivateKey,
     pub encoding_config: EncodingConfig,
+    pub config: Config,
     pub task: RwLock<Option<Arc<Task>>>,
 }
 
-
 impl Server {
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         let mut rng = rand::thread_rng();
         let rsa_private_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
         Server {
             rsa_private_key,
-            encoding_config: EncodingConfig::new(NonZero::new(1000).unwrap()),
+            encoding_config: EncodingConfig::new(config.walrus_shards),
+            config,
             task: RwLock::new(None),
         }
     }
@@ -52,4 +60,31 @@ impl Server {
             status: t.get_status(),
         })
     }*/
+
+    pub fn lancer_id(&self) -> ObjectID {
+        self.config.lancer_id
+    }
+
+    pub fn encrypt(
+        &self,
+        id: Vec<u8>,
+        input: EncryptionInput,
+    ) -> anyhow::Result<EncryptedBlobData> {
+        let (object, _) = seal_encrypt(
+            seal::ObjectID::from_bytes(&self.lancer_id().to_vec()).unwrap(),
+            id.clone(),
+            self.config
+                .seal
+                .key_servers
+                .iter()
+                .map(|s| seal::ObjectID::from_bytes(&s.to_vec()).unwrap())
+                .collect(),
+            &self.config.seal.public_keys,
+            self.config.seal.treshold,
+            input,
+        )?;
+        let data = bcs::to_bytes(&object)?;
+        let blob_id = self.get_blob_id(&data)?;
+        Ok(EncryptedBlobData { object, blob_id })
+    }
 }
