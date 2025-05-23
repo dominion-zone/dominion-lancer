@@ -6,7 +6,7 @@ const Footer = () => {
       <div class={styles.footerContainer}>
         <nav class={styles.navControls}>
           <a
-            href="https://youtu.be/BfON552tb2I"
+            href="https://youtu.be/u7Ec8fik164"
             class={styles.brandIcon}
             target="_blank"
             rel="noopener noreferrer"
