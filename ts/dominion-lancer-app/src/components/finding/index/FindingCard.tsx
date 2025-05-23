@@ -58,8 +58,6 @@ const FindingCard = (props: FindingCardProps) => {
     bugBountyId: finding.data?.bugBountyId,
   }));
 
-  const isOwner = () => createMemo(() => finding.data?.owner === user.value);
-
   const downloadBlob = downloadBlobMutation();
   const handleDownloadPublicReport = () =>
     downloadBlob.mutateAsync(
@@ -67,7 +65,7 @@ const FindingCard = (props: FindingCardProps) => {
         network: network.value as Network,
         user: user.value!,
         finding: finding.data!,
-        bugBounty: isOwner() ? undefined : bugBounty.data,
+        bugBounty: bugBounty.data,
         fieldKind: "publicReport",
         wallet: wallet.value!,
       },
@@ -104,7 +102,7 @@ const FindingCard = (props: FindingCardProps) => {
         network: network.value as Network,
         user: user.value!,
         finding: finding.data!,
-        bugBounty: isOwner() ? undefined : bugBounty.data,
+        bugBounty: bugBounty.data,
         fieldKind: "privateReport",
         wallet: wallet.value!,
       },

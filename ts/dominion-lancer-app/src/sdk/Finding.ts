@@ -57,7 +57,7 @@ export const isPublicReportReadable = (props: {
     props.finding.publicReportBlobId &&
       props.user &&
       (props.finding.owner === props.user ||
-        props.bugBounty?.owner === props.user)
+        (props.bugBounty?.owner === props.user && props.finding.isPublished))
   );
 };
 
@@ -79,6 +79,7 @@ export const isPrivateReportReadable = (props: {
       props.user &&
       (props.finding.owner === props.user ||
         (props.bugBounty?.owner === props.user &&
+          props.finding.isPublished &&
           props.finding.payedCount >= props.finding.payments.length))
   );
 };

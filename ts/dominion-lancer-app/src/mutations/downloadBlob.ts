@@ -41,7 +41,6 @@ export const downloadBlobMutation = () => {
           wallet: props.wallet,
         })
       );
-      console.log("sessionKey", sessionKey.isExpired());
 
       const sealId = new Uint8Array(33);
       sealId.set(fromHex(props.finding.id));
@@ -74,16 +73,7 @@ export const downloadBlobMutation = () => {
 
       const config = useConfig(props.network);
       const tx = new Transaction();
-      if (props.bugBounty) {
-        tx.moveCall({
-          target: `${config.lancer.package}::finding::seal_approve_with_bug_bounty`,
-          arguments: [
-            tx.pure.vector("u8", sealId),
-            tx.object(props.bugBounty.ownerCapId),
-            tx.object(props.finding.id),
-          ],
-        });
-      } else {
+      if (props.finding.owner === props.user) {
         tx.moveCall({
           target: `${config.lancer.package}::finding::seal_approve_with_owner_cap`,
           arguments: [
@@ -92,13 +82,28 @@ export const downloadBlobMutation = () => {
             tx.object(props.finding.id),
           ],
         });
+      } else {
+        tx.moveCall({
+          target: `${config.lancer.package}::finding::seal_approve_with_bug_bounty`,
+          arguments: [
+            tx.pure.vector("u8", sealId),
+            tx.object(props.bugBounty!.ownerCapId),
+            tx.object(props.finding.id),
+          ],
+        });
       }
       const txBytes = await tx.build({
         client: sui,
         onlyTransactionKind: true,
       });
-      // const r = await sui.dryRunTransactionBlock({transactionBlock: txBytes});
-      // console.log(r);
+      tx.setSender(props.user);
+      tx.setGasBudget(1000000);
+      const r = await sui.dryRunTransactionBlock({
+        transactionBlock: await tx.build({
+          client: sui,
+        }),
+      });
+      console.log(r);
       const decryptedBytes = await seal.decrypt({
         data,
         sessionKey,
