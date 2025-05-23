@@ -83,7 +83,7 @@ pub async fn post_new_finding_handler(
 
     if finding.type_
         != (StructTag {
-            address: server.lancer_id,
+            address: server.config.finding_origin_id.clone().into(),
             module: Identifier::from_str("finding").unwrap(),
             name: Identifier::from_str("Finding").unwrap(),
             type_params: vec![],

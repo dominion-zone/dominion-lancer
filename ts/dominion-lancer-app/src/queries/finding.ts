@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/solid-query";
 import { getFinding } from "~/sdk/Finding";
 import { Network } from "~/stores/config";
-import { suiClient } from "~/stores/suiClient";
+import { useSui } from "~/stores/suiClient";
 import { queryClient } from "./client";
 
 export type FindingProps = {
@@ -19,7 +19,7 @@ export const findingOptions = (props: FindingProps) =>
   queryOptions({
     queryKey: findingKey(props),
     queryFn: async () => {
-      const client = suiClient(props.network);
+      const client = useSui(props.network);
       return await getFinding({client, id: props.findingId})
     },
   });

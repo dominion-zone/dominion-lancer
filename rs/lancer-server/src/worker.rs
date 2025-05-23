@@ -167,7 +167,7 @@ impl Server {
             };
 
             pt.programmable_move_call(
-                self.lancer_id.into(),
+                self.config.lancer_id.clone(),
                 Identifier::new("finding")?,
                 Identifier::new("report_error_for_testing")?,
                 vec![],
@@ -219,7 +219,7 @@ impl Server {
                 )
             };
             pt.programmable_move_call(
-                self.lancer_id.into(),
+                self.config.lancer_id.clone(),
                 Identifier::new("finding")?,
                 Identifier::new("commit_for_testing")?,
                 vec![],

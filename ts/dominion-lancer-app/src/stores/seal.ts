@@ -1,9 +1,9 @@
 import { getAllowlistedKeyServers, SealClient } from "@mysten/seal";
-import { suiClient } from "./suiClient";
+import { useSui } from "./suiClient";
 
 export const sealClient = (network: string) =>
   new SealClient({
-    suiClient: suiClient(network),
+    suiClient: useSui(network),
     serverObjectIds: getAllowlistedKeyServers("testnet").map((server) => [
       server,
       1,

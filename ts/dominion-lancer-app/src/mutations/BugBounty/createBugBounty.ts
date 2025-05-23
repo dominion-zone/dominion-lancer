@@ -7,7 +7,7 @@ import { queryClient } from "~/queries/client";
 import { BugBounty } from "~/sdk/BugBounty";
 import { useConfig, Network } from "~/stores/config";
 
-import { suiClient } from "~/stores/suiClient";
+import { useSui } from "~/stores/suiClient";
 import execTx from "~/utils/execTx";
 
 export type CreateBugBountyProps = {
@@ -24,7 +24,7 @@ export const createBugBountyMutation = () => {
     mutationKey: ["createBugBounty"],
     mutationFn: async (props: CreateBugBountyProps) => {
       const config = useConfig(props.network);
-      const client = suiClient(props.network);
+      const client = useSui(props.network);
       const tx = new Transaction();
       const [bugBountyArg, ownerCap] = tx.moveCall({
         target: `${config.lancer.package}::bug_bounty::create_v1`,

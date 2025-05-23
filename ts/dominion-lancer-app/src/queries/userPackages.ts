@@ -1,6 +1,6 @@
 import { MoveStruct, MoveValue } from "@mysten/sui/client";
 import { queryOptions, useQuery } from "@tanstack/solid-query";
-import { suiClient } from "~/stores/suiClient";
+import { useSui } from "~/stores/suiClient";
 import { queryClient } from "./client";
 import { Accessor } from "solid-js";
 
@@ -19,7 +19,7 @@ export const userPackagesOptions = (props: UserPackagesProps) =>
   queryOptions({
     queryKey: userPackagesKey(props),
     queryFn: async () => {
-      const client = suiClient(props.network);
+      const client = useSui(props.network);
       const upgradeCaps = [];
       let cursor = null;
       for (;;) {

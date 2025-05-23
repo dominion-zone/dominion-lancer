@@ -7,7 +7,7 @@ import { SuiWallet } from "~/contexts";
 import { fromHex } from "@mysten/utils";
 import { coinWithBalance, Transaction } from "@mysten/sui/transactions";
 import { SUI_FRAMEWORK_ADDRESS } from "@mysten/sui/utils";
-import { suiClient } from "~/stores/suiClient";
+import { useSui } from "~/stores/suiClient";
 import execTx from "~/utils/execTx";
 import { Escrow } from "~/sdk/Escrow";
 import { Finding } from "~/sdk/Finding";
@@ -31,7 +31,7 @@ export const createFindingMutation = () => {
       mutationKey: ["createFinding"],
       mutationFn: async (props: CreateFindingProps) => {
         const config = useConfig(props.network);
-        const client = suiClient(props.network);
+        const client = useSui(props.network);
 
         const serverPublicKey = await queryClient.ensureQueryData(
           serverPkOptions({ network: props.network })

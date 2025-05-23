@@ -5076,6 +5076,7 @@ dependencies = [
  "reqwest",
  "rsa 0.9.8",
  "serde",
+ "serde_json",
  "sha2 0.10.9",
  "shared-crypto 0.0.0 (git+https://github.com/MystenLabs/sui?tag=testnet-v1.48.0)",
  "sqlx",

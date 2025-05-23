@@ -7,7 +7,7 @@ import { queryClient } from "~/queries/client";
 import { findingKey } from "~/queries/finding";
 import { Finding } from "~/sdk/Finding";
 import { Network, useConfig } from "~/stores/config";
-import { suiClient } from "~/stores/suiClient";
+import { useSui } from "~/stores/suiClient";
 import execTx from "~/utils/execTx";
 
 export type RemovePaymentProps = {
@@ -22,7 +22,7 @@ export const removePaymentMutation = () =>
     mutationKey: ["removePayment"],
     mutationFn: async (props: RemovePaymentProps) => {
       const config = useConfig(props.network);
-      const client = suiClient(props.network);
+      const client = useSui(props.network);
       const tx = new Transaction();
       for (const payment of props.finding.payments) {
         tx.moveCall({

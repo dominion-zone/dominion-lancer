@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/solid-query";
-import { suiClient } from "../stores/suiClient";
+import { useSui } from "../stores/suiClient";
 import { useConfig, Network } from "../stores/config";
 import { coinWithBalance, Transaction } from "@mysten/sui/transactions";
 import execTx from "~/utils/execTx";
@@ -18,7 +18,7 @@ export const topupUserMutation = useMutation(
     mutationKey: ["topupUser"],
     mutationFn: async (props: TopupUserProps) => {
       const config = useConfig(props.network);
-      const client = suiClient(props.network);
+      const client = useSui(props.network);
       const tx = new Transaction();
       const coinArg = tx.splitCoins(tx.gas, [props.amount]);
       tx.moveCall({

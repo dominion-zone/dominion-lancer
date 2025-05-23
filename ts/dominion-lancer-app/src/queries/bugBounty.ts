@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/solid-query";
 import { Network } from "~/stores/config";
-import { suiClient } from "~/stores/suiClient";
+import { useSui } from "~/stores/suiClient";
 import { queryClient } from "./client";
 import { getBugBounty } from "~/sdk/BugBounty";
 import { Accessor } from "solid-js";
@@ -20,7 +20,7 @@ export const bugBountyOptions = (props: BugBountyProps) => {
   return queryOptions({
     queryKey: bugBountyKey(props),
     queryFn: async () => {
-      const client = suiClient(props.network);
+      const client = useSui(props.network);
       return await getBugBounty({client, id: props.bugBountyId!});
     },
     enabled: Boolean(props.bugBountyId),

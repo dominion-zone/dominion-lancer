@@ -12,28 +12,28 @@ use walrus_sdk::{client::Client as WalrusClient, config::load_configuration};
 use walrus_sui::client::SuiContractClient;
 
 use crate::worker::worker;
+use crate::config::Config;
 
 pub struct Server {
+    pub config: Config,
     pub sui_client: SuiClient,
     pub wallet: WalletContext,
     pub reqwest: reqwest::Client,
     pub walrus: WalrusClient<SuiContractClient>,
-    pub lancer_id: AccountAddress,
-    pub runner_id: AccountAddress,
     pub task_sender: mpsc::Sender<LancerRunTask>,
 }
 
 impl Server {
-    pub async fn new() -> anyhow::Result<(Arc<Self>, JoinHandle<anyhow::Result<()>>)> {
+    pub async fn new(config: Config) -> anyhow::Result<(Arc<Self>, JoinHandle<anyhow::Result<()>>)> {
         let (task_sender, receiver) = mpsc::channel(8);
         let reqwest = reqwest::Client::new();
-        let config = load_configuration(
+        let walrus_config = load_configuration(
             Some(env::current_dir()?.join("walrus.yaml")),
             Some("testnet"),
         )?;
-        println!("Config: {:?}", config);
+        println!("Walrus config: {:?}", walrus_config);
         let sui_client = SuiClientBuilder::default().build_testnet().await?;
-        let wallet_conf = config
+        let wallet_conf = walrus_config
             .wallet_config
             .as_ref()
             .unwrap()
@@ -42,16 +42,16 @@ impl Server {
             .unwrap_or(sui_config_dir()?.join(SUI_CLIENT_CONFIG));
         // let mut client_config: SuiClientConfig = PersistedConfig::read(&wallet_conf)?;
         let wallet = WalletContext::new(&wallet_conf, None, None)?;
-        let walrus_sui_client = config
+        let walrus_sui_client = walrus_config
             .new_contract_client_with_wallet_in_config(None)
             .await?;
 
-        let refresh_handle = config
+        let refresh_handle = walrus_config
             .refresh_config
             .build_refresher_and_run(walrus_sui_client.read_client().clone())
             .await?;
         let walrus =
-            WalrusClient::new_contract_client(config, refresh_handle, walrus_sui_client).await?;
+            WalrusClient::new_contract_client(walrus_config, refresh_handle, walrus_sui_client).await?;
 
         // TODO: remove this
         /*
@@ -101,14 +101,7 @@ impl Server {
 
         let server = Arc::new(Server {
             sui_client,
-            lancer_id: AccountAddress::from_hex_literal(
-                "0xb472abe6694550c624e46715a1aa9bdd1ad060bb50ee6ebccb068a9922d24d87",
-            )
-            .unwrap(),
-            runner_id: AccountAddress::from_hex_literal(
-                "0xe173c15f4ee89ca7616c81b32bad6263733ee13c3c68f1cbcc14c28bde6e6a13",
-            )
-            .unwrap(),
+            config,
             task_sender,
             reqwest,
             walrus,

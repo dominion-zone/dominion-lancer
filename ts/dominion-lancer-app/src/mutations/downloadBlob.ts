@@ -13,7 +13,7 @@ import { BugBounty } from "~/sdk/BugBounty";
 import { Finding } from "~/sdk/Finding";
 import { Network, useConfig } from "~/stores/config";
 import { sealClient } from "~/stores/seal";
-import { suiClient } from "~/stores/suiClient";
+import { useSui } from "~/stores/suiClient";
 import { walrusClient } from "~/stores/walrus";
 
 export type FieldKind = "publicReport" | "privateReport" | "errorMessage";
@@ -31,7 +31,7 @@ export const downloadBlobMutation = () => {
   return useMutation(() => ({
     mutationKey: ["downloadBlob"],
     mutationFn: async (props: DownloadBlobProps) => {
-      const sui = suiClient(props.network);
+      const sui = useSui(props.network);
       const walrus = walrusClient(props.network);
       const seal = sealClient(props.network);
       const sessionKey = await queryClient.ensureQueryData(
