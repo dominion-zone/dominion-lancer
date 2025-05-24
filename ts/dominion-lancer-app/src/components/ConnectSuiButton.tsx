@@ -1,8 +1,9 @@
-import { Component, Match, splitProps, Switch } from "solid-js";
+import { Component, Match, Show, splitProps, Switch } from "solid-js";
 import { SuiWallet } from "../contexts/SuiWallet";
 import { formatAddress } from "@mysten/sui/utils";
 import {
   SuiWalletConnected,
+  SuiWalletConnecting,
   SuiWalletControllerConext,
 } from "../contexts/SuiWalletController";
 import { Button, ButtonRootProps } from "@kobalte/core/button";
@@ -21,31 +22,25 @@ export const ConnectSuiButton: Component<ConnectSuiButtonProps> = (props) => {
     "disconnect",
   ]);
   return (
-    <Switch>
-      <Match
-        when={
-          myProps.user &&
-          (!myProps.wallet || myProps.status === SuiWalletConnected)
-        }
-      >
-        <Button {...buttonProps} onClick={() => myProps.disconnect()}>
-          {formatAddress(myProps.user!)}
-        </Button>
-      </Match>
-      <Match when={!myProps.wallet && !myProps.user}>
-        <Button {...buttonProps} disabled={true}>
-          ...
-        </Button>
-      </Match>
-      <Match when={myProps.wallet && myProps.status !== "connected"}>
+    <Show
+      when={
+        myProps.wallet &&
+        (myProps.status === SuiWalletConnected ||
+          myProps.status === SuiWalletConnecting)
+      }
+      fallback={
         <Button
           {...buttonProps}
           onClick={() => myProps.connect()}
-          disabled={myProps.status === "connecting"}
+          disabled={!myProps.wallet}
         >
           Connect
         </Button>
-      </Match>
-    </Switch>
+      }
+    >
+      <Button {...buttonProps} onClick={() => myProps.disconnect()}>
+        {myProps.user ? formatAddress(myProps.user) : "..."}
+      </Button>
+    </Show>
   );
 };
