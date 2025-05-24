@@ -4,10 +4,17 @@ import { toBase64 } from "@mysten/utils";
 import { blobIdFromInt } from "@mysten/walrus";
 import { Config } from "~/stores/config";
 
-export type FindingStatus = "Draft" | "Active" | "Error";
+export type FindingStatus = "Processing" | "Draft" | "Error" | "Published";
+export const findingStatuses: [FindingStatus, ...FindingStatus[]] = [
+  "Processing",
+  "Draft",
+  "Error",
+  "Published",
+];
 
 export type Finding = {
   id: string;
+  innerId: string;
   ownerCapId: string;
   owner: string | null;
   bugBountyId: string;
@@ -17,11 +24,21 @@ export type Finding = {
   errorMessageBlobId: string | null;
   isPublished: boolean;
   walFunds: bigint;
-  payments: { payed: bigint; requested: bigint; type: string }[];
+  payments: { fieldId: string; payed?: bigint; requested?: bigint; type: string }[];
+  paymentsParentId: string;
   payedCount: bigint;
 };
 
 export const findingStatus = (finding: Finding): FindingStatus => {
+  if (finding.errorMessageBlobId) {
+    return "Error";
+  }
+  if (!finding.publicReportBlobId) {
+    return "Processing";
+  }
+  if (finding.isPublished) {
+    return "Published";
+  }
   return "Draft";
 };
 
@@ -36,7 +53,7 @@ export const hasFundsToWithdraw = (finding?: Finding) => {
   if (!finding) {
     return false;
   }
-  return Boolean(finding.payments.find((p) => p.payed > 0n));
+  return Boolean(finding.payments.find((p) => (p.payed || 0n) > 0n));
 };
 
 export const isPublicReportReadable = (props: {
@@ -98,6 +115,7 @@ export const isErrorMessageReadable = (props: {
   );
 };
 
+/*
 const parseFinding = async ({
   client,
   id,
@@ -237,6 +255,7 @@ const parseFinding = async ({
       (ownerCap.data!.owner as { AddressOwner?: string }).AddressOwner ?? null,
   };
 };
+*/
 
 export const getAllFindingIds = async ({
   config,
@@ -315,6 +334,7 @@ export const getUserFindingIds = async ({
   return ids;
 };
 
+/*
 export const getFinding = async ({
   client,
   id,
@@ -335,7 +355,7 @@ export const getFinding = async ({
     fields: (outer.data!.content as { fields: MoveStruct }).fields,
   });
 };
-/*
+
 export const getFindings = async ({
   client,
   ids,

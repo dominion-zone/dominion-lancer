@@ -1,18 +1,45 @@
 import { Combobox, ComboboxRootProps } from "@kobalte/core/combobox";
 import { Updater } from "@tanstack/solid-form";
 import { CheckIcon, ChevronsUpDown } from "lucide-solid";
-import { Setter, splitProps } from "solid-js";
+import { Setter, Show, splitProps } from "solid-js";
 import { useSuiNetwork } from "~/contexts";
 import { BugBounty } from "~/sdk/BugBounty";
 import { Network } from "~/stores/config";
 import styles from "~/styles/Combobox.module.css";
 import { formatAddress } from "@mysten/sui/utils";
-import { useBugBounties } from "~/queries/bugBounties";
+import { useBugBountyIds } from "~/queries/bugBountyIds";
+import { useBugBounty } from "~/queries/bugBounty";
+import { CollectionNode } from "@kobalte/core";
 
 export type BugBountySelectProps = {
   bugBountyId: string | null;
   setBugBountyId: Setter<string | null>;
 } & Pick<ComboboxRootProps<BugBounty>, "name">;
+
+const BugBountyItem = (props: { item: CollectionNode<string> }) => {
+  const network = useSuiNetwork();
+  const bugBounty = useBugBounty({
+    get network() {
+      return network.value as Network;
+    },
+    get bugBountyId() {
+      return props.item.rawValue;
+    },
+  });
+
+  return (
+    <Show when={bugBounty.data && bugBounty.data.isActive}>
+      <Combobox.Item item={props.item} class={styles.comboboxItem}>
+        <Combobox.ItemLabel>
+          {formatAddress(props.item.rawValue)} {bugBounty.data?.name}
+        </Combobox.ItemLabel>
+        <Combobox.ItemIndicator class={styles.comboboxItemIndicator}>
+          <CheckIcon />
+        </Combobox.ItemIndicator>
+      </Combobox.Item>
+    </Show>
+  );
+};
 
 const BugBountySelect = (props: BugBountySelectProps) => {
   const [myProps, comboboxProps] = splitProps(props, [
@@ -20,42 +47,29 @@ const BugBountySelect = (props: BugBountySelectProps) => {
     "setBugBountyId",
   ]);
   const network = useSuiNetwork();
-  const { filtered } = useBugBounties(() => ({
-    network: network.value as Network,
-  }));
-  const value = () => filtered().find(({ id }) => id === myProps.bugBountyId) || undefined;
+  const bugBounties = useBugBountyIds({
+    get network() {
+      return network.value as Network;
+    },
+  });
   const onInputChange = (value: string) => {
     if (value === "") {
       props.setBugBountyId(null);
     }
   };
   return (
-    <Combobox<BugBounty>
+    <Combobox<string>
       {...comboboxProps}
-      options={filtered()}
-      value={value()}
-      onChange={(v) => props.setBugBountyId(v?.id || null)}
+      options={bugBounties.data || []}
+      value={props.bugBountyId}
+      onChange={props.setBugBountyId}
       onInputChange={onInputChange}
       placeholder="Enter a bug bounty id…"
-      optionValue="id"
-      optionTextValue="id"
-      optionLabel="id"
-      optionDisabled={({ isActive }) => !isActive}
       defaultFilter={(bounty, input) =>
-        bounty.id.startsWith(input.toLowerCase()) ||
-        bounty.id.startsWith("0x" + input.toLowerCase()) ||
-        bounty.name.toLowerCase().startsWith(input.toLowerCase())
+        bounty.startsWith(input.toLowerCase()) ||
+        bounty.startsWith("0x" + input.toLowerCase())
       }
-      itemComponent={(props) => (
-        <Combobox.Item item={props.item} class={styles.comboboxItem}>
-          <Combobox.ItemLabel>
-            {formatAddress(props.item.rawValue.id)} {props.item.rawValue.name}
-          </Combobox.ItemLabel>
-          <Combobox.ItemIndicator class={styles.comboboxItemIndicator}>
-            <CheckIcon />
-          </Combobox.ItemIndicator>
-        </Combobox.Item>
-      )}
+      itemComponent={(props) => <BugBountyItem item={props.item} />}
     >
       <Combobox.HiddenSelect />
       <Combobox.Control class={styles.comboboxControl} aria-label="Bug bounty">

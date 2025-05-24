@@ -1,43 +1,51 @@
-import { queryOptions, useQuery } from "@tanstack/solid-query";
+import { QueryFunction, queryOptions, useQuery } from "@tanstack/solid-query";
 import { Network, useConfig } from "~/stores/config";
 import { useSui } from "~/stores/suiClient";
 import { queryClient } from "./client";
 import { getAllBugBountyIds, getUserBugBountyIds } from "~/sdk/BugBounty";
-import { Accessor } from "solid-js";
+import { Accessor, createMemo } from "solid-js";
 
 export type BugBountyIdsProps = {
   network: Network;
   ownedBy?: string;
 };
 
-export const bugBountyIdsKey = (props: BugBountyIdsProps) => [
+export type BugBountyIdsKey = [
+  network: Network,
+  type: "bugBountyIds",
+  ownedBy: string | undefined
+];
+
+export const bugBountyIdsKey = (props: BugBountyIdsProps): BugBountyIdsKey => [
   props.network,
   "bugBountyIds",
-  {
-    ownedBy: props.ownedBy,
-  },
+  props.ownedBy,
 ];
+
+const queryFn: QueryFunction<string[] | undefined, BugBountyIdsKey> = async ({
+  queryKey: [network, , ownedBy],
+}) => {
+  const config = useConfig(network);
+  const client = useSui(network);
+  if (ownedBy) {
+    return await getUserBugBountyIds({
+      config,
+      client,
+      user: ownedBy,
+    });
+  } else {
+    return await getAllBugBountyIds({ config, client });
+  }
+};
 
 export const bugBountyIdsOptions = (props: BugBountyIdsProps) =>
   queryOptions({
     queryKey: bugBountyIdsKey(props),
-    queryFn: async () => {
-      const config = useConfig(props.network);
-      const client = useSui(props.network);
-      if (props.ownedBy) {
-        return await getUserBugBountyIds({
-          config,
-          client,
-          user: props.ownedBy,
-        });
-      } else {
-        return await getAllBugBountyIds({ config, client });
-      }
-    },
+    queryFn,
   });
 
-export const useBugBountyIds = (props: Accessor<BugBountyIdsProps>) =>
+export const useBugBountyIds = (props: BugBountyIdsProps) =>
   useQuery(
-    () => bugBountyIdsOptions(props()),
+    () => bugBountyIdsOptions(props),
     () => queryClient
   );

@@ -1,10 +1,10 @@
-import { CoinStruct, SuiClient } from "@mysten/sui/client";
-import { coinWithBalance, Transaction } from "@mysten/sui/transactions";
-import { normalizeStructTag, SUI_FRAMEWORK_ADDRESS } from "@mysten/sui/utils";
+import { Transaction } from "@mysten/sui/transactions";
 import { useMutation } from "@tanstack/solid-query";
+import { createMemo, untrack } from "solid-js";
 import { SuiWallet } from "~/contexts";
 import { queryClient } from "~/queries/client";
-import { findingKey } from "~/queries/finding";
+import { useFinding } from "~/queries/finding";
+import { suiObjectKey } from "~/queries/suiObject";
 import { Finding } from "~/sdk/Finding";
 import { Network, useConfig } from "~/stores/config";
 import { useSui } from "~/stores/suiClient";
@@ -12,47 +12,64 @@ import execTx from "~/utils/execTx";
 
 export type PublishFindingProps = {
   network: Network;
-  wallet: SuiWallet;
-  user: string;
-  finding: Finding;
+  findingId: string;
 };
 
-export const publishFindingMutation = () =>
-  useMutation(() => ({
-    mutationKey: ["publishFinding"],
-    mutationFn: async (props: PublishFindingProps) => {
+export type PublishFindingKey = [
+  network: Network,
+  type: "publishFinding",
+  findingId: string
+];
+
+export const publishFindingKey = (
+  props: PublishFindingProps
+): PublishFindingKey => [props.network, "publishFinding", props.findingId];
+
+export const publishFindingMutation = (props: PublishFindingProps) =>
+  useMutation(
+    createMemo(() => {
       const config = useConfig(props.network);
       const client = useSui(props.network);
-      const tx = new Transaction();
-      tx.moveCall({
-        target: `${config.lancer.package}::finding::publish`,
-        typeArguments: [],
-        arguments: [
-          tx.object(props.finding.ownerCapId),
-          tx.object(props.finding.id),
-        ],
-      });
-      const response = await execTx({
-        tx,
-        wallet: props.wallet,
-        user: props.user,
-        network: props.network,
-        client,
-        options: {
-          showEvents: true,
-        },
-      });
+      const network = props.network;
+      const findingId = props.findingId;
+      return {
+        mutationKey: publishFindingKey(props),
+        mutationFn: async ({ wallet }: { wallet: SuiWallet }) =>
+          untrack(async () => {
+            const finding = await useFinding({
+              network,
+              findingId,
+            }).promise;
+            if (!finding) {
+              throw new Error("Finding not loaded");
+            }
+            const tx = new Transaction();
+            tx.moveCall({
+              target: `${config.lancer.package}::finding::publish`,
+              typeArguments: [],
+              arguments: [tx.object(finding.ownerCapId), tx.object(findingId)],
+            });
+            const response = await execTx({
+              tx,
+              wallet,
+              user: finding.owner!,
+              network,
+              client,
+              options: {
+                showEvents: true,
+              },
+            });
 
-      return { txDigest: response.digest };
-    },
-    onSuccess: async (data, props) => {
-      queryClient.setQueryData(
-        findingKey({
-          network: props.network,
-          findingId: props.finding.id,
-        }),
-        (old: Finding | undefined) =>
-          old ? { ...old, isPublished: true } : old
-      );
-    },
-  }));
+            return { txDigest: response.digest, finding };
+          }),
+        onSuccess: async ({ finding }: { finding: Finding }) => {
+          await queryClient.invalidateQueries({
+            queryKey: suiObjectKey({
+              network,
+              id: finding.innerId,
+            }),
+          });
+        },
+      };
+    })
+  );

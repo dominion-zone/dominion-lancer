@@ -1,8 +1,18 @@
 import { Button } from "@kobalte/core/button";
 import { formatAddress, formatDigest, SUI_DECIMALS } from "@mysten/sui/utils";
 import { createLink } from "@tanstack/solid-router";
-import { Square, SquareCheck, X } from "lucide-solid";
-import { createMemo, For, Match, Show, Switch } from "solid-js";
+import { LoaderCircle, Square, SquareCheck, X } from "lucide-solid";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Match,
+  onCleanup,
+  Show,
+  Switch,
+  untrack,
+} from "solid-js";
 import {
   useSuiClient,
   useSuiNetwork,
@@ -16,18 +26,21 @@ import buttonStyles from "~/styles/Button.module.css";
 import { Link } from "@kobalte/core/link";
 import { Link as RouterLink } from "@tanstack/solid-router";
 import {
+  Finding,
   hasFundsToWithdraw,
   isErrorMessageReadable,
   isPaid,
   isPrivateReportReadable,
   isPublicReportReadable,
 } from "~/sdk/Finding";
-import { WalrusClient } from "@mysten/walrus";
 import { downloadBlobMutation } from "~/mutations/downloadBlob";
 import { payFindingMutation } from "~/mutations/Finding/payFinding";
 import { withdrawFindingMutation } from "~/mutations/Finding/withdrawFinding";
 import { publishFindingMutation } from "~/mutations/Finding/publishFinding";
-import { destroyFindingMutation } from "~/mutations/Finding/destroyFinding";
+import {
+  destroyFindingMutation,
+  DestroyFindingProps,
+} from "~/mutations/Finding/destroyFinding";
 import { removePaymentMutation } from "~/mutations/Finding/removePayment";
 import { useFinding } from "~/queries/finding";
 import { useBugBounty } from "~/queries/bugBounty";
@@ -38,13 +51,13 @@ import styles from "~/styles/bugBounty/index/Card.module.css";
 export type FindingCardProps = {
   findingId: string;
   solo?: boolean;
+  filter?: (finding: Finding) => boolean;
 };
 
 const FindingCard = (props: FindingCardProps) => {
   const LinkButton = createLink(Button);
   const user = useSuiUser();
   const network = useSuiNetwork();
-  const suiClient = useSuiClient();
   const wallet = useSuiWallet();
   const walletController = useSuiWalletController();
 
@@ -53,21 +66,107 @@ const FindingCard = (props: FindingCardProps) => {
     findingId: props.findingId,
   });
 
-  const bugBounty = useBugBounty(() => ({
-    network: network.value as Network,
-    bugBountyId: finding.data?.bugBountyId,
-  }));
+  const bugBounty = useBugBounty({
+    get network() {
+      return network.value as Network;
+    },
+    get bugBountyId() {
+      return finding.data?.bugBountyId;
+    },
+  });
 
-  const downloadBlob = downloadBlobMutation();
+  const [publicReportUrl, setPublicReportUrl] = createSignal<
+    { url: string; name: string } | undefined
+  >();
+  const [publicReportLink, setPublicReportLink] = createSignal<
+    HTMLAnchorElement | undefined
+  >();
+  const [privateReportUrl, setPrivateReportUrl] = createSignal<
+    { url: string; name: string } | undefined
+  >();
+  const [privateReportLink, setPrivateReportLink] = createSignal<
+    HTMLAnchorElement | undefined
+  >();
+  const [errorMessageUrl, setErrorMessageUrl] = createSignal<
+    { url: string; name: string } | undefined
+  >();
+  const [errorMessageLink, setErrorMessageLink] = createSignal<
+    HTMLAnchorElement | undefined
+  >();
+
+  const resetUrls = () => {
+    setPublicReportUrl((v) => {
+      if (v) {
+        URL.revokeObjectURL(v.url);
+      }
+      return undefined;
+    });
+    setPrivateReportUrl((v) => {
+      if (v) {
+        URL.revokeObjectURL(v.url);
+      }
+      return undefined;
+    });
+    setErrorMessageUrl((v) => {
+      if (v) {
+        URL.revokeObjectURL(v.url);
+      }
+      return undefined;
+    });
+  };
+  onCleanup(resetUrls);
+
+  createEffect<string | undefined>((oldUser) => {
+    if (oldUser && user.value !== oldUser) {
+      resetUrls();
+    }
+    return user.value;
+  }, user.value);
+
+  createEffect<string | undefined>((url) => {
+    const el = publicReportLink();
+    if (el?.href && el.href !== url) {
+      el.click();
+      return el.href;
+    }
+    return url;
+  }, undefined);
+
+  createEffect<string | undefined>((url) => {
+    const el = privateReportLink();
+    if (el?.href && el.href !== url) {
+      el.click();
+      return el.href;
+    }
+    return url;
+  }, undefined);
+
+  createEffect<string | undefined>((url) => {
+    const el = errorMessageLink();
+    if (el?.href && el.href !== url) {
+      el.click();
+      return el.href;
+    }
+    return url;
+  }, undefined);
+
+  const downloadPublicReport = downloadBlobMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get user() {
+      return user.value!;
+    },
+    get findingId() {
+      return props.findingId;
+    },
+    fieldKind: "publicReport",
+  });
   const handleDownloadPublicReport = () =>
-    downloadBlob.mutateAsync(
+    downloadPublicReport.mutateAsync(
       {
-        network: network.value as Network,
-        user: user.value!,
-        finding: finding.data!,
-        bugBounty: bugBounty.data,
-        fieldKind: "publicReport",
         wallet: wallet.value!,
+        setUrl: setPublicReportUrl,
       },
       {
         onError: (error) => {
@@ -88,7 +187,7 @@ const FindingCard = (props: FindingCardProps) => {
                 </Toast.Description>
               </div>
               <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                <X size={14} />
+                <X size={12} />
               </Toast.CloseButton>
             </Toast>
           ));
@@ -96,15 +195,23 @@ const FindingCard = (props: FindingCardProps) => {
       }
     );
 
+  const downloadPrivateReport = downloadBlobMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get user() {
+      return user.value!;
+    },
+    get findingId() {
+      return props.findingId;
+    },
+    fieldKind: "privateReport",
+  });
   const handleDownloadPrivateReport = () =>
-    downloadBlob.mutateAsync(
-     {
-        network: network.value as Network,
-        user: user.value!,
-        finding: finding.data!,
-        bugBounty: bugBounty.data,
-        fieldKind: "privateReport",
+    downloadPrivateReport.mutateAsync(
+      {
         wallet: wallet.value!,
+        setUrl: setPrivateReportUrl,
       },
       {
         onError: (error) => {
@@ -125,7 +232,7 @@ const FindingCard = (props: FindingCardProps) => {
                 </Toast.Description>
               </div>
               <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                <X size={14} />
+                <X size={12} />
               </Toast.CloseButton>
             </Toast>
           ));
@@ -133,14 +240,23 @@ const FindingCard = (props: FindingCardProps) => {
       }
     );
 
+  const downloadErrorMessage = downloadBlobMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get user() {
+      return user.value!;
+    },
+    get findingId() {
+      return props.findingId;
+    },
+    fieldKind: "errorMessage",
+  });
   const handleDownloadErrorMessage = () =>
-    downloadBlob.mutateAsync(
+    downloadErrorMessage.mutateAsync(
       {
-        network: network.value as Network,
-        user: user.value!,
-        finding: finding.data!,
-        fieldKind: "errorMessage",
         wallet: wallet.value!,
+        setUrl: setErrorMessageUrl,
       },
       {
         onError: (error) => {
@@ -161,7 +277,7 @@ const FindingCard = (props: FindingCardProps) => {
                 </Toast.Description>
               </div>
               <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                <X size={14} />
+                <X size={12} />
               </Toast.CloseButton>
             </Toast>
           ));
@@ -169,23 +285,27 @@ const FindingCard = (props: FindingCardProps) => {
       }
     );
 
-  const removePayment = removePaymentMutation();
+  const removePayment = removePaymentMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get findingId() {
+      return props.findingId;
+    },
+  });
   const handleRemovePayment = () => {
     removePayment.mutateAsync(
-      {
-        network: network.value as Network,
+      untrack(() => ({
         wallet: wallet.value!,
-        user: user.value!,
-        finding: finding.data!,
-      },
+      })),
       {
-        onSuccess: ({ txDigest }, mutationProps) => {
+        onSuccess: ({ txDigest, finding }) => {
           const toastId = toaster.show((props) => (
             <Toast toastId={props.toastId} class={toastStyles.toast}>
               <div class={toastStyles.toastContent}>
                 <div>
                   <Toast.Title class={toastStyles.toastTitle}>
-                    Finding {mutationProps.finding.id}: payment removed
+                    Finding {formatAddress(finding.id)}: payment removed
                   </Toast.Title>
                   <Toast.Description class={toastStyles.toastDescription}>
                     Transaction:{" "}
@@ -201,7 +321,7 @@ const FindingCard = (props: FindingCardProps) => {
                   </Toast.Description>
                 </div>
                 <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                  <X size={14} />
+                  <X size={12} />
                 </Toast.CloseButton>
               </div>
             </Toast>
@@ -225,7 +345,7 @@ const FindingCard = (props: FindingCardProps) => {
                 </Toast.Description>
               </div>
               <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                <X size={14} />
+                <X size={12} />
               </Toast.CloseButton>
             </Toast>
           ));
@@ -234,23 +354,30 @@ const FindingCard = (props: FindingCardProps) => {
     );
   };
 
-  const payFinding = payFindingMutation();
+  const payFinding = payFindingMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get findingId() {
+      return props.findingId;
+    },
+    get user() {
+      return user.value!;
+    },
+  });
   const handlePay = () => {
     payFinding.mutateAsync(
-      {
-        network: network.value as Network,
+      untrack(() => ({
         wallet: wallet.value!,
-        user: user.value!,
-        finding: finding.data!,
-      },
+      })),
       {
-        onSuccess: ({ txDigest }, mutationProps) => {
+        onSuccess: ({ txDigest, finding }) => {
           const toastId = toaster.show((props) => (
             <Toast toastId={props.toastId} class={toastStyles.toast}>
               <div class={toastStyles.toastContent}>
                 <div>
                   <Toast.Title class={toastStyles.toastTitle}>
-                    Finding {mutationProps.finding.id} paid
+                    Finding {formatAddress(finding.id)} paid
                   </Toast.Title>
                   <Toast.Description class={toastStyles.toastDescription}>
                     Transaction:{" "}
@@ -266,7 +393,7 @@ const FindingCard = (props: FindingCardProps) => {
                   </Toast.Description>
                 </div>
                 <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                  <X size={14} />
+                  <X size={12} />
                 </Toast.CloseButton>
               </div>
             </Toast>
@@ -290,7 +417,7 @@ const FindingCard = (props: FindingCardProps) => {
                 </Toast.Description>
               </div>
               <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                <X size={14} />
+                <X size={12} />
               </Toast.CloseButton>
             </Toast>
           ));
@@ -299,23 +426,27 @@ const FindingCard = (props: FindingCardProps) => {
     );
   };
 
-  const publishFinding = publishFindingMutation();
+  const publishFinding = publishFindingMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get findingId() {
+      return props.findingId;
+    },
+  });
   const handlePublish = () => {
     publishFinding.mutateAsync(
-      {
-        network: network.value as Network,
+      untrack(() => ({
         wallet: wallet.value!,
-        user: user.value!,
-        finding: finding.data!,
-      },
+      })),
       {
-        onSuccess: ({ txDigest }, mutationProps) => {
+        onSuccess: ({ txDigest, finding }) => {
           const toastId = toaster.show((props) => (
             <Toast toastId={props.toastId} class={toastStyles.toast}>
               <div class={toastStyles.toastContent}>
                 <div>
                   <Toast.Title class={toastStyles.toastTitle}>
-                    Finding {mutationProps.finding.id} published
+                    Finding {formatAddress(finding.id)} published
                   </Toast.Title>
                   <Toast.Description class={toastStyles.toastDescription}>
                     Transaction:{" "}
@@ -331,7 +462,7 @@ const FindingCard = (props: FindingCardProps) => {
                   </Toast.Description>
                 </div>
                 <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                  <X size={14} />
+                  <X size={12} />
                 </Toast.CloseButton>
               </div>
             </Toast>
@@ -355,7 +486,7 @@ const FindingCard = (props: FindingCardProps) => {
                 </Toast.Description>
               </div>
               <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                <X size={14} />
+                <X size={12} />
               </Toast.CloseButton>
             </Toast>
           ));
@@ -364,23 +495,34 @@ const FindingCard = (props: FindingCardProps) => {
     );
   };
 
-  const destroyFinding = destroyFindingMutation();
+  const destroyFinding = destroyFindingMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get findingId() {
+      return props.findingId;
+    },
+  });
   const handleDestroy = () => {
     destroyFinding.mutateAsync(
-      {
-        network: network.value as Network,
+      untrack(() => ({
         wallet: wallet.value!,
-        user: user.value!,
-        finding: finding.data!,
-      },
+      })),
       {
-        onSuccess: ({ txDigest }, mutationProps) => {
+        onSuccess: ({
+          txDigest,
+          finding,
+        }: {
+          txDigest: string;
+          finding: Finding;
+        }) => {
+          console.log("Finding destroyed", finding);
           const toastId = toaster.show((props) => (
             <Toast toastId={props.toastId} class={toastStyles.toast}>
               <div class={toastStyles.toastContent}>
                 <div>
                   <Toast.Title class={toastStyles.toastTitle}>
-                    Finding {mutationProps.finding.id} destroyed
+                    Finding {formatAddress(finding.id)} destroyed
                   </Toast.Title>
                   <Toast.Description class={toastStyles.toastDescription}>
                     Transaction:{" "}
@@ -396,7 +538,7 @@ const FindingCard = (props: FindingCardProps) => {
                   </Toast.Description>
                 </div>
                 <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                  <X size={14} />
+                  <X size={12} />
                 </Toast.CloseButton>
               </div>
             </Toast>
@@ -420,7 +562,7 @@ const FindingCard = (props: FindingCardProps) => {
                 </Toast.Description>
               </div>
               <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                <X size={14} />
+                <X size={12} />
               </Toast.CloseButton>
             </Toast>
           ));
@@ -429,23 +571,27 @@ const FindingCard = (props: FindingCardProps) => {
     );
   };
 
-  const withdrawFinding = withdrawFindingMutation();
+  const withdrawFinding = withdrawFindingMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get findingId() {
+      return props.findingId;
+    },
+  });
   const handleWithdraw = () => {
     withdrawFinding.mutateAsync(
-      {
-        network: network.value as Network,
+      untrack(() => ({
         wallet: wallet.value!,
-        user: user.value!,
-        finding: finding.data!,
-      },
+      })),
       {
-        onSuccess: ({ txDigest }, mutationProps) => {
+        onSuccess: ({ txDigest, finding }) => {
           const toastId = toaster.show((props) => (
             <Toast toastId={props.toastId} class={toastStyles.toast}>
               <div class={toastStyles.toastContent}>
                 <div>
                   <Toast.Title class={toastStyles.toastTitle}>
-                    Finding {mutationProps.finding.id}: payment withdrawn
+                    Finding {formatAddress(finding.id)}: payment withdrawn
                   </Toast.Title>
                   <Toast.Description class={toastStyles.toastDescription}>
                     Transaction:{" "}
@@ -461,7 +607,7 @@ const FindingCard = (props: FindingCardProps) => {
                   </Toast.Description>
                 </div>
                 <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                  <X size={14} />
+                  <X size={12} />
                 </Toast.CloseButton>
               </div>
             </Toast>
@@ -485,7 +631,7 @@ const FindingCard = (props: FindingCardProps) => {
                 </Toast.Description>
               </div>
               <Toast.CloseButton class={toastStyles.toastCloseButton}>
-                <X size={14} />
+                <X size={12} />
               </Toast.CloseButton>
             </Toast>
           ));
@@ -495,131 +641,216 @@ const FindingCard = (props: FindingCardProps) => {
   };
 
   return (
-    <section class="card">
-      <h2>
-        <Show
-          when={!props.solo}
-          fallback={
-            <span>
-              Finding{" "}
+    <Show when={finding.data && (!props.filter || props.filter(finding.data))}>
+      <section class="card">
+        <h2>
+          <Show
+            when={!props.solo}
+            fallback={
+              <span>
+                Finding{" "}
+                <Link
+                  href={`https://${
+                    network.value === "mainnet" ? "" : network.value + "."
+                  }suivision.xyz/object/${props.findingId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  ({formatAddress(props.findingId)})
+                </Link>
+              </span>
+            }
+          >
+            <RouterLink
+              to="/finding/$findingId"
+              params={{ findingId: props.findingId }}
+              search={(v) => ({ network: v.network, user: v.user })}
+            >
+              Finding {formatAddress(props.findingId)}
+            </RouterLink>
+          </Show>
+        </h2>
+        <div class={formStyles.container}>
+          <div class={formStyles.grid}>
+            <label for={`bugBounty${props.findingId}`}>Bug bounty:</label>
+            <RouterLink
+              id={`packageId${props.findingId}`}
+              to="/bug-bounty/$bugBountyId"
+              params={{ bugBountyId: finding.data?.bugBountyId! }}
+              search={{
+                network: network.value as Network,
+                user: user.value,
+              }}
+            >
+              {bugBounty.data?.name} (
+              {finding.data?.bugBountyId &&
+                formatAddress(finding.data?.bugBountyId)}
+              )
+            </RouterLink>
+            <Show when={finding.data?.owner}>
+              <label for={`owner${props.findingId}`}>Owner:</label>
               <Link
+                id={`owner${props.findingId}`}
                 href={`https://${
                   network.value === "mainnet" ? "" : network.value + "."
-                }suivision.xyz/object/${props.findingId}`}
+                }suivision.xyz/address/${finding.data?.owner}`}
                 target="_blank"
                 rel="noreferrer"
               >
-                ({formatAddress(props.findingId)})
+                {finding.data?.owner}
               </Link>
-            </span>
-          }
-        >
-          <RouterLink
-            to="/finding/$findingId"
-            params={{ findingId: props.findingId }}
-            search={(v) => ({ network: v.network, user: v.user })}
-          >
-            Finding {formatAddress(props.findingId)}
-          </RouterLink>
-        </Show>
-      </h2>
-      <div class={formStyles.container}>
-        <div class={formStyles.grid}>
-          <label for={`bugBounty${props.findingId}`}>Bug bounty:</label>
-          <RouterLink
-            id={`packageId${props.findingId}`}
-            to="/bug-bounty/$bugBountyId"
-            params={{ bugBountyId: finding.data?.bugBountyId! }}
-            search={{
-              network: network.value as Network,
-              user: user.value,
-            }}
-          >
-            {bugBounty.data?.name} (
-            {finding.data?.bugBountyId &&
-              formatAddress(finding.data?.bugBountyId)}
-            )
-          </RouterLink>
-          <Show when={finding.data?.owner}>
-            <label for={`owner${props.findingId}`}>Owner:</label>
-            <Link
-              id={`owner${props.findingId}`}
-              href={`https://${
-                network.value === "mainnet" ? "" : network.value + "."
-              }suivision.xyz/address/${finding.data?.owner}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {finding.data?.owner}
-            </Link>
-          </Show>
-          <Switch>
-            <Match when={finding.data?.publicReportBlobId}>
-              <label for={`publicReport${props.findingId}`}>
-                Public report:
-              </label>
-              <Button
-                class={buttonStyles.button}
-                disabled={
-                  !isPublicReportReadable({
-                    finding: finding.data,
-                    bugBounty: bugBounty.data,
-                    user: user.value,
-                  })
+            </Show>
+            <Switch>
+              <Match when={finding.data?.publicReportBlobId}>
+                <label for={`publicReport${props.findingId}`}>
+                  Public report:
+                </label>
+                <Switch>
+                  <Match when={publicReportUrl()}>
+                    <Link
+                      href={publicReportUrl()!.url}
+                      download={publicReportUrl()!.name}
+                      ref={(el) => setPublicReportLink(el)}
+                    >
+                      {publicReportUrl()!.name}
+                    </Link>
+                  </Match>
+                  <Match when={!publicReportUrl()}>
+                    <Button
+                      class={buttonStyles.button}
+                      disabled={
+                        !isPublicReportReadable({
+                          finding: finding.data!,
+                          bugBounty: bugBounty.data!,
+                          user: user.value,
+                        }) || downloadPublicReport.isPending
+                      }
+                      onClick={handleDownloadPublicReport}
+                    >
+                      <Show when={downloadPublicReport.isPending}>
+                        <LoaderCircle size={10} />
+                      </Show>
+                      Prepare
+                    </Button>
+                  </Match>
+                </Switch>
+              </Match>
+              <Match
+                when={
+                  !finding.data?.publicReportBlobId &&
+                  !finding.data?.errorMessageBlobId
                 }
-                onClick={handleDownloadPublicReport}
               >
-                Download
-              </Button>
-            </Match>
-            <Match
-              when={
-                !finding.data?.publicReportBlobId &&
-                !finding.data?.errorMessageBlobId
+                <label for={`reports${props.findingId}`}>Reports:</label>
+                <span id={`reports${props.findingId}`}>Processing...</span>
+              </Match>
+            </Switch>
+            <Show when={finding.data?.privateReportBlobId}>
+              <label for={`privateReport${props.findingId}`}>
+                Private report:
+              </label>
+              <Switch>
+                <Match when={privateReportUrl()}>
+                  <Link
+                    href={privateReportUrl()!.url}
+                    download={privateReportUrl()!.name}
+                    ref={(el) => setPrivateReportLink(el)}
+                  >
+                    {privateReportUrl()!.name}
+                  </Link>
+                </Match>
+                <Match when={!privateReportUrl()}>
+                  <Button
+                    class={buttonStyles.button}
+                    disabled={
+                      !isPrivateReportReadable({
+                        finding: finding.data!,
+                        bugBounty: bugBounty.data!,
+                        user: user.value,
+                      }) || downloadPrivateReport.isPending
+                    }
+                    onClick={handleDownloadPrivateReport}
+                  >
+                    <Show when={downloadPrivateReport.isPending}>
+                      <LoaderCircle size={10} />
+                    </Show>
+                    Prepare
+                  </Button>
+                </Match>
+              </Switch>
+            </Show>
+            <Show when={finding.data?.errorMessageBlobId}>
+              <label for={`errorMessage${props.findingId}`}>
+                Error message:
+              </label>
+              <Switch>
+                <Match when={errorMessageUrl()}>
+                  <Link
+                    href={errorMessageUrl()!.url}
+                    download={errorMessageUrl()!.name}
+                    ref={(el) => setErrorMessageLink(el)}
+                  >
+                    {errorMessageUrl()!.name}
+                  </Link>
+                </Match>
+                <Match when={!errorMessageUrl()}>
+                  <Button
+                    class={buttonStyles.button}
+                    disabled={
+                      !isErrorMessageReadable({
+                        finding: finding.data!,
+                        user: user.value,
+                      }) || downloadErrorMessage.isPending
+                    }
+                    onClick={handleDownloadErrorMessage}
+                  >
+                    <Show when={downloadErrorMessage.isPending}>
+                      <LoaderCircle size={10} />
+                    </Show>
+                    Prepare
+                  </Button>
+                </Match>
+              </Switch>
+            </Show>
+            <label for={`payment${props.findingId}`}>Payment:</label>
+            <Show
+              when={finding.data?.payments.length || 0 > 0}
+              fallback={
+                <span id={`payment${props.findingId}`}>
+                  <Button
+                    class={buttonStyles.button}
+                    disabled={
+                      finding.data?.isPublished ||
+                      !user.value ||
+                      walletController.status !== "connected" ||
+                      finding.data?.owner !== user.value
+                    }
+                  >
+                    Add
+                  </Button>
+                </span>
               }
             >
-              <label for={`reports${props.findingId}`}>Reports:</label>
-              <span id={`reports${props.findingId}`}>Processing...</span>
-            </Match>
-          </Switch>
-          <Show when={finding.data?.privateReportBlobId}>
-            <label for={`privateReport${props.findingId}`}>
-              Private report:
-            </label>
-            <Button
-              class={buttonStyles.button}
-              disabled={
-                !isPrivateReportReadable({
-                  finding: finding.data,
-                  bugBounty: bugBounty.data,
-                  user: user.value,
-                })
-              }
-              onClick={handleDownloadPrivateReport}
-            >
-              Download
-            </Button>
-          </Show>
-          <Show when={finding.data?.errorMessageBlobId}>
-            <label for={`errorMessage${props.findingId}`}>Error message:</label>
-            <Button
-              class={buttonStyles.button}
-              disabled={
-                !isErrorMessageReadable({
-                  finding: finding.data,
-                  user: user.value,
-                })
-              }
-              onClick={handleDownloadErrorMessage}
-            >
-              Download
-            </Button>
-          </Show>
-          <label for={`payment${props.findingId}`}>Payment:</label>
-          <Show
-            when={finding.data?.payments.length || 0 > 0}
-            fallback={
-              <span id={`payment${props.findingId}`}>
+              <span
+                id={`payment${props.findingId}`}
+                style={{
+                  display: "flex",
+                  "flex-direction": "row",
+                  gap: "10px",
+                  "align-items": "end",
+                }}
+              >
+                <ul style={{ display: "inline-block" }}>
+                  <For each={finding.data?.payments}>
+                    {(p) => (
+                      <li>
+                        {Number(p.payed) / Math.pow(10, SUI_DECIMALS)} /{" "}
+                        {Number(p.requested) / Math.pow(10, SUI_DECIMALS)}{" "}
+                        {p.type.split("::").at(-1)}
+                      </li>
+                    )}
+                  </For>
+                </ul>
                 <Button
                   class={buttonStyles.button}
                   disabled={
@@ -628,118 +859,85 @@ const FindingCard = (props: FindingCardProps) => {
                     walletController.status !== "connected" ||
                     finding.data?.owner !== user.value
                   }
+                  onClick={handleRemovePayment}
                 >
-                  Add
+                  Remove
+                </Button>
+                <Button
+                  class={buttonStyles.button}
+                  disabled={
+                    isPaid(finding.data!) ||
+                    !user.value ||
+                    walletController.status !== "connected"
+                  }
+                  onClick={handlePay}
+                >
+                  Pay
+                </Button>
+                <Button
+                  class={buttonStyles.button}
+                  disabled={
+                    !hasFundsToWithdraw(finding.data!) ||
+                    !user.value ||
+                    walletController.status !== "connected" ||
+                    finding.data?.owner !== user.value
+                  }
+                  onClick={handleWithdraw}
+                >
+                  Withdraw
                 </Button>
               </span>
-            }
-          >
-            <span
-              id={`payment${props.findingId}`}
-              style={{
-                display: "flex",
-                "flex-direction": "row",
-                gap: "10px",
-                "align-items": "end",
+            </Show>
+            <label for={`payment${props.findingId}`}>Publicity:</label>
+            <Show
+              when={!finding.data?.isPublished}
+              fallback={<span>Published</span>}
+            >
+              <span style={{ display: "flex", gap: "10px" }}>
+                <Button
+                  class={buttonStyles.button}
+                  disabled={
+                    !finding.data?.publicReportBlobId ||
+                    !user.value ||
+                    user.value !== finding.data?.owner ||
+                    walletController.status !== "connected"
+                  }
+                  onClick={handlePublish}
+                >
+                  Publish
+                </Button>
+                <Button
+                  class={buttonStyles.button}
+                  disabled={
+                    finding.data?.isPublished ||
+                    !user.value ||
+                    user.value !== finding.data?.owner ||
+                    walletController.status !== "connected"
+                  }
+                  onClick={handleDestroy}
+                >
+                  Destroy
+                </Button>
+              </span>
+            </Show>
+          </div>
+        </div>
+        <Show when={props.solo}>
+          <div class={styles.line}>
+            <LinkButton
+              class={buttonStyles.button}
+              to="/finding"
+              search={{
+                network: network.value as Network,
+                user: user.value,
               }}
             >
-              <ul style={{ display: "inline-block" }}>
-                <For each={finding.data?.payments}>
-                  {(p) => (
-                    <li>
-                      {Number(p.payed) / Math.pow(10, SUI_DECIMALS)} /{" "}
-                      {Number(p.requested) / Math.pow(10, SUI_DECIMALS)}{" "}
-                      {p.type.split("::").at(-1)}
-                    </li>
-                  )}
-                </For>
-              </ul>
-              <Button
-                class={buttonStyles.button}
-                disabled={
-                  finding.data?.isPublished ||
-                  !user.value ||
-                  walletController.status !== "connected" ||
-                  finding.data?.owner !== user.value
-                }
-                onClick={handleRemovePayment}
-              >
-                Remove
-              </Button>
-              <Button
-                class={buttonStyles.button}
-                disabled={
-                  isPaid(finding.data) ||
-                  !user.value ||
-                  walletController.status !== "connected"
-                }
-                onClick={handlePay}
-              >
-                Pay
-              </Button>
-              <Button
-                class={buttonStyles.button}
-                disabled={
-                  !hasFundsToWithdraw(finding.data) ||
-                  !user.value ||
-                  walletController.status !== "connected" ||
-                  finding.data?.owner !== user.value
-                }
-                onClick={handleWithdraw}
-              >
-                Withdraw
-              </Button>
-            </span>
-          </Show>
-          <label for={`payment${props.findingId}`}>Publicity:</label>
-          <Show
-            when={!finding.data?.isPublished}
-            fallback={<span>Published</span>}
-          >
-            <span style={{ display: "flex", gap: "10px" }}>
-              <Button
-                class={buttonStyles.button}
-                disabled={
-                  !finding.data?.publicReportBlobId ||
-                  !user.value ||
-                  user.value !== finding.data?.owner ||
-                  walletController.status !== "connected"
-                }
-                onClick={handlePublish}
-              >
-                Publish
-              </Button>
-              <Button
-                class={buttonStyles.button}
-                disabled={
-                  finding.data?.isPublished ||
-                  !user.value ||
-                  user.value !== finding.data?.owner ||
-                  walletController.status !== "connected"
-                }
-                onClick={handleDestroy}
-              >
-                Destroy
-              </Button>
-            </span>
-          </Show>
-        </div>
-      </div>
-      <Show when={props.solo}>
-        <div class={styles.line}>
-          <LinkButton
-            class={buttonStyles.button}
-            to="/finding"
-            search={{
-              network: network.value as Network,
-              user: user.value,
-            }}
-          >
-            All
-          </LinkButton>
-        </div>
-      </Show>
-    </section>
+              All
+            </LinkButton>
+          </div>
+        </Show>
+      </section>
+    </Show>
   );
 };
 

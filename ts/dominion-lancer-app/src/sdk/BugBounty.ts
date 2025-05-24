@@ -10,7 +10,7 @@ export type BugBounty = {
   approves: string[];
   owner: string | null;
 };
-
+/*
 const parseBugBounty = async ({
   client,
   id,
@@ -76,7 +76,7 @@ const parseBugBounty = async ({
       (ownerCap.data!.owner as { AddressOwner?: string }).AddressOwner ?? null,
   };
 };
-
+*/
 export const getAllBugBountyIds = async ({
   config,
   client,
@@ -152,7 +152,7 @@ export const getUserBugBountyIds = async ({
   }
   return ids;
 };
-
+/*
 export const getBugBounty = async ({
   client,
   id,
@@ -172,7 +172,7 @@ export const getBugBounty = async ({
     client,
   });
 };
-/*
+
 export const getBugBounties = async ({
   client,
   ids,

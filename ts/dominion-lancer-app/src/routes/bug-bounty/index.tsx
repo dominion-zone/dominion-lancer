@@ -1,5 +1,5 @@
 import { createFileRoute, useMatches } from "@tanstack/solid-router";
-import { For } from "solid-js";
+import { createMemo, For } from "solid-js";
 import { useSuiNetwork, useSuiUser } from "~/contexts";
 import { useConfig, Network } from "~/stores/config";
 import { z } from "zod";
@@ -7,7 +7,8 @@ import { zodValidator } from "@tanstack/zod-adapter";
 import BugBountiesToolbox from "~/components/bugBounty/index/BugBountiesToolbox";
 import { normalizeStructTag } from "@mysten/sui/utils";
 import BugBountyCard from "~/components/bugBounty/index/BugBountyCard";
-import { useBugBounties } from "~/queries/bugBounties";
+import { useBugBountyIds } from "~/queries/bugBountyIds";
+import { BugBounty } from "~/sdk/BugBounty";
 
 const searchSchema = z.object({
   ownedBy: z.string().optional(),
@@ -78,33 +79,43 @@ function RouteComponent() {
     });
   };
 
-  const { filtered } = useBugBounties(() => ({
-    network: network.value as Network,
-    filter: (bugBounty) => {
-      if (filterMineChecked() && user.value && bugBounty.owner !== user.value) {
+  const bugBountyIds = useBugBountyIds({
+    get network() {
+      return network.value as Network;
+    },
+    get ownedBy() {
+      return search().ownedBy;
+    },
+  });
+
+  const filter = createMemo(() => {
+    const filterMine = filterMineChecked();
+    const filterActive = filterActiveChecked();
+    const filterApproved = filterApprovedChecked();
+    const config = useConfig(network.value as Network);
+    const userValue = user.value;
+    return (bugBounty: BugBounty) => {
+      if (filterMine && userValue && bugBounty.owner !== userValue) {
         return false;
       }
-      if (filterActiveChecked() && !bugBounty.isActive) {
+      if (filterActive && !bugBounty.isActive) {
         return false;
       }
       if (
-        filterApprovedChecked() &&
+        filterApproved &&
         !bugBounty.approves.find(
           (v) =>
             normalizeStructTag(v) ===
             normalizeStructTag(
-              `${
-                useConfig(network.value as Network).lancer.typeOrigins
-                  .upgraderApprove.UpgraderApproveV1
-              }::upgrader_approve::UpgraderApproveV1`
+              `${config.lancer.typeOrigins.upgraderApprove.UpgraderApproveV1}::upgrader_approve::UpgraderApproveV1`
             )
         )
       ) {
         return false;
       }
       return true;
-    },
-  }));
+    };
+  });
 
   return (
     <main>
@@ -117,8 +128,10 @@ function RouteComponent() {
         filterApprovedChecked={filterApprovedChecked}
         setFilterApprovedChecked={setFilterApprovedChecked}
       />
-      <For each={filtered()}>
-        {(bugBounty) => <BugBountyCard bugBountyId={bugBounty.id} />}
+      <For each={bugBountyIds.data}>
+        {(id) => (
+          <BugBountyCard bugBountyId={id} filter={filter()} />
+        )}
       </For>
     </main>
   );

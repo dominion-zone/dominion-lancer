@@ -98,7 +98,7 @@ function RootComponent() {
   );
 
   const [suiAutoconnect, setSuiAutoconnect] = makePersisted(
-    createSignal(false)
+    createSignal(true)
   );
 
   const setSuiNetworkChecked = ((
@@ -142,8 +142,8 @@ function RootComponent() {
                     <Sidebar />
                     <Suspense>
                       <Outlet />
-                      <Devtools />
                     </Suspense>
+                    <Devtools />
                   </div>
                   <Footer />
                   <Toast.Region>

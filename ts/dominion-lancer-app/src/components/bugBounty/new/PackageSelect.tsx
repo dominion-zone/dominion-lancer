@@ -27,15 +27,10 @@ const PackageSelect = (props: PackageSelectProps) => {
   ]);
   const network = useSuiNetwork();
   const user = useSuiUser();
-  const userPackages = userPackagesQuery(() => ({
-    network: network.value,
-    user: user.value!,
-  }));
-  const onInputChange = (value: string) => {
-    if (value === "") {
-      props.setPackageId(null);
-    }
-  };
+  const userPackages = userPackagesQuery({
+    get network() { return network.value; },
+    get user() { return user.value; },
+  });
   return (
     <Combobox<{
       packageId: string;

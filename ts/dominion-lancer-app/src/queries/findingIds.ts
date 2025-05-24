@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/solid-query";
+import { QueryFunction, queryOptions, useQuery } from "@tanstack/solid-query";
 import { Network, useConfig } from "~/stores/config";
 import { useSui } from "~/stores/suiClient";
 import { queryClient } from "./client";
@@ -10,34 +10,42 @@ export type FindingIdsProps = {
   ownedBy?: string;
 };
 
-export const findingIdsKey = (props: FindingIdsProps) => [
+export type FindingIdsKey = [
+  network: Network,
+  type: "findingIds",
+  ownedBy?: string
+];
+
+export const findingIdsKey = (props: FindingIdsProps): FindingIdsKey => [
   props.network,
   "findingIds",
-  {
-    ownedBy: props.ownedBy,
-  },
+  props.ownedBy,
 ];
+
+const queryFn: QueryFunction<string[] | undefined, FindingIdsKey> = async ({
+  queryKey: [network, , ownedBy],
+}) => {
+  const config = useConfig(network);
+  const client = useSui(network);
+  if (ownedBy) {
+    return await getUserFindingIds({
+      config,
+      client,
+      user: ownedBy,
+    });
+  } else {
+    return await getAllFindingIds({ config, client });
+  }
+};
 
 export const findingIdsOptions = (props: FindingIdsProps) =>
   queryOptions({
     queryKey: findingIdsKey(props),
-    queryFn: async () => {
-      const config = useConfig(props.network);
-      const client = useSui(props.network);
-      if (props.ownedBy) {
-        return await getUserFindingIds({
-          config,
-          client,
-          user: props.ownedBy,
-        });
-      } else {
-        return await getAllFindingIds({ config, client });
-      }
-    },
+    queryFn,
   });
 
-export const useFindingIds = (props: Accessor<FindingIdsProps>) =>
+export const useFindingIds = (props: FindingIdsProps) =>
   useQuery(
-    () => findingIdsOptions(props()),
+    () => findingIdsOptions(props),
     () => queryClient
   );

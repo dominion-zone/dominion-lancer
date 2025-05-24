@@ -2,7 +2,7 @@ import { Component, Setter, splitProps } from "solid-js";
 import { CheckIcon, ChevronsUpDown } from "lucide-solid";
 import { Select, SelectRootProps } from "@kobalte/core/select";
 import styles from "~/styles/Select.module.css";
-import { FindingStatus } from "~/sdk/Finding";
+import { FindingStatus, findingStatuses } from "~/sdk/Finding";
 
 export type FindingStatusSelectProps = {
   status: FindingStatus | null;
@@ -16,7 +16,7 @@ const FindingStatusSelect: Component<FindingStatusSelectProps> = (props) => {
   ]);
   return (
     <Select<FindingStatus>
-      options={["Draft", "Active", "Error"]}
+      options={findingStatuses}
       value={myProps.status}
       onChange={myProps.setStatus}
       placeholder="All"

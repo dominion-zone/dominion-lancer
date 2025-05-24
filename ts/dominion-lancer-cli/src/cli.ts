@@ -9,6 +9,7 @@ import {setContext} from './context';
 import {config, Config, Network} from './config';
 import { installCreateBugBounty } from './commands/createBugBounty';
 import { installPackageTypeOrigins } from './commands/packageTypeOrigins';
+import { installShow } from './commands/show';
 
 export const cli = () => {
   const program = new Command();
@@ -52,6 +53,7 @@ export const cli = () => {
 
   installCreateBugBounty(program);
   installPackageTypeOrigins(program);
+  installShow(program);
 
   return program;
 };

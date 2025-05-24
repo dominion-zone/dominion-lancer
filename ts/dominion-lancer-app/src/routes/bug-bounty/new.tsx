@@ -1,6 +1,6 @@
 import { createFileRoute, createLink } from "@tanstack/solid-router";
 import { createForm } from "@tanstack/solid-form";
-import { createEffect } from "solid-js";
+import { createEffect, untrack } from "solid-js";
 import { userPackagesQuery } from "~/queries/userPackages";
 import {
   useSuiNetwork,
@@ -26,6 +26,7 @@ import {
   isValidSuiObjectId,
 } from "@mysten/sui/utils";
 import { Link } from "@kobalte/core/link";
+import { Link as RouterLink } from "@tanstack/solid-router";
 
 const searchSchema = z.object({
   user: z.string(),
@@ -43,16 +44,27 @@ function RouteComponent() {
 
   const network = useSuiNetwork();
   const user = useSuiUser();
-  const userPackages = userPackagesQuery(() => ({
-    network: network.value,
-    user: user.value!,
-  }));
+  const userPackages = userPackagesQuery({
+    get network() {
+      return network.value;
+    },
+    get user() {
+      return user.value;
+    },
+  });
   const wallet = useSuiWallet();
   const walletController = useSuiWalletController();
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
 
-  const mutation = createBugBountyMutation();
+  const mutation = createBugBountyMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get user() {
+      return user.value!;
+    },
+  });
 
   const form = createForm(() => ({
     defaultValues: {
@@ -65,14 +77,12 @@ function RouteComponent() {
         (cap) => cap.packageId === value.packageId
       )?.upgradeCapId;
       await mutation.mutateAsync(
-        {
-          network: network.value as Network,
+        untrack(() => ({
           wallet: wallet.value!,
-          user: user.value!,
           packageId: value.packageId,
           name: value.name,
           upgradeCapId,
-        },
+        })),
         {
           onSuccess: ({ bugBounty, txDigest }) => {
             const toastId = toaster.show((props) => (
@@ -80,7 +90,18 @@ function RouteComponent() {
                 <div class={toastStyles.toastContent}>
                   <div>
                     <Toast.Title class={toastStyles.toastTitle}>
-                      Bug bounty {formatAddress(bugBounty.id)} has been created
+                      Bug bounty{" "}
+                      <RouterLink
+                        to="/bug-bounty/$bugBountyId"
+                        params={{ bugBountyId: bugBounty.id }}
+                        search={{
+                          user: user.value,
+                          network: network.value as Network,
+                        }}
+                      >
+                        {formatAddress(bugBounty.id)}
+                      </RouterLink>{" "}
+                      has been created
                     </Toast.Title>
                     <Toast.Description class={toastStyles.toastDescription}>
                       Transaction:{" "}

@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/solid-query";
+import { QueryFunction, queryOptions, useQuery } from "@tanstack/solid-query";
 import { Network } from "../stores/config";
 import { useConfig } from "../stores/config";
 import { queryClient } from "./client";
@@ -9,7 +9,9 @@ export type ServerPkProps = {
   network: Network;
 };
 
-export const serverPkKey = (props: ServerPkProps) => [
+export type ServerPkKey = [network: Network, type: "serverPk"];
+
+export const serverPkKey = (props: ServerPkProps): ServerPkKey => [
   props.network,
   "serverPk",
 ];
@@ -31,22 +33,25 @@ function importSpkiPublicKey(spkiPem: string): Promise<CryptoKey> {
   );
 }
 
+const queryFn: QueryFunction<CryptoKey, ServerPkKey> = async ({
+  queryKey: [network, ,],
+}) =>
+  await importSpkiPublicKey(
+    (
+      await axios.get<string>(
+        useConfig(network).runner.server.url + "/public_key"
+      )
+    ).data
+  );
+
 export const serverPkOptions = (props: ServerPkProps) =>
   queryOptions({
     queryKey: serverPkKey(props),
-    queryFn: async () => {
-      return importSpkiPublicKey(
-        (
-          await axios.get<string>(
-            useConfig(props.network).runner.server.url + "/public_key"
-          )
-        ).data
-      );
-    },
+    queryFn,
   });
 
-export const serverPkQuery = (props: Accessor<ServerPkProps>) =>
+export const serverPkQuery = (props: ServerPkProps) =>
   useQuery(
-    () => serverPkOptions(props()),
+    () => serverPkOptions(props),
     () => queryClient
   );

@@ -24,6 +24,7 @@
     "@tanstack/solid-router-devtools": "^1.114.1",
     "@tanstack/zod-adapter": "^1.119.0",
     "axios": "^1.9.0",
+    "channel-ts": "^0.1.2",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-solid": "^8.6.0",
     "lucide-solid": "^0.503.0",

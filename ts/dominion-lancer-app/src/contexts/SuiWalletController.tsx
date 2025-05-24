@@ -10,11 +10,13 @@ import {
 import { SuiWallet } from "./SuiWallet";
 import { StandardConnect, StandardDisconnect } from "@mysten/wallet-standard";
 
+export const SuiWalletNotConnected = "not-connected";
 export const SuiWalletDisconnected = "disconnected";
 export const SuiWalletConnecting = "connecting";
 export const SuiWalletConnected = "connected";
 
 export type SuiWalletConnectionStatus =
+  | typeof SuiWalletNotConnected
   | typeof SuiWalletDisconnected
   | typeof SuiWalletConnecting
   | typeof SuiWalletConnected;
@@ -40,7 +42,7 @@ export const SuiWalletControllerProvider: Component<
   SuiWalletControllerContextProviderProps
 > = (props) => {
   const [status, setStatus] = createSignal<SuiWalletConnectionStatus>(
-    SuiWalletDisconnected
+    SuiWalletNotConnected
   );
 
   createEffect((oldChains) => {
@@ -100,14 +102,17 @@ export const SuiWalletControllerProvider: Component<
     if (!props.wallet) {
       return;
     }
-    if (status() !== SuiWalletDisconnected) {
+    const s = status();
+    if (s === SuiWalletConnecting || s === SuiWalletConnected) {
       const disconnect = props.wallet.features[StandardDisconnect];
       if (disconnect) {
         disconnect.disconnect().finally(() => {
           setStatus(SuiWalletDisconnected);
+          props.setUser(undefined);
         });
       } else {
         setStatus(SuiWalletDisconnected);
+        props.setUser(undefined);
       }
     }
   };
@@ -118,26 +123,27 @@ export const SuiWalletControllerProvider: Component<
     }
 
     if (prevWallet) {
-      if (status() !== SuiWalletDisconnected) {
+      const s = status();
+      if (s === SuiWalletConnecting || s === SuiWalletConnected) {
         const disconnect = prevWallet.features[StandardDisconnect];
         if (disconnect) {
           disconnect.disconnect().finally(() => {
-            setStatus(SuiWalletDisconnected);
-            if (props.wallet && props.autoConnect) {
-              connect();
-            }
+            setStatus(SuiWalletNotConnected);
           });
         } else {
-          setStatus(SuiWalletDisconnected);
-          if (props.wallet && props.autoConnect) {
-            connect();
-          }
+          setStatus(SuiWalletNotConnected);
         }
       }
     }
 
     return props.wallet;
   }, undefined);
+
+  createEffect(() => {
+    if (props.autoConnect && props.wallet && status() === SuiWalletNotConnected) {
+      connect();
+    }
+  });
 
   return (
     <SuiWalletControllerConext.Provider

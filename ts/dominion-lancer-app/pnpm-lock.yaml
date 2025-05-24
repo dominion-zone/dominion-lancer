@@ -56,6 +56,9 @@ importers:
       axios:
         specifier: ^1.9.0
         version: 1.9.0
+      channel-ts:
+        specifier: ^0.1.2
+        version: 0.1.2
       embla-carousel-autoplay:
         specifier: ^8.6.0
         version: 8.6.0(embla-carousel@8.6.0)
@@ -1763,6 +1766,9 @@ packages:
   chalk@5.4.1:
     resolution: {integrity: sha512-zgVZuo2WcZgfUEmsn6eO3kINexW8RAE4maiQ8QNs8CtpPCSyMiYsULR3HQYkm3w8FIA3SberyMJMSldGsW+U3w==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
+  channel-ts@0.1.2:
+    resolution: {integrity: sha512-cI/XiDF+jB0v95Xup8xlM7k93lT3xwPl0WdjEZ9w9aUMf5N+3GQevspK2EDYfMyxcKcXdN1F6PDpuYRpUfaZmg==}
 
   character-entities-html4@2.1.0:
     resolution: {integrity: sha512-1v7fgQRj6hnSwFpq1Eu0ynr/CDEw0rXo2B61qXrLNdHZmPKgb7fqS1a2JwF0rISo9q77jDI8VMEHoApn8qDoZA==}
@@ -5930,6 +5936,8 @@ snapshots:
       supports-color: 7.2.0
 
   chalk@5.4.1: {}
+
+  channel-ts@0.1.2: {}
 
   character-entities-html4@2.1.0: {}
 

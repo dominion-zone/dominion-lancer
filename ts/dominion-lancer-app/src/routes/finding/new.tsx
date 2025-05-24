@@ -15,7 +15,7 @@ import BugBountySelect from "~/components/finding/BugBountySelect";
 import formStyles from "~/styles/Form.module.css";
 import buttonStyles from "~/styles/Button.module.css";
 import { Button } from "@kobalte/core/button";
-import { createEffect, Show } from "solid-js";
+import { createEffect, Show, untrack } from "solid-js";
 import {
   formatAddress,
   formatDigest,
@@ -55,11 +55,22 @@ function RouteComponent() {
   const wallet = useSuiWallet();
   const walletController = useSuiWalletController();
   const user = useSuiUser();
-  const mutation = createFindingMutation();
-  const escrows = userEscrowsQuery(() => ({
-    network: network.value as Network,
-    user: user.value!,
-  }));
+  const mutation = createFindingMutation({
+    get network() {
+      return network.value as Network;
+    },
+    get user() {
+      return user.value!;
+    },
+  });
+  const escrows = userEscrowsQuery({
+    get network() {
+      return network.value as Network;
+    },
+    get user() {
+      return user.value;
+    },
+  });
   const escrowsBalanceTotal = () =>
     escrows.data?.reduce(
       (acc, escrow) => (escrow.isLocked ? acc : acc + escrow.balance),
@@ -76,26 +87,23 @@ function RouteComponent() {
 
     onSubmit: async ({ value }) => {
       await mutation.mutateAsync(
-        {
-          network: network.value as Network,
+        untrack(() => ({
           wallet: wallet.value!,
-          user: user.value!,
           file: value.files[0],
           bugBountyId: value.bugBountyId,
           paymentSui: BigInt(value.paymentSui * Math.pow(10, SUI_DECIMALS)),
           topupSui:
             BigInt(value.budgetSui * Math.pow(10, SUI_DECIMALS)) -
             escrowsBalanceTotal(),
-          escrows: escrows.data!,
-        },
+        })),
         {
-          onSuccess: ({ finding, txDigest }) => {
+          onSuccess: ({ findingId, txDigest }) => {
             const toastId = toaster.show((props) => (
               <Toast toastId={props.toastId} class={toastStyles.toast}>
                 <div class={toastStyles.toastContent}>
                   <div>
                     <Toast.Title class={toastStyles.toastTitle}>
-                      Finding {formatAddress(finding.id)} has been created
+                      Finding {formatAddress(findingId)} has been created
                     </Toast.Title>
                     <Toast.Description class={toastStyles.toastDescription}>
                       Transaction:{" "}
@@ -119,7 +127,7 @@ function RouteComponent() {
             navigate({
               to: "/finding/$findingId",
               params: {
-                findingId: finding.id,
+                findingId,
               },
               search: {
                 network: network.value as Network,
@@ -138,7 +146,7 @@ function RouteComponent() {
               >
                 <div class={toastStyles.toastContent}>
                   <Toast.Title class={toastStyles.toastTitle}>
-                    Error uploading finding
+                    Error creating finding
                   </Toast.Title>
                   <Toast.Description class={toastStyles.toastDescription}>
                     {error.message}

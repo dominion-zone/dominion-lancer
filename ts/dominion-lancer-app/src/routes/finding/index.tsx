@@ -4,15 +4,15 @@ import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import FindingsToolbox from "~/components/finding/index/FindingsToolbox";
 import { useSuiUser } from "~/contexts";
-import { findingStatus, FindingStatus } from "~/sdk/Finding";
-import { For } from "solid-js";
+import { Finding, findingStatus, FindingStatus, findingStatuses } from "~/sdk/Finding";
+import { createEffect, createMemo, For } from "solid-js";
 import FindingCard from "~/components/finding/index/FindingCard";
-import { useFindings } from "~/queries/findings";
+import { useFindingIds } from "~/queries/findingIds";
 
 const searchSchema = z.object({
   ownedBy: z.string().optional(),
   bugBountyId: z.string().optional(),
-  status: z.enum(["Draft", "Active", "Error"]).optional(),
+  status: z.enum(findingStatuses).optional(),
 });
 
 export const Route = createFileRoute("/finding/")({
@@ -76,22 +76,32 @@ function RouteComponent() {
     });
   };
 
-  const { filtered } = useFindings(() => ({
-    network: search().network,
-    ownedBy: search().ownedBy,
-    filter: (finding) => {
-      if (filterMineChecked() && finding.owner !== search().ownedBy) {
+  const findingIds = useFindingIds({
+    get network() {
+      return search().network;
+    },
+    get ownedBy() {
+      return search().ownedBy;
+    },
+  });
+  const filter = createMemo(() => {
+    const filterMine = filterMineChecked();
+    const filterBugBounty = filterBugBountyId();
+    const filterStatusValue = filterStatus();
+    const ownedBy = search().ownedBy;
+    return (finding: Finding) => {
+      if (filterMine && finding.owner !== ownedBy) {
         return false;
       }
-      if (filterBugBountyId() && finding.bugBountyId !== search().bugBountyId) {
+      if (filterBugBounty && finding.bugBountyId !== filterBugBounty) {
         return false;
       }
-      if (filterStatus() && findingStatus(finding) !== filterStatus()) {
+      if (filterStatusValue && findingStatus(finding) !== filterStatusValue) {
         return false;
       }
       return true;
-    },
-  }));
+    };
+  });
 
   return (
     <main>
@@ -105,8 +115,8 @@ function RouteComponent() {
         setFilterStatus={setFilterStatus}
       />
 
-      <For each={filtered()}>
-        {(finding) => <FindingCard findingId={finding.id} />}
+      <For each={findingIds.data || []}>
+        {(findingId) => <FindingCard findingId={findingId} filter={filter()}/>}
       </For>
     </main>
   );

@@ -5,6 +5,7 @@ export const queryClient = new QueryClient({
     queries: {
       throwOnError: true,
       retry: 10,
+      experimental_prefetchInRender: true,
     },
   },
 });
