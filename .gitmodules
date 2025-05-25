@@ -1,0 +1,12 @@
+[submodule ".move/https___github_com_MystenLabs_sui_git_framework__devnet"]
+	path = .move/https___github_com_MystenLabs_sui_git_framework__devnet
+	url = https://github.com/MystenLabs/sui.git
+	branch = devnet
+[submodule ".move/https___github_com_MystenLabs_sui_git_framework__testnet"]
+	path = .move/https___github_com_MystenLabs_sui_git_framework__testnet
+	url = https://github.com/MystenLabs/sui.git
+	branch = testnet
+[submodule ".move/https___github_com_MystenLabs_sui_git_framework__mainnet"]
+	path = .move/https___github_com_MystenLabs_sui_git_framework__mainnet
+	url = https://github.com/MystenLabs/sui.git
+	branch = mainnet
