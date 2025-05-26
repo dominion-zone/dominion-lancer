@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     */
     let config: Config = serde_json::from_slice(&fs::read("lancer-server.json").await?)?;
     let cors = config.cors;
-    let (server, worker) = Server::new(config).await.unwrap();
+    let (server, worker) = Server::new(config).await?;
 
     let app = Router::new()
         .route("/public_key", get(get_public_key))

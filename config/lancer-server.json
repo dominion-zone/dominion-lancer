@@ -1,7 +1,10 @@
 {
   "lancer_id": "0xb472abe6694550c624e46715a1aa9bdd1ad060bb50ee6ebccb068a9922d24d87",
   "finding_origin_id": "0xaf3dd531a92b3ff2b78ce6eed4e92405c808fe38cb3a7aba7d9451eb6265962a",
+  "executor_origin_id": "0xaf3dd531a92b3ff2b78ce6eed4e92405c808fe38cb3a7aba7d9451eb6265962a",
+  "nautilus_id": "0x14e8b4d8b28ee9aa5ea604f3f33969b3d0f03247b51837f27e17bcf875d3582c",
   "runner_id": "0xe173c15f4ee89ca7616c81b32bad6263733ee13c3c68f1cbcc14c28bde6e6a13",
   "vsock_port": 9300,
-  "cors": false
+  "cors": false,
+  "enclave_config_id": "0x1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
 }

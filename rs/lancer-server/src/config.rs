@@ -7,9 +7,12 @@ use sui_types::base_types::ObjectID;
 pub struct Config {
     pub lancer_id: ObjectID,
     pub finding_origin_id: ObjectID,
+    pub executor_origin_id: ObjectID,
+    pub nautilus_id: ObjectID,
     pub runner_id: ObjectID,
     pub cors: bool,
     pub vsock_port: u32,
+    pub enclave_config_id: ObjectID,
 }
 
 /*

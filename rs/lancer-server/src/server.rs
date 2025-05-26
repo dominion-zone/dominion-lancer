@@ -12,7 +12,7 @@ use sui_sdk::{
     sui_client_config::SuiClientConfig,
     wallet_context::WalletContext,
 };
-use sui_types::base_types::ObjectID;
+use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber};
 use tokio::{
     sync::{RwLock, mpsc},
     task::JoinHandle,
@@ -24,6 +24,7 @@ use crate::config::Config;
 
 pub struct Server {
     pub config: Config,
+    pub enclave_config_ref: ObjectRef,
     pub sui_client: SuiClient,
     pub wallet: WalletContext,
     pub walrus: WalrusClient<SuiContractClient>,
@@ -62,6 +63,15 @@ impl Server {
         let walrus =
             WalrusClient::new_contract_client(walrus_config, refresh_handle, walrus_sui_client)
                 .await?;
+        
+        let enclave_config_ref = sui_client
+            .read_api()
+            .get_object_with_options(
+                config.enclave_config_id,
+                SuiObjectDataOptions::new(),
+            )
+            .await?
+            .object_ref_if_exists().context("Enclave config not found")?;
 
         // TODO: remove this
         /*
@@ -111,6 +121,7 @@ impl Server {
 
         let server = Arc::new(Server {
             sui_client,
+            enclave_config_ref,
             config,
             task_sender,
             walrus,

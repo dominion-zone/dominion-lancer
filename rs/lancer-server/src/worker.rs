@@ -6,10 +6,12 @@ use futures::{SinkExt, StreamExt};
 use lancer_transport::identity::Identity;
 use lancer_transport::{response::LancerRunResponse, task::LancerRunTask};
 use move_core_types::account_address::AccountAddress;
-use sui_sdk::rpc_types::SuiObjectDataOptions;
+use seal::ObjectID as SealObjectID;
+use sui_sdk::rpc_types::{SuiObjectDataOptions, SuiTransactionBlockEffectsAPI};
+use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber};
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
 use sui_types::transaction::{ObjectArg, TransactionData};
-use sui_types::{Identifier, MOVE_STDLIB_PACKAGE_ID, TypeTag};
+use sui_types::{Identifier, MOVE_STDLIB_PACKAGE_ID, SUI_FRAMEWORK_PACKAGE_ID, TypeTag};
 use tokio::sync::mpsc;
 use tokio_util::{
     bytes::Bytes,
@@ -34,6 +36,7 @@ impl Server {
         &self,
         task: &LancerRunTask,
         response: LancerRunResponse,
+        enclave_ref: Option<ObjectRef>,
     ) -> anyhow::Result<()> {
         let mut blobs = vec![];
         if let Some(public_report) = response.public_report {
@@ -225,6 +228,104 @@ impl Server {
         Ok(())
     }
 
+    async fn destroy_enclave(
+        &self,
+        (id, initial_shared_version, _): ObjectRef,
+    ) -> anyhow::Result<()> {
+        let mut pt = ProgrammableTransactionBuilder::new();
+        let enclave_arg = pt.obj(ObjectArg::SharedObject {
+            id,
+            initial_shared_version,
+            mutable: true,
+        })?;
+        pt.programmable_move_call(
+            self.config.nautilus_id,
+            Identifier::new("finding")?,
+            Identifier::new("deploy_old_enclave_by_owner")?,
+            vec![
+                TypeTag::from_str(&format!(
+                    "{}::executor::EXECUTOR",
+                    self.config.executor_origin_id
+                ))
+                .unwrap(),
+            ],
+            vec![enclave_arg],
+        );
+        let (sender, gas_object) = self.wallet.get_one_gas_object().await?.unwrap();
+        let gas_price = self.wallet.get_reference_gas_price().await?;
+        let r = self
+            .wallet
+            .execute_transaction_must_succeed(self.wallet.sign_transaction(
+                &TransactionData::new_programmable(
+                    sender,
+                    vec![gas_object],
+                    pt.finish(),
+                    1000000000,
+                    gas_price,
+                ),
+            ))
+            .await;
+        println!("Enclave destroyed: {}", r.digest);
+        Ok(())
+    }
+
+    async fn register_enclave(&self, identity: Identity) -> anyhow::Result<ObjectRef> {
+        let mut pt = ProgrammableTransactionBuilder::new();
+        let document_arg = pt.pure(identity.attestation)?;
+        let attestation_arg = pt.programmable_move_call(
+            SUI_FRAMEWORK_PACKAGE_ID,
+            Identifier::new("nitro_attestation")?,
+            Identifier::new("load_nitro_attestation")?,
+            vec![],
+            vec![document_arg],
+        );
+        let enclave_config_arg = pt.obj(ObjectArg::SharedObject {
+            id: self.enclave_config_ref.0,
+            initial_shared_version: self.enclave_config_ref.1,
+            mutable: false,
+        })?;
+        pt.programmable_move_call(
+            self.config.nautilus_id.clone(),
+            Identifier::new("enclave")?,
+            Identifier::new("register")?,
+            vec![
+                TypeTag::from_str(&format!(
+                    "{}::executor::EXECUTOR",
+                    self.config.executor_origin_id
+                ))
+                .unwrap(),
+            ],
+            vec![enclave_config_arg, attestation_arg],
+        );
+        let (sender, gas_object) = self.wallet.get_one_gas_object().await?.unwrap();
+        let gas_price = self.wallet.get_reference_gas_price().await?;
+        let r = self
+            .wallet
+            .execute_transaction_must_succeed(self.wallet.sign_transaction(
+                &TransactionData::new_programmable(
+                    sender,
+                    vec![gas_object],
+                    pt.finish(),
+                    1000000000,
+                    gas_price,
+                ),
+            ))
+            .await;
+        if !r.status_ok().unwrap() {
+            bail!("Failed to register enclave: {}", r.errors.join(", "));
+        }
+        let enclave_ref = r
+            .effects
+            .unwrap()
+            .shared_objects()
+            .into_iter()
+            .next()
+            .expect("Must be one object shared")
+            .clone();
+        println!("Enclave registered: {}", r.digest);
+        Ok((enclave_ref.object_id, enclave_ref.version, enclave_ref.digest))
+    }
+
     pub async fn worker(
         self: Arc<Server>,
         mut receiver: mpsc::Receiver<LancerRunTask>,
@@ -238,6 +339,12 @@ impl Server {
 
         let mut backlog = None;
 
+        struct EnclaveInfo {
+            enclave_ref: ObjectRef,
+            identity: Identity,
+        }
+        let mut last_used_enclave: Option<EnclaveInfo> = None;
+
         loop {
             self.reset_identity().await;
             println!("[worker] waiting for enclave connection...");
@@ -250,7 +357,36 @@ impl Server {
                 println!("[worker] failed to receive identity, connection lost");
                 continue;
             };
-            self.set_identity(identity).await;
+            self.set_identity(identity.clone()).await;
+            let refresh_enclave = if let Some(info) = &last_used_enclave {
+                info.identity != identity
+            } else {
+                true
+            };
+            if refresh_enclave {
+                if let Some(old) = last_used_enclave.take() {
+                    if let Err(e) = self
+                        .destroy_enclave(old.enclave_ref)
+                        .await
+                    {
+                        println!(
+                            "[worker] failed to destroy old enclave {}: {}",
+                            old.enclave_ref.0, e
+                        );
+                    }
+                }
+                if let Ok(enclave_ref) =
+                    self.register_enclave(identity.clone()).await
+                {
+                    last_used_enclave = Some(EnclaveInfo {
+                        enclave_ref,
+                        identity,
+                    });
+                } else {
+                    println!("[worker] failed to register enclave, skipping");
+                    continue;
+                }
+            };
 
             while let Some(task) = next_task(&mut backlog, &mut receiver).await {
                 println!("[worker] sending task: {}", task.finding_id);
@@ -278,7 +414,17 @@ impl Server {
 
                 match response {
                     Ok(response) => {
-                        if self.process_response(&task, response).await.is_err() {
+                        if self
+                            .process_response(
+                                &task,
+                                response,
+                                last_used_enclave
+                                    .as_ref()
+                                    .map(|info| info.enclave_ref.clone()),
+                            )
+                            .await
+                            .is_err()
+                        {
                             println!(
                                 "[worker] failed to process response for task: {}",
                                 task.finding_id
