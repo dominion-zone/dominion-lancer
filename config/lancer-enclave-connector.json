@@ -13,5 +13,7 @@
     "treshold": 1
   },
   "walrus_shards": 1000,
-  "lancer_id": "0xaf3dd531a92b3ff2b78ce6eed4e92405c808fe38cb3a7aba7d9451eb6265962a"
+  "lancer_id": "0xaf3dd531a92b3ff2b78ce6eed4e92405c808fe38cb3a7aba7d9451eb6265962a",
+  "use_tcp": false,
+  "port": 9300
 }

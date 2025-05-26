@@ -1,36 +1,17 @@
-use std::{str::FromStr, sync::Arc};
+use std::{sync::Arc};
 
 use crate::post_new_finding::post_new_finding;
-use aes_gcm::{Aes256Gcm, Key, KeyInit, Nonce, aead::Aead};
+use anyhow_http::response::{HttpJsonResult};
 use axum::{
     Router,
-    body::Body,
     extract::{DefaultBodyLimit, State},
-    http::{Method, StatusCode, header},
-    response::Response,
+    http::{Method},
+    response::{IntoResponse},
     routing::{get, post},
 };
-use axum_extra::extract::Multipart;
-use base64::prelude::*;
 use config::Config;
-use move_core_types::language_storage::StructTag;
-use rand::thread_rng as rng;
-use rsa::{Oaep, RsaPrivateKey, pkcs8::EncodePublicKey};
 use server::Server;
-use sha2::{Digest, Sha256};
-use shared_crypto::intent::{Intent, IntentMessage};
-use sui_sdk::{
-    rpc_types::{SuiData, SuiObjectDataOptions},
-    types::crypto::PublicKey,
-    verify_personal_message_signature::verify_personal_message_signature,
-};
-use sui_types::{
-    base_types::{ObjectID, SuiAddress},
-    crypto::{Signature, SignatureScheme, SuiSignature, ToFromBytes},
-};
 use tokio::fs;
-use tower::ServiceBuilder;
-use tower_http::compression::CompressionLayer;
 use tower_http::cors::{AllowHeaders, Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
 
@@ -39,13 +20,8 @@ pub mod post_new_finding;
 pub mod server;
 pub mod worker;
 
-async fn get_public_key() -> String {
-    reqwest::get("http://localhost:9300/public_key")
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap()
+async fn get_public_key(State(server): State<Arc<Server>>) -> HttpJsonResult<impl IntoResponse> {
+    Ok(server.get_public_key().await?)
 }
 
 #[tokio::main]

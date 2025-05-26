@@ -5,7 +5,7 @@ use seal::IBEPublicKeys;
 use serde::{Deserialize, Serialize};
 use sui_types::base_types::ObjectID;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SealConfig {
     pub key_servers: Vec<ObjectID>,
     pub public_keys: IBEPublicKeys,
@@ -39,11 +39,12 @@ impl Default for SealConfig {
 }
 */
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     pub seal: SealConfig,
     pub walrus_shards: NonZeroU16,
     pub lancer_id: ObjectID,
+    pub port: u32,
 }
 
 /*

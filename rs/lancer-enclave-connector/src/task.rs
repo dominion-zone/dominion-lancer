@@ -8,11 +8,11 @@ use std::{
 
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce, aead::Aead};
 use anyhow::{Context, bail};
-use anyhow_http::response::HttpJsonResult;
 use async_tempfile::TempDir;
-use axum::{Json, extract::State, http::header, response::IntoResponse};
-use axum_extra::extract::Multipart;
-use lancer_transport::response::{EncryptedBlobData, LancerRunResponse};
+use lancer_transport::{
+    response::{EncryptedBlobData, LancerRunResponse},
+    task::LancerRunTask,
+};
 use rsa::{Oaep, RsaPrivateKey};
 use seal::{EncryptionInput, seal_encrypt};
 use serde::{Deserialize, Serialize};
@@ -26,7 +26,7 @@ use tokio::{
 };
 use tokio_tar::{Archive, Builder as ArchiveBuilder, EntryType};
 
-use crate::{bson::Bson, server::Server};
+use crate::state::State;
 
 async fn add_dir_to_tar<W>(
     tar: &mut ArchiveBuilder<W>,
@@ -77,87 +77,34 @@ pub struct RunnerOutput {
 }
 
 impl Task {
-    pub async fn from_multipart(
-        rsa_private_key: &RsaPrivateKey,
-        mut multipart: Multipart,
-    ) -> anyhow::Result<(Self, impl Future<Output = anyhow::Result<RunnerOutput>>)> {
-        let mut iv = None;
-        let mut encrypted_file = None;
-        let mut encrypted_key = None;
-        let mut bug_bounty_id = None;
-        let mut finding_id = None;
-        let mut escrow_id = None;
-
-        while let Some(field) = multipart.next_field().await? {
-            let name = field.name().unwrap_or_default().to_string();
-            let data = field.bytes().await?.to_vec();
-            match name.as_str() {
-                "iv" => iv = Some(data),
-                "encryptedFile" => encrypted_file = Some(data),
-                "encryptedKey" => encrypted_key = Some(data),
-                "bugBountyId" => {
-                    bug_bounty_id = Some(ObjectID::from_str(&String::from_utf8(data)?)?);
-                }
-                "findingId" => {
-                    finding_id = Some(ObjectID::from_str(&String::from_utf8(data)?)?);
-                }
-                "escrowId" => {
-                    escrow_id = Some(ObjectID::from_str(&String::from_utf8(data)?)?);
-                }
-                _ => (),
-            }
-        }
-        let iv = iv.context("iv not found")?;
-        let encrypted_file = encrypted_file.context("encryptedFile not found")?;
-        let encrypted_key = encrypted_key.context("encryptedKey not found")?;
-        let bug_bounty_id = bug_bounty_id.context("bugBountyId not found")?;
-        let finding_id = finding_id.context("findingId not found")?;
-        let escrow_id = escrow_id.context("escrowId not found")?;
-        Self::from_encrypted(
-            rsa_private_key,
-            iv,
-            encrypted_file,
-            encrypted_key,
-            bug_bounty_id,
-            finding_id,
-            escrow_id,
-        )
-        .await
-    }
-
     pub async fn from_encrypted(
         rsa_private_key: &RsaPrivateKey,
-        iv: Vec<u8>,
-        encrypted_file: Vec<u8>,
-        encrypted_key: Vec<u8>,
-        bug_bounty_id: ObjectID,
-        finding_id: ObjectID,
-        escrow_id: ObjectID,
+        task: &LancerRunTask,
     ) -> anyhow::Result<(Self, impl Future<Output = anyhow::Result<RunnerOutput>>)> {
         let submission = [
-            iv.clone(),
-            encrypted_file.clone(),
-            encrypted_key.clone(),
-            bug_bounty_id.to_vec(),
+            task.iv.clone(),
+            task.encrypted_file.clone(),
+            task.encrypted_key.clone(),
+            task.bug_bounty_id.to_vec(),
         ]
         .concat();
         let submission_hash = Sha256::digest(&submission);
 
-        let decrypted_key = rsa_private_key.decrypt(Oaep::new::<Sha256>(), &encrypted_key)?;
+        let decrypted_key = rsa_private_key.decrypt(Oaep::new::<Sha256>(), &task.encrypted_key)?;
 
         let cipher = Aes256Gcm::new_from_slice(&decrypted_key)?;
-        let nonce = Nonce::from_slice(&iv);
+        let nonce = Nonce::from_slice(&task.iv);
 
         let data = cipher
-            .decrypt(nonce, encrypted_file.as_ref())
+            .decrypt(nonce, task.encrypted_file.as_ref())
             .map_err(|e| anyhow::anyhow!(e))?;
 
         Self::from_data(
             submission_hash.to_vec(),
             data,
-            bug_bounty_id,
-            finding_id,
-            escrow_id,
+            task.bug_bounty_id,
+            task.finding_id,
+            task.escrow_id,
         )
         .await
     }
@@ -280,11 +227,11 @@ impl Task {
             private_report,
             error_message,
         }: RunnerOutput,
-        server: Arc<Server>,
+        state: Arc<State>,
     ) -> anyhow::Result<LancerRunResponse> {
         let id_base = self.finding_id.to_vec();
         let public_report = if let Some(report) = public_report {
-            Some(server.encrypt(
+            Some(state.encrypt(
                 [id_base.clone(), vec![PUBLIC_FIELD]].concat(),
                 EncryptionInput::Aes256Gcm {
                     data: report,
@@ -296,7 +243,7 @@ impl Task {
         };
 
         let private_report = if let Some(report) = private_report {
-            Some(server.encrypt(
+            Some(state.encrypt(
                 [id_base.clone(), vec![PRIVATE_FIELD]].concat(),
                 EncryptionInput::Aes256Gcm {
                     data: report,
@@ -308,7 +255,7 @@ impl Task {
         };
 
         let error_message = if let Some(report) = error_message {
-            Some(server.encrypt(
+            Some(state.encrypt(
                 [id_base.clone(), vec![ERROR_FIELD]].concat(),
                 EncryptionInput::Aes256Gcm {
                     data: report,
@@ -350,20 +297,17 @@ impl Task {
         })
     }*/
 
-    pub async fn run(
-        server: Arc<Server>,
-        multipart: Multipart,
-    ) -> anyhow::Result<LancerRunResponse> {
-        let (task, results) = Task::from_multipart(&server.rsa_private_key, multipart).await?;
+    pub async fn run(state: Arc<State>, task: &LancerRunTask) -> anyhow::Result<LancerRunResponse> {
+        let (task, results) = Task::from_encrypted(&state.rsa_private_key, task).await?;
         // TODO: encryption
         let task = Arc::new(task);
 
-        if let Some(old_task) = server.task.write().await.replace(task.clone()) {
+        if let Some(old_task) = state.task.write().await.replace(task.clone()) {
             let _ = old_task.runner_killer.send(()); // igonre error
         }
 
         let runner_output = results.await?;
 
-        task.prepare_response(runner_output, server.clone()).await
+        task.prepare_response(runner_output, state.clone()).await
     }
 }

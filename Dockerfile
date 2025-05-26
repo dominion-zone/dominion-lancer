@@ -6,9 +6,9 @@ RUN apt-get update && apt-get install -y \
 COPY ./.move /root/.move
 WORKDIR /lancer
 COPY ./target/release/lancer-runner \
-     ./target/release/lancer-enclave-server \
-     ./config/lancer-enclave-server.json \
+     ./target/release/lancer-enclave-connector \
+     ./config/lancer-enclave-connector.json \
      ./
 COPY ./glu/lancer/ ./lancer/
 EXPOSE 9300
-CMD [ "./lancer-enclave-server" ]
+CMD [ "./lancer-enclave-connector" ]

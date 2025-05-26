@@ -19,14 +19,14 @@
 - **`rs/lancer-runner/`**  
   Executes submitted scripts in an isolated test SUI cluster, inside the enclave.
 
-- **`rs/lancer-enclave-server/`**  
-  Runs inside a secure enclave (e.g., AWS Nitro Enclaves). Listens on vsock for encrypted script execution requests, performs encryption/decryption, and delegates isolated script execution to `lancer-runner`.
+- **`rs/lancer-enclave-connector/`**  
+  Runs inside a secure enclave (e.g., AWS Nitro Enclaves). Connects vsock for encrypted script execution requests, performs encryption/decryption, and delegates isolated script execution to `lancer-runner`.
 
 - **`rs/lancer-server/`**  
-  Public-facing service that interacts with the enclave server. Handles file uploads to Walrus, writes verified outputs to the blockchain, and manages payment for enclave usage.
+  Public-facing service that interacts with the enclave. Handles file uploads to Walrus, writes verified outputs to the blockchain, and manages payment for enclave usage.
 
 - **`rs/lancer-transport/`**  
-  Shared serialization/deserialization layer between `lancer-server` and `lancer-enclave-server`.
+  Shared serialization/deserialization layer between `lancer-server` and `lancer-enclave-connector`.
 
 ---
 

@@ -19,18 +19,18 @@ use walrus_core::{
 
 use crate::{config::Config, task::Task};
 
-pub struct Server {
+pub struct State {
     pub rsa_private_key: RsaPrivateKey,
     pub encoding_config: EncodingConfig,
     pub config: Config,
     pub task: RwLock<Option<Arc<Task>>>,
 }
 
-impl Server {
+impl State {
     pub fn new(config: Config) -> Self {
         let mut rng = rand::thread_rng();
         let rsa_private_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
-        Server {
+        State {
             rsa_private_key,
             encoding_config: EncodingConfig::new(config.walrus_shards),
             config,
@@ -38,10 +38,9 @@ impl Server {
         }
     }
 
-    pub fn get_public_key(&self) -> String {
+    pub fn get_public_key(&self) -> Vec<u8> {
         let public_key = self.rsa_private_key.to_public_key();
-        let spki_der = public_key.to_public_key_der().unwrap().as_ref().to_vec();
-        BASE64_STANDARD.encode(&spki_der)
+        public_key.to_public_key_der().unwrap().as_ref().to_vec()
     }
 
     pub fn get_blob_id(&self, blob: &[u8]) -> anyhow::Result<BlobId> {

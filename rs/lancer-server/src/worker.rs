@@ -1,30 +1,24 @@
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::bail;
-use lancer_transport::task;
+use anyhow::{Context, bail};
+use futures::{SinkExt, StreamExt};
 use lancer_transport::{response::LancerRunResponse, task::LancerRunTask};
 use move_core_types::account_address::AccountAddress;
-use move_core_types::identifier::IdentStr;
-use reqwest::multipart::{Form, Part};
-use sui_config::{PersistedConfig, SUI_CLIENT_CONFIG, sui_config_dir};
-use sui_keys::keystore::FileBasedKeystore;
 use sui_sdk::rpc_types::SuiObjectDataOptions;
-use sui_sdk::sui_client_config::SuiClientConfig;
-use sui_sdk::wallet_context::WalletContext;
-use sui_sdk::{SuiClient, SuiClientBuilder};
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
-use sui_types::transaction::{ObjectArg, Transaction, TransactionData};
-use sui_types::{
-    Identifier, MOVE_STDLIB_PACKAGE_ID, SUI_FRAMEWORK_PACKAGE_ID, SUI_SYSTEM_PACKAGE_ID, TypeTag,
-};
+use sui_types::transaction::{ObjectArg, TransactionData};
+use sui_types::{Identifier, MOVE_STDLIB_PACKAGE_ID, TypeTag};
 use tokio::sync::mpsc;
+use tokio_util::{
+    bytes::Bytes,
+    codec::{Framed, LengthDelimitedCodec},
+};
+use tokio_vsock::{VsockAddr, VsockListener};
 use walrus_core::DEFAULT_ENCODING;
 use walrus_sdk::client::responses::{BlobStoreResult, EventOrObjectId};
 use walrus_sdk::store_when::StoreWhen;
-use walrus_sdk::{client::Client as WalrusClient, config::load_configuration};
-use walrus_sui::client::{BlobPersistence, PostStoreAction, SuiContractClient};
+use walrus_sui::client::{BlobPersistence, PostStoreAction};
 
 use crate::server::Server;
 
@@ -32,35 +26,14 @@ const PUBLIC_TAR_PATH: &str = "public.tar";
 const PRIVATE_TAR_PATH: &str = "private.tar";
 const ERROR_MESSAGE_PATH: &str = "error_message.txt";
 
-impl Server {
-    pub async fn process_task(&self, task: &LancerRunTask) -> anyhow::Result<()> {
-        println!("Processing task: {:?}", task.finding_id);
-        /*
-        iv: Vec<u8>,
-        pub encrypted_file: Vec<u8>,
-        pub encrypted_key: Vec<u8>,
-        pub bug_bounty_id: ObjectID,
-        pub finding_id: ObjectID,
-        pub escrow_id: ObjectID, */
-        let form = Form::new()
-            .part("iv", Part::bytes(task.iv.clone()))
-            .part("encryptedFile", Part::bytes(task.encrypted_file.clone()))
-            .part("encryptedKey", Part::bytes(task.encrypted_key.clone()))
-            .text("bugBountyId", task.bug_bounty_id.to_string())
-            .text("findingId", task.finding_id.to_string())
-            .text("escrowId", task.escrow_id.to_string());
-        let response = self
-            .reqwest
-            .post("http://localhost:9300/run")
-            .multipart(form)
-            .send()
-            .await
-            .unwrap()
-            .bytes()
-            .await?;
-        println!("Received response: {:?}", response.len());
-        let response: LancerRunResponse = bson::from_slice(&response)?;
+const VMADDR_CID_ANY: u32 = 0xFFFFFFFF;
 
+impl Server {
+    pub async fn process_response(
+        &self,
+        task: &LancerRunTask,
+        response: LancerRunResponse,
+    ) -> anyhow::Result<()> {
         let mut blobs = vec![];
         if let Some(public_report) = response.public_report {
             blobs.push((PUBLIC_TAR_PATH.into(), bcs::to_bytes(&public_report)?));
@@ -250,16 +223,87 @@ impl Server {
         println!("Transaction: {}", r.digest);
         Ok(())
     }
+
+    pub async fn worker(
+        self: Arc<Server>,
+        mut receiver: mpsc::Receiver<LancerRunTask>,
+    ) -> anyhow::Result<()> {
+        let listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_ANY, self.config.vsock_port))
+            .context("Failed to bind VSOCK listener")?;
+        println!(
+            "[worker] listening on VSOCK port {}",
+            self.config.vsock_port
+        );
+
+        let mut backlog = None;
+
+        loop {
+            self.reset_public_key().await;
+            println!("[worker] waiting for enclave connection...");
+            let (stream, addr) = listener.accept().await.context("Failed to accept VSOCK")?;
+            println!("[worker] accepted connection from CID {}", addr.cid());
+            let mut stream = Framed::new(stream, LengthDelimitedCodec::new());
+
+            while let Some(task) = next_task(&mut backlog, &mut receiver).await {
+                println!("[worker] sending task: {}", task.finding_id);
+
+                if stream
+                    .send(Bytes::from(
+                        bcs::to_bytes(&task).expect("Failed to serialize task"),
+                    ))
+                    .await
+                    .is_err()
+                {
+                    backlog = Some(task);
+                    println!("[worker] failed to send task, connection lost");
+                    break;
+                };
+
+                let response: std::result::Result<LancerRunResponse, String> =
+                    if let Some(Ok(response)) = stream.next().await {
+                        bcs::from_bytes(&response).expect("Failed to deserialize response")
+                    } else {
+                        println!("[worker] failed to receive response, connection lost");
+                        backlog = Some(task);
+                        break;
+                    };
+
+                match response {
+                    Ok(response) => {
+                        if self.process_response(&task, response).await.is_err() {
+                            println!(
+                                "[worker] failed to process response for task: {}",
+                                task.finding_id
+                            );
+                        } else {
+                            println!("[worker] successfully processed task: {}", task.finding_id);
+                        }
+                    }
+                    Err(e) => {
+                        println!(
+                            "[worker] received error response {} for task: {}",
+                            e,
+                            task.finding_id
+                        );
+                    }
+                }
+            }
+
+            // Not reconnecting means receiver is closed
+            if backlog.is_none() {
+                return Ok(());
+            }
+        }
+    }
 }
 
-pub async fn worker(
-    server: Arc<Server>,
-    mut receiver: mpsc::Receiver<LancerRunTask>,
-) -> anyhow::Result<()> {
-    while let Some(task) = receiver.recv().await {
-        // Process the task
-        server.process_task(&task).await.unwrap();
+async fn next_task(
+    backlog: &mut Option<LancerRunTask>,
+    rx: &mut mpsc::Receiver<LancerRunTask>,
+) -> Option<LancerRunTask> {
+    if let Some(task) = backlog.take() {
+        Some(task)
+    } else {
+        rx.recv().await
     }
-
-    Ok(())
 }

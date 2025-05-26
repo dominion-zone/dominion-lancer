@@ -1,32 +1,40 @@
 use std::{env, str::FromStr, sync::Arc};
 
+use anyhow::bail;
+use base64::prelude::*;
 use lancer_transport::task::LancerRunTask;
 use move_core_types::account_address::AccountAddress;
 use sui_config::{PersistedConfig, SUI_CLIENT_CONFIG, sui_config_dir};
 use sui_sdk::{
-    rpc_types::{SuiData, SuiObjectDataOptions}, sui_client_config::SuiClientConfig, wallet_context::WalletContext, SuiClient, SuiClientBuilder
+    SuiClient, SuiClientBuilder,
+    rpc_types::{SuiData, SuiObjectDataOptions},
+    sui_client_config::SuiClientConfig,
+    wallet_context::WalletContext,
 };
 use sui_types::base_types::ObjectID;
-use tokio::{sync::mpsc, task::JoinHandle};
+use tokio::{
+    sync::{RwLock, mpsc},
+    task::JoinHandle,
+};
 use walrus_sdk::{client::Client as WalrusClient, config::load_configuration};
 use walrus_sui::client::SuiContractClient;
 
-use crate::worker::worker;
 use crate::config::Config;
 
 pub struct Server {
     pub config: Config,
     pub sui_client: SuiClient,
     pub wallet: WalletContext,
-    pub reqwest: reqwest::Client,
     pub walrus: WalrusClient<SuiContractClient>,
     pub task_sender: mpsc::Sender<LancerRunTask>,
+    pub public_key: RwLock<Vec<u8>>,
 }
 
 impl Server {
-    pub async fn new(config: Config) -> anyhow::Result<(Arc<Self>, JoinHandle<anyhow::Result<()>>)> {
+    pub async fn new(
+        config: Config,
+    ) -> anyhow::Result<(Arc<Self>, JoinHandle<anyhow::Result<()>>)> {
         let (task_sender, receiver) = mpsc::channel(8);
-        let reqwest = reqwest::Client::new();
         let walrus_config = load_configuration(
             Some(env::current_dir()?.join("walrus.yaml")),
             Some("testnet"),
@@ -51,7 +59,8 @@ impl Server {
             .build_refresher_and_run(walrus_sui_client.read_client().clone())
             .await?;
         let walrus =
-            WalrusClient::new_contract_client(walrus_config, refresh_handle, walrus_sui_client).await?;
+            WalrusClient::new_contract_client(walrus_config, refresh_handle, walrus_sui_client)
+                .await?;
 
         // TODO: remove this
         /*
@@ -103,13 +112,31 @@ impl Server {
             sui_client,
             config,
             task_sender,
-            reqwest,
             walrus,
             wallet,
+            public_key: RwLock::new(vec![]),
         });
 
-        let worker = tokio::spawn(worker(server.clone(), receiver));
+        let worker = tokio::spawn(server.clone().worker(receiver));
 
         Ok((server, worker))
+    }
+
+    pub async fn get_public_key(&self) -> anyhow::Result<String> {
+        let public_key = self.public_key.read().await.clone();
+        if public_key.is_empty() {
+            bail!("Public key is not known.");
+        }
+        Ok(BASE64_STANDARD.encode(&public_key))
+    }
+
+    pub async fn set_public_key(&self, public_key: Vec<u8>) {
+        let mut pk = self.public_key.write().await;
+        *pk = public_key;
+    }
+
+    pub async fn reset_public_key(&self) {
+        let mut pk = self.public_key.write().await;
+        *pk = vec![];
     }
 }

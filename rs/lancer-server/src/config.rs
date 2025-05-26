@@ -9,6 +9,7 @@ pub struct Config {
     pub finding_origin_id: ObjectID,
     pub runner_id: ObjectID,
     pub cors: bool,
+    pub vsock_port: u32,
 }
 
 /*
