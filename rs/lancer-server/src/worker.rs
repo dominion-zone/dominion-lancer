@@ -25,12 +25,11 @@ use walrus_sdk::store_when::StoreWhen;
 use walrus_sui::client::{BlobPersistence, PostStoreAction, ReadClient};
 
 use crate::server::Server;
+use crate::stream::Listener;
 
 const PUBLIC_TAR_PATH: &str = "public.tar";
 const PRIVATE_TAR_PATH: &str = "private.tar";
 const ERROR_MESSAGE_PATH: &str = "error_message.txt";
-
-const VMADDR_CID_ANY: u32 = 0xFFFFFFFF;
 
 impl Server {
     pub async fn process_response(
@@ -408,12 +407,8 @@ impl Server {
         self: Arc<Server>,
         mut receiver: mpsc::Receiver<LancerRunTask>,
     ) -> anyhow::Result<()> {
-        let listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_ANY, self.config.vsock_port))
-            .context("Failed to bind VSOCK listener")?;
-        println!(
-            "[worker] listening on VSOCK port {}",
-            self.config.vsock_port
-        );
+        let listener =
+            Listener::bind(self.config.connector_port, self.config.connector_use_tcp).await?;
 
         let mut backlog = None;
 
@@ -426,8 +421,7 @@ impl Server {
         loop {
             self.reset_identity().await;
             println!("[worker] waiting for enclave connection...");
-            let (stream, addr) = listener.accept().await.context("Failed to accept VSOCK")?;
-            println!("[worker] accepted connection from CID {}", addr.cid());
+            let stream= listener.accept().await.context("Failed to accept VSOCK")?;
             let mut stream = Framed::new(stream, LengthDelimitedCodec::new());
             let identity: Identity = if let Some(Ok(identity_bytes)) = stream.next().await {
                 bcs::from_bytes(&identity_bytes).expect("Failed to deserialize identity")

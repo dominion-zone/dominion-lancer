@@ -11,7 +11,8 @@ pub struct Config {
     pub nautilus_id: ObjectID,
     pub runner_id: ObjectID,
     pub cors: bool,
-    pub vsock_port: u32,
+    pub connector_use_tcp: bool,
+    pub connector_port: u32,
     pub enclave_config_id: ObjectID,
 }
 

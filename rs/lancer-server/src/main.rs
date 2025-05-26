@@ -20,6 +20,7 @@ pub mod config;
 pub mod post_new_finding;
 pub mod server;
 pub mod worker;
+pub mod stream;
 
 async fn get_public_key(State(server): State<Arc<Server>>) -> HttpJsonResult<impl IntoResponse> {
     Ok(BASE64_STANDARD.encode(&server.identity().await?.decryption_public_key))

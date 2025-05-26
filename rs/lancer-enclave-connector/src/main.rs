@@ -15,9 +15,9 @@ use tokio_vsock::{VsockAddr, VsockStream};
 
 pub mod config;
 pub mod state;
+pub mod stream;
 pub mod task;
 
-const VMADDR_CID_PARENT: u32 = 3;
 const RECONNECT_DELAY_SECS: Duration = Duration::from_secs(1);
 
 #[tokio::main]
@@ -41,15 +41,8 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run(state: Arc<State>) -> anyhow::Result<()> {
-    let stream = VsockStream::connect(VsockAddr::new(VMADDR_CID_PARENT, state.config.port))
-        .await
-        .context("Failed to connect to host VSOCK")?;
+    let stream = stream::Stream::connect(state.config.port, state.config.use_tcp).await?;
     let mut stream = Framed::new(stream, LengthDelimitedCodec::new());
-
-    println!(
-        "Connected to host on CID={} PORT={}",
-        VMADDR_CID_PARENT, state.config.port
-    );
 
     let identity = Identity {
         decryption_public_key: state.get_decryption_public_key(),

@@ -44,6 +44,7 @@ pub struct Config {
     pub seal: SealConfig,
     pub walrus_shards: NonZeroU16,
     pub lancer_id: ObjectID,
+    pub use_tcp: bool,
     pub port: u32,
 }
 
