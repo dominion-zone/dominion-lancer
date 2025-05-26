@@ -13,5 +13,6 @@ pub struct LancerRunResponse {
     pub public_report: Option<EncryptedBlobData>,
     pub private_report: Option<EncryptedBlobData>,
     pub error_message: Option<EncryptedBlobData>,
+    pub timestamp_ms: u64,
     pub signature: Vec<u8>,
 }

@@ -22,7 +22,7 @@ pub mod server;
 pub mod worker;
 
 async fn get_public_key(State(server): State<Arc<Server>>) -> HttpJsonResult<impl IntoResponse> {
-    Ok(BASE64_STANDARD.encode(&server.identity().await?.public_key))
+    Ok(BASE64_STANDARD.encode(&server.identity().await?.decryption_public_key))
 }
 
 #[tokio::main]

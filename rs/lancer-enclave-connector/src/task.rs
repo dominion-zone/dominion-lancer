@@ -9,6 +9,7 @@ use std::{
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce, aead::Aead};
 use anyhow::{Context, bail};
 use async_tempfile::TempDir;
+use fastcrypto::ed25519::Ed25519Signature;
 use lancer_transport::{
     response::{EncryptedBlobData, LancerRunResponse},
     task::LancerRunTask,
@@ -17,7 +18,7 @@ use rsa::{Oaep, RsaPrivateKey};
 use seal::{EncryptionInput, seal_encrypt};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sui_types::base_types::ObjectID;
+use sui_types::{base_types::ObjectID, crypto::{Signer, ToFromBytes}};
 use tokio::{
     fs,
     io::AsyncWrite,
@@ -25,6 +26,7 @@ use tokio::{
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
 };
 use tokio_tar::{Archive, Builder as ArchiveBuilder, EntryType};
+use walrus_core::BlobId;
 
 use crate::state::State;
 
@@ -78,7 +80,7 @@ pub struct RunnerOutput {
 
 impl Task {
     pub async fn from_encrypted(
-        rsa_private_key: &RsaPrivateKey,
+        state: Arc<State>,
         task: &LancerRunTask,
     ) -> anyhow::Result<(Self, impl Future<Output = anyhow::Result<RunnerOutput>>)> {
         let submission = [
@@ -90,7 +92,9 @@ impl Task {
         .concat();
         let submission_hash = Sha256::digest(&submission);
 
-        let decrypted_key = rsa_private_key.decrypt(Oaep::new::<Sha256>(), &task.encrypted_key)?;
+        let decrypted_key = state
+            .decryption_private_key
+            .decrypt(Oaep::new::<Sha256>(), &task.encrypted_key)?;
 
         let cipher = Aes256Gcm::new_from_slice(&decrypted_key)?;
         let nonce = Nonce::from_slice(&task.iv);
@@ -266,11 +270,37 @@ impl Task {
             None
         };
 
+        #[derive(Serialize, Deserialize)]
+        struct IntentMessage {
+            intent: u8,
+            timestamp_ms: u64,
+            finding_id: ObjectID,
+            submission_hash: Vec<u8>,
+            public_blob_id: Option<BlobId>,
+            private_blob_id: Option<BlobId>,
+            error_blob_id: Option<BlobId>,
+        }
+
+        let timestamp_ms = chrono::Utc::now().timestamp_millis() as u64;
+        let intent_msg = IntentMessage {
+            intent: 0,
+            timestamp_ms,
+            finding_id: self.finding_id,
+            submission_hash: self.submission_hash.clone(),
+            public_blob_id: public_report.as_ref().map(|r| r.blob_id.clone()),
+            private_blob_id: private_report.as_ref().map(|r| r.blob_id.clone()),
+            error_blob_id: error_message.as_ref().map(|r| r.blob_id.clone()),
+        };
+
+        let signing_payload = bcs::to_bytes(&intent_msg).expect("serialization failed");
+        let signature: Ed25519Signature = state.signing_private_key.sign(signing_payload.as_slice());
+
         Ok(LancerRunResponse {
             public_report,
             private_report,
             error_message,
-            signature: self.submission_hash.clone(),
+            timestamp_ms,
+            signature: signature.as_bytes().to_vec(),
         })
     }
 
@@ -298,7 +328,7 @@ impl Task {
     }*/
 
     pub async fn run(state: Arc<State>, task: &LancerRunTask) -> anyhow::Result<LancerRunResponse> {
-        let (task, results) = Task::from_encrypted(&state.rsa_private_key, task).await?;
+        let (task, results) = Task::from_encrypted(state.clone(), task).await?;
         // TODO: encryption
         let task = Arc::new(task);
 

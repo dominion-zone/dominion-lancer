@@ -9,6 +9,7 @@ use move_core_types::account_address::AccountAddress;
 use seal::ObjectID as SealObjectID;
 use sui_sdk::rpc_types::{SuiObjectDataOptions, SuiTransactionBlockEffectsAPI};
 use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber};
+use sui_types::object::Owner;
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
 use sui_types::transaction::{ObjectArg, TransactionData};
 use sui_types::{Identifier, MOVE_STDLIB_PACKAGE_ID, SUI_FRAMEWORK_PACKAGE_ID, TypeTag};
@@ -21,7 +22,7 @@ use tokio_vsock::{VsockAddr, VsockListener};
 use walrus_core::DEFAULT_ENCODING;
 use walrus_sdk::client::responses::{BlobStoreResult, EventOrObjectId};
 use walrus_sdk::store_when::StoreWhen;
-use walrus_sui::client::{BlobPersistence, PostStoreAction};
+use walrus_sui::client::{BlobPersistence, PostStoreAction, ReadClient};
 
 use crate::server::Server;
 
@@ -119,8 +120,7 @@ impl Server {
             initial_shared_version: finding.owner().unwrap().start_version().unwrap(),
             mutable: true,
         })?;
-        let enclave_id_arg = pt.pure(AccountAddress::ZERO)?;
-        let timestamp_ms_arg = pt.pure(0u64)?;
+        let timestamp_ms_arg = pt.pure(response.timestamp_ms)?;
 
         let blob_type = TypeTag::from_str(&format!(
             "{}::blob::Blob",
@@ -130,6 +130,28 @@ impl Server {
                 .get_system_package_id()
         ))
         .unwrap();
+
+        let walrus_system_object_id = self.walrus.config().contract_config.system_object;
+        let walrus_system_arg = if let Some(Owner::Shared {
+            initial_shared_version,
+        }) = self
+            .sui_client
+            .read_api()
+            .get_object_with_options(
+                walrus_system_object_id,
+                SuiObjectDataOptions::new().with_owner(),
+            )
+            .await?
+            .owner()
+        {
+            ObjectArg::SharedObject {
+                id: walrus_system_object_id,
+                initial_shared_version,
+                mutable: false,
+            }
+        } else {
+            bail!("Walrus system object is not shared");
+        };
 
         if let Some(error_blob_object_id) = error_blob_object_id {
             let error_blob_arg = {
@@ -143,18 +165,43 @@ impl Server {
                 ))?
             };
 
-            pt.programmable_move_call(
-                self.config.lancer_id.clone(),
-                Identifier::new("finding")?,
-                Identifier::new("report_error_for_testing")?,
-                vec![],
-                vec![
-                    finding_arg,
-                    error_blob_arg,
-                    enclave_id_arg,
-                    timestamp_ms_arg,
-                ],
-            );
+            if let Some(enclave_ref) = enclave_ref {
+                let walrus_system_arg = pt.obj(walrus_system_arg)?;
+                let enclave_arg = pt.obj(ObjectArg::SharedObject {
+                    id: enclave_ref.0,
+                    initial_shared_version: enclave_ref.1,
+                    mutable: false,
+                })?;
+                let signature_arg = pt.pure(response.signature)?;
+                pt.programmable_move_call(
+                    self.config.lancer_id.clone(),
+                    Identifier::new("finding")?,
+                    Identifier::new("report_error")?,
+                    vec![],
+                    vec![
+                        finding_arg,
+                        walrus_system_arg,
+                        error_blob_arg,
+                        enclave_arg,
+                        timestamp_ms_arg,
+                        signature_arg,
+                    ],
+                );
+            } else {
+                let enclave_id_arg = pt.pure(AccountAddress::ZERO)?;
+                pt.programmable_move_call(
+                    self.config.lancer_id.clone(),
+                    Identifier::new("finding")?,
+                    Identifier::new("report_error_for_testing")?,
+                    vec![],
+                    vec![
+                        finding_arg,
+                        error_blob_arg,
+                        enclave_id_arg,
+                        timestamp_ms_arg,
+                    ],
+                );
+            }
         } else {
             let public_report_blob_arg = {
                 let blob_obj = self
@@ -195,19 +242,46 @@ impl Server {
                     vec![],
                 )
             };
-            pt.programmable_move_call(
-                self.config.lancer_id.clone(),
-                Identifier::new("finding")?,
-                Identifier::new("commit_for_testing")?,
-                vec![],
-                vec![
-                    finding_arg,
-                    public_report_blob_arg,
-                    private_report_blob_arg,
-                    enclave_id_arg,
-                    timestamp_ms_arg,
-                ],
-            );
+
+            if let Some(enclave_ref) = enclave_ref {
+                let walrus_system_arg = pt.obj(walrus_system_arg)?;
+                let enclave_arg = pt.obj(ObjectArg::SharedObject {
+                    id: enclave_ref.0,
+                    initial_shared_version: enclave_ref.1,
+                    mutable: false,
+                })?;
+                let signature_arg = pt.pure(response.signature)?;
+                pt.programmable_move_call(
+                    self.config.lancer_id.clone(),
+                    Identifier::new("finding")?,
+                    Identifier::new("commit")?,
+                    vec![],
+                    vec![
+                        finding_arg,
+                        walrus_system_arg,
+                        public_report_blob_arg,
+                        private_report_blob_arg,
+                        enclave_arg,
+                        timestamp_ms_arg,
+                        signature_arg,
+                    ],
+                );
+            } else {
+                let enclave_id_arg = pt.pure(AccountAddress::ZERO)?;
+                pt.programmable_move_call(
+                    self.config.lancer_id.clone(),
+                    Identifier::new("finding")?,
+                    Identifier::new("commit_for_testing")?,
+                    vec![],
+                    vec![
+                        finding_arg,
+                        public_report_blob_arg,
+                        private_report_blob_arg,
+                        enclave_id_arg,
+                        timestamp_ms_arg,
+                    ],
+                );
+            }
         }
 
         let (sender, gas_object) = self.wallet.get_one_gas_object().await.unwrap().unwrap();
@@ -269,9 +343,9 @@ impl Server {
         Ok(())
     }
 
-    async fn register_enclave(&self, identity: Identity) -> anyhow::Result<ObjectRef> {
+    async fn register_enclave(&self, identity: &Identity) -> anyhow::Result<ObjectRef> {
         let mut pt = ProgrammableTransactionBuilder::new();
-        let document_arg = pt.pure(identity.attestation)?;
+        let document_arg = pt.pure(&identity.attestation)?;
         let attestation_arg = pt.programmable_move_call(
             SUI_FRAMEWORK_PACKAGE_ID,
             Identifier::new("nitro_attestation")?,
@@ -323,7 +397,7 @@ impl Server {
             .expect("Must be one object shared")
             .clone();
         println!("Enclave registered: {}", r.digest);
-        Ok((enclave_ref.object_id, enclave_ref.version, enclave_ref.digest))
+        Ok(enclave_ref)
     }
 
     pub async fn worker(
@@ -365,26 +439,24 @@ impl Server {
             };
             if refresh_enclave {
                 if let Some(old) = last_used_enclave.take() {
-                    if let Err(e) = self
-                        .destroy_enclave(old.enclave_ref)
-                        .await
-                    {
+                    if let Err(e) = self.destroy_enclave(old.enclave_ref).await {
                         println!(
                             "[worker] failed to destroy old enclave {}: {}",
                             old.enclave_ref.0, e
                         );
                     }
                 }
-                if let Ok(enclave_ref) =
-                    self.register_enclave(identity.clone()).await
-                {
-                    last_used_enclave = Some(EnclaveInfo {
-                        enclave_ref,
-                        identity,
-                    });
+                if !identity.attestation.is_empty() {
+                    if let Ok(enclave_ref) = self.register_enclave(&identity).await {
+                        last_used_enclave = Some(EnclaveInfo {
+                            enclave_ref,
+                            identity,
+                        });
+                    } else {
+                        println!("[worker] failed to register enclave, entering test mode");
+                    }
                 } else {
-                    println!("[worker] failed to register enclave, skipping");
-                    continue;
+                    println!("[worker] no attestation provided, skipping enclave registration");
                 }
             };
 

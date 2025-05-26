@@ -52,7 +52,7 @@ async fn run(state: Arc<State>) -> anyhow::Result<()> {
     );
 
     let identity = Identity {
-        public_key: state.get_public_key(),
+        decryption_public_key: state.get_decryption_public_key(),
         attestation: state.attestation.clone(),
     };
 

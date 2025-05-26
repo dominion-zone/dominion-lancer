@@ -4989,6 +4989,7 @@ dependencies = [
  "aws-nitro-enclaves-nsm-api",
  "base64 0.22.1",
  "bcs",
+ "chrono",
  "crypto",
  "fastcrypto",
  "futures 0.3.31",

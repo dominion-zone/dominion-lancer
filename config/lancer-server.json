@@ -6,5 +6,5 @@
   "runner_id": "0xe173c15f4ee89ca7616c81b32bad6263733ee13c3c68f1cbcc14c28bde6e6a13",
   "vsock_port": 9300,
   "cors": false,
-  "enclave_config_id": "0x1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
+  "enclave_config_id": "0xfcbcc011de1eaae05107c95f715ac4c94ba03ae36039d8552f218e164fe67ffd"
 }

@@ -103,6 +103,9 @@ export const config = {
         },
       },
     },
+    nautilus: {
+      package: "0x14e8b4d8b28ee9aa5ea604f3f33969b3d0f03247b51837f27e17bcf875d3582c"
+    }
   },
   /*
   devnet: {

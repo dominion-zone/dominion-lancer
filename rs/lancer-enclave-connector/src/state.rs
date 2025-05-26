@@ -4,6 +4,8 @@ use anyhow::bail;
 use aws_nitro_enclaves_nsm_api::api::{Request as NsmRequest, Response as NsmResponse};
 use aws_nitro_enclaves_nsm_api::driver;
 use base64::prelude::*;
+use fastcrypto::ed25519::Ed25519KeyPair;
+use fastcrypto::traits::KeyPair;
 use lancer_transport::response::EncryptedBlobData;
 use rsa::RsaPrivateKey;
 use rsa::pkcs8::EncodePublicKey;
@@ -15,6 +17,7 @@ use seal::{
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use sui_types::base_types::ObjectID;
+use sui_types::crypto::ToFromBytes;
 use tokio::sync::RwLock;
 use walrus_core::{
     BlobId, DEFAULT_ENCODING, EncodingType,
@@ -24,7 +27,8 @@ use walrus_core::{
 use crate::{config::Config, task::Task};
 
 pub struct State {
-    pub rsa_private_key: RsaPrivateKey,
+    pub decryption_private_key: RsaPrivateKey,
+    pub signing_private_key: Ed25519KeyPair,
     pub attestation: Vec<u8>,
     pub encoding_config: EncodingConfig,
     pub config: Config,
@@ -34,9 +38,10 @@ pub struct State {
 impl State {
     pub fn new(config: Config) -> anyhow::Result<Self> {
         let mut rng = rand::thread_rng();
-        let rsa_private_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
-        let public_key = rsa_private_key.to_public_key();
-        let public_key = public_key.to_public_key_der().unwrap().as_ref().to_vec();
+        let decryption_private_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
+
+        let signing_private_key = Ed25519KeyPair::generate(&mut rng);
+        let signing_public_key = signing_private_key.public();
 
         let fd = driver::nsm_init();
 
@@ -44,7 +49,7 @@ impl State {
         let request = NsmRequest::Attestation {
             user_data: None,
             nonce: None,
-            public_key: Some(ByteBuf::from(public_key)),
+            public_key: Some(ByteBuf::from(signing_public_key.as_bytes())),
         };
 
         let response = driver::nsm_process_request(fd, request);
@@ -55,14 +60,23 @@ impl State {
                 document
             }
             _ => {
+                // TODO:
+                /*
                 bail!(
                     "Failed to get attestation from NSM driver. Expected Attestation response, got: {:?}",
                     response
                 );
+                */
+                println!(
+                    "Failed to get attestation from NSM driver. Expected Attestation response, got: {:?}",
+                    response
+                );
+                vec![]
             }
         };
         Ok(State {
-            rsa_private_key,
+            decryption_private_key,
+            signing_private_key,
             attestation,
             encoding_config: EncodingConfig::new(config.walrus_shards),
             config,
@@ -70,9 +84,13 @@ impl State {
         })
     }
 
-    pub fn get_public_key(&self) -> Vec<u8> {
-        let public_key = self.rsa_private_key.to_public_key();
-        public_key.to_public_key_der().unwrap().as_ref().to_vec()
+    pub fn get_decryption_public_key(&self) -> Vec<u8> {
+        self.decryption_private_key
+            .to_public_key()
+            .to_public_key_der()
+            .unwrap()
+            .as_ref()
+            .to_vec()
     }
 
     pub fn get_blob_id(&self, blob: &[u8]) -> anyhow::Result<BlobId> {

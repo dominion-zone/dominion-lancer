@@ -10,6 +10,7 @@ import {config, Config, Network} from './config';
 import { installCreateBugBounty } from './commands/createBugBounty';
 import { installPackageTypeOrigins } from './commands/packageTypeOrigins';
 import { installShow } from './commands/show';
+import { installCreateEnclaveConfig } from './commands/createEnclaveConfig';
 
 export const cli = () => {
   const program = new Command();
@@ -53,6 +54,7 @@ export const cli = () => {
 
   installCreateBugBounty(program);
   installPackageTypeOrigins(program);
+  installCreateEnclaveConfig(program);
   installShow(program);
 
   return program;
