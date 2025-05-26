@@ -397,7 +397,11 @@ impl Server {
             .expect("Must be one object shared")
             .clone();
         println!("Enclave registered: {}", r.digest);
-        Ok(enclave_ref)
+        Ok((
+            enclave_ref.object_id,
+            enclave_ref.version,
+            enclave_ref.digest,
+        ))
     }
 
     pub async fn worker(

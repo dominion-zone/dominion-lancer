@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@kobalte/core": "^0.13.9",
-    "@mysten/seal": "^0.4.4",
+    "@mysten/seal": "^0.4.5",
     "@mysten/sui": "^1.30.0",
     "@mysten/utils": "^0.0.0",
     "@mysten/wallet-standard": "^0.14.9",
