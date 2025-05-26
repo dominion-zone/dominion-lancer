@@ -3,15 +3,15 @@ use std::{any, sync::Arc, time::Duration};
 use anyhow::Context;
 use config::Config;
 use futures::{SinkExt, StreamExt};
-use lancer_transport::task::LancerRunTask;
+use lancer_transport::{identity::Identity, task::LancerRunTask};
 use state::State;
 use task::Task;
-use tokio::{fs, io::AsyncWriteExt, net::TcpListener};
+use tokio::fs;
 use tokio_util::{
     bytes::Bytes,
     codec::{Framed, LengthDelimitedCodec},
 };
-use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
+use tokio_vsock::{VsockAddr, VsockStream};
 
 pub mod config;
 pub mod state;
@@ -24,7 +24,7 @@ const RECONNECT_DELAY_SECS: Duration = Duration::from_secs(1);
 async fn main() -> anyhow::Result<()> {
     // fs::write("lancer-enclave-connector.json", &serde_json::to_vec_pretty(&Config::default())?).await?;
     let config: Config = serde_json::from_slice(&fs::read("lancer-enclave-connector.json").await?)?;
-    let state = Arc::new(State::new(config.clone()));
+    let state = Arc::new(State::new(config.clone())?);
 
     loop {
         match run(state.clone()).await {
@@ -51,7 +51,16 @@ async fn run(state: Arc<State>) -> anyhow::Result<()> {
         VMADDR_CID_PARENT, state.config.port
     );
 
-    stream.send(Bytes::from(state.get_public_key())).await?;
+    let identity = Identity {
+        public_key: state.get_public_key(),
+        attestation: state.attestation.clone(),
+    };
+
+    stream
+        .send(Bytes::from(
+            bcs::to_bytes(&identity).expect("Error serializing identity"),
+        ))
+        .await?;
 
     loop {
         let task = stream

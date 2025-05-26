@@ -1,14 +1,15 @@
-use std::{sync::Arc};
+use std::sync::Arc;
 
 use crate::post_new_finding::post_new_finding;
-use anyhow_http::response::{HttpJsonResult};
+use anyhow_http::response::HttpJsonResult;
 use axum::{
     Router,
     extract::{DefaultBodyLimit, State},
-    http::{Method},
-    response::{IntoResponse},
+    http::Method,
+    response::IntoResponse,
     routing::{get, post},
 };
+use base64::prelude::*;
 use config::Config;
 use server::Server;
 use tokio::fs;
@@ -21,7 +22,7 @@ pub mod server;
 pub mod worker;
 
 async fn get_public_key(State(server): State<Arc<Server>>) -> HttpJsonResult<impl IntoResponse> {
-    Ok(server.get_public_key().await?)
+    Ok(BASE64_STANDARD.encode(&server.identity().await?.public_key))
 }
 
 #[tokio::main]

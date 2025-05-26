@@ -25,3 +25,5 @@ fastcrypto = { workspace = true }
 bcs = { workspace = true }
 serde_json = { workspace = true }
 tokio-vsock = { workspace = true }
+serde_bytes = { workspace = true }
+aws-nitro-enclaves-nsm-api = "0.4.0"

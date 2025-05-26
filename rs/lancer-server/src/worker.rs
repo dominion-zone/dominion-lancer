@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, bail};
 use futures::{SinkExt, StreamExt};
+use lancer_transport::identity::Identity;
 use lancer_transport::{response::LancerRunResponse, task::LancerRunTask};
 use move_core_types::account_address::AccountAddress;
 use sui_sdk::rpc_types::SuiObjectDataOptions;
@@ -238,11 +239,18 @@ impl Server {
         let mut backlog = None;
 
         loop {
-            self.reset_public_key().await;
+            self.reset_identity().await;
             println!("[worker] waiting for enclave connection...");
             let (stream, addr) = listener.accept().await.context("Failed to accept VSOCK")?;
             println!("[worker] accepted connection from CID {}", addr.cid());
             let mut stream = Framed::new(stream, LengthDelimitedCodec::new());
+            let identity: Identity = if let Some(Ok(identity_bytes)) = stream.next().await {
+                bcs::from_bytes(&identity_bytes).expect("Failed to deserialize identity")
+            } else {
+                println!("[worker] failed to receive identity, connection lost");
+                continue;
+            };
+            self.set_identity(identity).await;
 
             while let Some(task) = next_task(&mut backlog, &mut receiver).await {
                 println!("[worker] sending task: {}", task.finding_id);
@@ -282,8 +290,7 @@ impl Server {
                     Err(e) => {
                         println!(
                             "[worker] received error response {} for task: {}",
-                            e,
-                            task.finding_id
+                            e, task.finding_id
                         );
                     }
                 }

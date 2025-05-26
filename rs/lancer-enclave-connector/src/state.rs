@@ -1,5 +1,8 @@
 use std::{num::NonZero, str::FromStr, sync::Arc};
 
+use anyhow::bail;
+use aws_nitro_enclaves_nsm_api::api::{Request as NsmRequest, Response as NsmResponse};
+use aws_nitro_enclaves_nsm_api::driver;
 use base64::prelude::*;
 use lancer_transport::response::EncryptedBlobData;
 use rsa::RsaPrivateKey;
@@ -10,6 +13,7 @@ use seal::{
     seal_encrypt,
 };
 use serde::{Deserialize, Serialize};
+use serde_bytes::ByteBuf;
 use sui_types::base_types::ObjectID;
 use tokio::sync::RwLock;
 use walrus_core::{
@@ -21,21 +25,49 @@ use crate::{config::Config, task::Task};
 
 pub struct State {
     pub rsa_private_key: RsaPrivateKey,
+    pub attestation: Vec<u8>,
     pub encoding_config: EncodingConfig,
     pub config: Config,
     pub task: RwLock<Option<Arc<Task>>>,
 }
 
 impl State {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config) -> anyhow::Result<Self> {
         let mut rng = rand::thread_rng();
         let rsa_private_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
-        State {
+        let public_key = rsa_private_key.to_public_key();
+        let public_key = public_key.to_public_key_der().unwrap().as_ref().to_vec();
+
+        let fd = driver::nsm_init();
+
+        // Send attestation request to NSM driver with public key set.
+        let request = NsmRequest::Attestation {
+            user_data: None,
+            nonce: None,
+            public_key: Some(ByteBuf::from(public_key)),
+        };
+
+        let response = driver::nsm_process_request(fd, request);
+        driver::nsm_exit(fd);
+        let attestation = match response {
+            NsmResponse::Attestation { document } => {
+                driver::nsm_exit(fd);
+                document
+            }
+            _ => {
+                bail!(
+                    "Failed to get attestation from NSM driver. Expected Attestation response, got: {:?}",
+                    response
+                );
+            }
+        };
+        Ok(State {
             rsa_private_key,
+            attestation,
             encoding_config: EncodingConfig::new(config.walrus_shards),
             config,
             task: RwLock::new(None),
-        }
+        })
     }
 
     pub fn get_public_key(&self) -> Vec<u8> {

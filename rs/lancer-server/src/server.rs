@@ -1,9 +1,10 @@
 use std::{env, str::FromStr, sync::Arc};
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use base64::prelude::*;
-use lancer_transport::task::LancerRunTask;
+use lancer_transport::{identity::Identity, task::LancerRunTask};
 use move_core_types::account_address::AccountAddress;
+use serde::{Deserialize, Serialize};
 use sui_config::{PersistedConfig, SUI_CLIENT_CONFIG, sui_config_dir};
 use sui_sdk::{
     SuiClient, SuiClientBuilder,
@@ -27,7 +28,7 @@ pub struct Server {
     pub wallet: WalletContext,
     pub walrus: WalrusClient<SuiContractClient>,
     pub task_sender: mpsc::Sender<LancerRunTask>,
-    pub public_key: RwLock<Vec<u8>>,
+    pub identity: RwLock<Option<Identity>>,
 }
 
 impl Server {
@@ -114,7 +115,7 @@ impl Server {
             task_sender,
             walrus,
             wallet,
-            public_key: RwLock::new(vec![]),
+            identity: RwLock::new(None),
         });
 
         let worker = tokio::spawn(server.clone().worker(receiver));
@@ -122,21 +123,19 @@ impl Server {
         Ok((server, worker))
     }
 
-    pub async fn get_public_key(&self) -> anyhow::Result<String> {
-        let public_key = self.public_key.read().await.clone();
-        if public_key.is_empty() {
-            bail!("Public key is not known.");
-        }
-        Ok(BASE64_STANDARD.encode(&public_key))
+    pub async fn identity(&self) -> anyhow::Result<Identity> {
+        let identity = self.identity.read().await;
+        identity
+            .as_ref()
+            .cloned()
+            .context("Identity not set, not connected to the enclave")
+    }
+    
+    pub async fn set_identity(&self, identity: Identity) {
+        *self.identity.write().await = Some(identity);
     }
 
-    pub async fn set_public_key(&self, public_key: Vec<u8>) {
-        let mut pk = self.public_key.write().await;
-        *pk = public_key;
-    }
-
-    pub async fn reset_public_key(&self) {
-        let mut pk = self.public_key.write().await;
-        *pk = vec![];
+    pub async fn reset_identity(&self) {
+        *self.identity.write().await = None;
     }
 }
