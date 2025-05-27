@@ -475,6 +475,12 @@ impl ObjectPtr {
         serde_json::to_value(self.0.as_ref()).map_err(|e| e.to_string())
     }
 
+    pub fn deserialize(value: serde_json::Value) -> Result<Self, String> {
+        serde_json::from_value(value)
+            .map_err(|e| e.to_string())
+            .map(Self)
+    }
+
     pub fn show(&self) -> String {
         format!("{:?}", self.0.as_ref())
     }
@@ -501,6 +507,12 @@ impl ObjectPtr {
 
     pub fn owner(&self) -> WOwner {
         WOwner(self.0.owner().clone())
+    }
+
+    pub fn set_owner(&self, owner: WOwner) -> Self {
+        let mut object = Arc::unwrap_or_clone(self.0.clone()).into_inner();
+        object.owner = owner.0;
+        Self(Arc::new(Object::from(object)))
     }
 }
 
@@ -695,6 +707,10 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 1,
                 "lancer.sui.object.prim.serialize_object",
                 ObjectPtr::serialize),
+            deserialize_object => primitive!(
+                1,
+                "lancer.sui.object.prim.deserialize_object",
+                ObjectPtr::deserialize),
             show_object => primitive!(
                 1,
                 "lancer.sui.object.prim.show_object",
@@ -727,6 +743,11 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 1,
                 "lancer.sui.object.prim.object_owner",
                 ObjectPtr::owner),
+            set_object_owner => primitive!(
+                2,
+                "lancer.sui.object.prim.set_object_owner",
+                ObjectPtr::set_owner
+            ),
         ),
     )
 }

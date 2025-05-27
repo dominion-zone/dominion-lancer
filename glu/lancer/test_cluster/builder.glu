@@ -3,11 +3,16 @@ let effect @ { Eff, ? } = import! std.effect
 let { Lift, lift, ? } = import! std.effect.lift
 let { SuiAddress } = import! lancer.sui.sui_address
 let { TestCluster } = import! lancer.test_cluster
+let { ObjectPtr, ? } = import! lancer.sui.object
 
 let build self: TestClusterBuilder -> Eff [| lift : Lift IO | r |] TestCluster
     = lift <| prim.build self
 
+let add_object self object : TestClusterBuilder -> ObjectPtr -> Eff [| lift : Lift IO | r |] ()
+    = lift <| prim.add_object self object
+
 {
     TestClusterBuilder,
     build,
+    add_object
 }

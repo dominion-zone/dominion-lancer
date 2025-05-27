@@ -8,7 +8,7 @@ target
 .netlify
 .vinxi
 app.config.timestamp_*.js
-
+examples/*/output/
 # Environment
 .env
 .env*.local

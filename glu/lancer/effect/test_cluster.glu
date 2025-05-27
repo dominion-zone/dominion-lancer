@@ -17,12 +17,15 @@ let { Coin } = import! lancer.rpc.types
 let { Reporting } = import! lancer.reporting
 let { TransactionBuilder, run_transaction_builder, ? } = import! lancer.effect.transaction_builder
 let { Logger, log, ? } = import! lancer.effect.logger
+let { ObjectPtr, ? } = import! lancer.sui.object
+
 
 type TestCluster r a =
     | Initialize : TestCluster r ()
     | CommitPreparation : Array SuiAddress -> TestCluster r ()
     | CommitDemonstration : String -> Reporting -> TestCluster r ()
     | GenerateKeypair : TestCluster r SuiAddress
+    | AddObject : ObjectPtr -> TestCluster r ()
     | ExecuteTx : forall x . Int -> SuiAddress -> Array SuiAddress
         -> Eff [| transaction_builder: TransactionBuilder | r |] x
         -> TestCluster r TransactionBlockResponse
@@ -42,6 +45,9 @@ let commit_demonstration description reporting
 
 let generate_keypair : Eff [| test_cluster : TestCluster | r |] SuiAddress =
     Impure (convert_effect! test_cluster GenerateKeypair) Pure
+
+let add_object object : ObjectPtr -> Eff [| test_cluster : TestCluster | r |] () =
+    Impure (convert_effect! test_cluster (AddObject object)) Pure
 
 let execute_tx gas_budget sender tx_building
     : forall x . Int
@@ -136,6 +142,15 @@ let run_test_cluster builder temp_wallet working_dir eff =
                     do address = tw.generate_keypair temp_wallet
                     log <| System <| KeypairGenerated { address }
                     loop <| f address
+            | AddObject object ->
+                do state = get
+                match state with
+                | Initialization builder ->
+                    tcbi.add_object builder object
+                    log <| System <| ObjectAdded object
+                    loop <| f ()
+                | _ ->
+                    lift <| io.throw "Invalid state for add object"
             | ExecuteTx gas_budget sender additional_signers transaction ->
                 do cluster = get_cluster
                 do transaction = run_transaction_builder working_dir transaction

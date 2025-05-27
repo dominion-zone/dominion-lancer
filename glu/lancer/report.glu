@@ -4,7 +4,7 @@ let io @ { IO, ? } = import! std.io
 let { (<|), (<<) } = import! std.function
 let { wrap } = import! std.applicative
 let { Lift, run_lift, lift, ? } = import! std.effect.lift
-let { Serialize, ? } = import! std.json.ser
+let { Serialize, serialize, ? } = import! std.json.ser
 let { Result, ? } = import! std.result
 let { Show } = import! std.show
 let { Reporting, ? } = import! lancer.reporting
@@ -45,6 +45,7 @@ type SystemLog =
     | PreparationCommited PreparationCommitedInfo
     | DemonstrationCommited DemonstrationCommitedInfo
     | KeypairGenerated KeypairGeneratedInfo
+    | ObjectAdded ObjectPtr
     | TxExecuted TxExecutedInfo
     | DirectoryCompiled String
 
@@ -62,6 +63,9 @@ let serialize_SystemLog: Serialize SystemLog = {
         | KeypairGenerated info ->
             do inner = serialize_KeypairGeneratedInfo.serialize info
             Ok <| Array [String "KeypairGenerated", inner]
+        | ObjectAdded object ->
+            do inner = serialize object
+            Ok <| Array [String "ObjectAdded", inner]
         | TxExecuted info ->
             do inner = serialize_TxExecutedInfo.serialize info
             Ok <| Array [String "TxExecuted", inner]
