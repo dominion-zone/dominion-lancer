@@ -24,9 +24,8 @@ let run builder working_dir scenario : TestClusterBuilder -> String -> Lancer _ 
     let scenario = map_logs (\x -> User x) scenario
     // Apply the test cluster effect
     let scenario =
-        do test_cluster = tcbi.build builder
         do temp_wallet = tw.new ()
-        run_test_cluster test_cluster temp_wallet working_dir scenario
+        run_test_cluster builder temp_wallet working_dir scenario
     
     // Apply the logger effect
     let scenario = exec_logger scenario

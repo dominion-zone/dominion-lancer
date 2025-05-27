@@ -16,12 +16,13 @@ let { assert } = import! std.assert
 
 let {
     TestCluster,
+    initialize,
+    commit_preparation,
+    commit_demonstration,
     generate_keypair,
     execute_tx,
     get_coins,
     get_balance,
-    commit_preparation,
-    commit_demonstration,
 } = import! lancer.effect.test_cluster
 
 let {
@@ -42,6 +43,8 @@ let {
     pay,
 } = import! lancer.effect.transaction_builder
 let { Logger, log, ? } = import! lancer.effect.logger
+
+initialize
 
 log "Generating admin keypair"
 do admin = generate_keypair

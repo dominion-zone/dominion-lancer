@@ -12,6 +12,7 @@ let { Transaction, ? } = import! lancer.transaction
 let { TransactionBlockResponsePtr, ? } = import! lancer.rpc
 let { ObjectPtr, ? } = import! lancer.sui.object
 let { Value } = import! std.json
+let { ? } = import! std.unit
 
 #[derive(Show, Serialize)]
 type KeypairGeneratedInfo = {
@@ -40,27 +41,30 @@ type DemonstrationCommitedInfo = {
 
 #[derive(Show)]
 type SystemLog =
-    | KeypairGenerated KeypairGeneratedInfo
-    | TxExecuted TxExecutedInfo
+    | Initialized ()
     | PreparationCommited PreparationCommitedInfo
     | DemonstrationCommited DemonstrationCommitedInfo
+    | KeypairGenerated KeypairGeneratedInfo
+    | TxExecuted TxExecutedInfo
     | DirectoryCompiled String
 
 let serialize_SystemLog: Serialize SystemLog = {
     serialize = \x ->
         match x with
-        | KeypairGenerated info ->
-            do inner = serialize_KeypairGeneratedInfo.serialize info
-            Ok <| Array [String "KeypairGenerated", inner]
-        | TxExecuted info ->
-            do inner = serialize_TxExecutedInfo.serialize info
-            Ok <| Array [String "TxExecuted", inner]
+        | Initialized () ->
+            Ok <| Array [String "Initialized"]
         | PreparationCommited info ->
             do inner = serialize_PreparationCommitedInfo.serialize info
             Ok <| Array [String "PreparationCommited", inner]
         | DemonstrationCommited info ->
             do inner = serialize_DemonstrationCommitedInfo.serialize info
             Ok <| Array [String "DemonstrationCommited", inner]
+        | KeypairGenerated info ->
+            do inner = serialize_KeypairGeneratedInfo.serialize info
+            Ok <| Array [String "KeypairGenerated", inner]
+        | TxExecuted info ->
+            do inner = serialize_TxExecutedInfo.serialize info
+            Ok <| Array [String "TxExecuted", inner]
         | DirectoryCompiled dir ->
             Ok <| Array [String "DirectoryCompiled", String dir]
 }
