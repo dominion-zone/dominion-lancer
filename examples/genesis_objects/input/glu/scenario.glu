@@ -1,0 +1,22 @@
+let effect @ { Eff, ? } = import! std.effect
+let { read_file_to_string, ? } = import! lancer.effect.file_system
+let { log, ? } = import! lancer.effect.logger
+let { Reporting } = import! lancer.reporting
+
+let {
+    TestCluster,
+    initialize,
+    commit_preparation,
+    commit_demonstration,
+    generate_keypair,
+    execute_tx,
+    get_coins,
+    get_balance,
+} = import! lancer.effect.test_cluster
+
+do file = read_file_to_string "glu/scenario.glu"
+log file
+
+initialize
+commit_preparation []
+commit_demonstration "" Public

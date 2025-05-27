@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     let working_dir = Path::new(
         &std::env::args()
             .nth(1)
-            .unwrap_or("./examples/simple".to_string()),
+            .context("No working directory provided")?,
     )
     .canonicalize()?;
     if !working_dir.exists() {

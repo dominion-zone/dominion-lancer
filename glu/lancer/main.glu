@@ -8,6 +8,7 @@ let io @ { IO, ? } = import! std.io
 let { map } = import! std.functor
 let { Log, ? } = import! lancer.report
 let { exec_logger, map_logs } = import! lancer.effect.logger
+let { run_file_system } = import! lancer.effect.file_system
 let { Show, show, ? } = import! std.show
 let { to_string, ? } = import! std.json.ser
 let { unwrap_ok } = import! std.result
@@ -22,6 +23,7 @@ let { make_public_summary, ? } = import! lancer.summary
 
 let run builder working_dir scenario : TestClusterBuilder -> String -> Lancer _ -> IO (String, Option String) =
     let scenario = map_logs (\x -> User x) scenario
+    let scenario = run_file_system working_dir scenario
     // Apply the test cluster effect
     let scenario =
         do temp_wallet = tw.new ()

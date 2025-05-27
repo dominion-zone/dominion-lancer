@@ -1,10 +1,12 @@
 let { Eff } = import! std.effect
 let { TestCluster } = import! lancer.effect.test_cluster
 let { Logger } = import! lancer.effect.logger
+let { FileSystem } = import! lancer.effect.file_system
 
 type Lancer r = Eff [|
     test_cluster: TestCluster,
     logger: Logger String,
+    file_system: FileSystem,
     | r |] ()
 
 {
