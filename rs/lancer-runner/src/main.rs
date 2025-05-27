@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use gluon::vm::api::{Hole, IO, OpaqueValue};
 use gluon::{RootedThread, VmBuilder};
 use gluon::{ThreadExt, new_vm_async, vm::api::FunctionRef};

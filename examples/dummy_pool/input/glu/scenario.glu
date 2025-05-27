@@ -13,6 +13,7 @@ let { SuiAddress, ? } = import! lancer.sui.sui_address
 let { unwrap_ok, ? } = import! std.result
 let { parse } = import! lancer.parse
 let { assert } = import! std.assert
+let { ObjectPtr, ? } = import! lancer.sui.object
 
 let {
     TestCluster,

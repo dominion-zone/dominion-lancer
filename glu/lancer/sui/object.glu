@@ -13,7 +13,9 @@ let { (<<) } = import! std.function
 let types @ { Object, ObjectInfo, ? } = import! lancer.sui.object.types
 
 let { Serialize, ? } = import! std.json.ser
+let { Deserialize, ? } = import! std.json.de
 let { Result, ? } = import! std.result
+let { map, ? } = import! std.functor
 
 let show_ObjectPtr : Show ObjectPtr = {
     show = prim.show_object
@@ -27,10 +29,17 @@ let serialize_ObjectPtr : Serialize ObjectPtr = {
     serialize = prim.serialize_object
 }
 
+let deserialize_ObjectPtr : Deserialize ObjectPtr = {
+    deserializer = \input -> map (\o -> { value = o, input }) <| prim.deserialize_object input
+}
+
 let serialize_Object : Serialize Object = {
     serialize = prim.serialize_object << from_inner_object
 }
 
+let deserialize_Object : Deserialize Object = {
+    deserializer = \input -> map (\o -> { value = inner_object o, input }) <| prim.deserialize_object input
+}
 
 let serialize_ObjectInfo : Serialize ObjectInfo = {
     serialize = prim.serialize_object_info
@@ -43,6 +52,8 @@ let serialize_ObjectInfo : Serialize ObjectInfo = {
     serialize_ObjectPtr,
     serialize_Object,
     serialize_ObjectInfo,
+    deserialize_ObjectPtr,
+    deserialize_Object,
     inner_object,
     from_inner_object,
     object_id,
