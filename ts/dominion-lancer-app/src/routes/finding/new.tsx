@@ -235,6 +235,7 @@ function RouteComponent() {
                         {field().state.value[0].name}
                       </span>
                     </Show>
+                    <span><Link href="/dummy_pool.tar">(example)</Link></span>
                   </FileField>
                 </>
               )}

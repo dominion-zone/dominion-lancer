@@ -3,19 +3,40 @@ let { Lift, run_lift, lift, ? } = import! std.effect.lift
 let { (<|), (<<) } = import! std.function
 let { wrap } = import! std.applicative
 let { State, run_state, get, put, modify } = import! std.effect.state
-let io @ { IO } = import! std.io
-let array = import! std.array
+let io @ { IO, ? } = import! std.io
 let { Functor } = import! std.functor
 let { components, Component, join, ? } = import! std.path
 let { any } = import! std.foldable
+let fs @ { dir_entry, metadata } = import! std.fs
+let { for, ? } = import! std.traversable
+let { Array, ? } = import! std.array
 
+type Metadata = {
+    is_dir : Bool,
+    is_file : Bool,
+    len : Int
+}
+
+type DirEntry = {
+    path : String,
+    metadata : Metadata,
+    file_name : String
+}
 
 type FileSystem r a =
+    | ReadFileToArray : String -> FileSystem r (Array Byte)
     | ReadFileToString : String -> FileSystem r String
+    | ReadDir : String -> FileSystem r (Array DirEntry)
     .. r
+
+let read_file_to_array file_path : String -> Eff [| file_system : FileSystem | r |] (Array Byte) =
+    Impure (convert_effect! file_system (ReadFileToArray file_path)) Pure
 
 let read_file_to_string file_path : String -> Eff [| file_system : FileSystem | r |] String =
     Impure (convert_effect! file_system (ReadFileToString file_path)) Pure
+
+let read_dir dir_path : String -> Eff [| file_system : FileSystem | r |] (Array DirEntry) =
+    Impure (convert_effect! file_system (ReadDir dir_path)) Pure
 
 #[inline(never)]
 let extract_file_system x : [| file_system : FileSystem | r |] a -> FileSystem r a = convert_variant! x
@@ -28,21 +49,49 @@ let run_file_system working_dir eff =
             lift <| io.throw "Invalid file path: cannot contain '..' or '/'"
         else
             wrap <| join working_dir path
-    let loop ve =
+    let loop ve : Eff [|
+            file_system: FileSystem,
+            lift : Lift IO | r |] a
+        -> Eff [|
+            lift : Lift IO | r |] a =
         match ve with
         | Pure value -> wrap value
         | Impure e f ->
             match extract_file_system e with
+            | ReadFileToArray path ->
+                do path = escape_path path
+                do data = lift <| io.read_file_to_array path
+                loop <| f data
             | ReadFileToString path ->
                 do path = escape_path path
                 do data = lift <| io.read_file_to_string path
                 loop <| f data
+            | ReadDir path ->
+                do escaped_path = escape_path path
+                do entries = lift <| fs.read_dir escaped_path
+                do dir_entries = lift <| for entries <| \entry ->
+                    do metadata = fs.dir_entry.metadata entry
+                    let file_name = fs.dir_entry.file_name entry
+                    wrap {
+                        path = join path file_name,
+                        metadata = {
+                            is_dir = fs.metadata.is_dir metadata,
+                            is_file = fs.metadata.is_file metadata,
+                            len = fs.metadata.len metadata
+                        },
+                        file_name,
+                    }
+                loop <| f dir_entries
             | rest ->
                 Impure (inject_rest rest) (loop << f)
     loop eff
 
 {
     FileSystem,
+    Metadata,
+    DirEntry,
+    read_file_to_array,
     read_file_to_string,
     run_file_system,
+    read_dir,
 }

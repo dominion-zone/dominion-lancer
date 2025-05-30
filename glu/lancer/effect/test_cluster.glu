@@ -17,7 +17,7 @@ let { Coin } = import! lancer.rpc.types
 let { Reporting } = import! lancer.reporting
 let { TransactionBuilder, run_transaction_builder, ? } = import! lancer.effect.transaction_builder
 let { Logger, log, ? } = import! lancer.effect.logger
-let { ObjectPtr, ? } = import! lancer.sui.object
+let { ObjectPtr, Object ? } = import! lancer.sui.object
 
 
 type TestCluster r a =
@@ -29,6 +29,7 @@ type TestCluster r a =
     | ExecuteTx : forall x . Int -> SuiAddress -> Array SuiAddress
         -> Eff [| transaction_builder: TransactionBuilder | r |] x
         -> TestCluster r TransactionBlockResponse
+    | GetObject : SuiAddress -> TestCluster r Object
     | GetCoins : StructTag -> SuiAddress -> TestCluster r (Array Coin)
     | GetBalance : StructTag -> SuiAddress -> TestCluster r Int
     .. r
@@ -56,6 +57,9 @@ let execute_tx gas_budget sender tx_building
     -> Eff [| test_cluster : TestCluster | r |] TransactionBlockResponse =
     let r : TestCluster r TransactionBlockResponse = ExecuteTx gas_budget sender [] tx_building
     Impure (convert_effect! test_cluster r) Pure
+
+let get_object id : SuiAddress -> Eff [| test_cluster : TestCluster | r |] Object =
+    Impure (convert_effect! test_cluster (GetObject id)) Pure
 
 let get_coins coin_type owner
     : StructTag -> SuiAddress -> Eff [| test_cluster : TestCluster | r |] (Array Coin) =
@@ -157,6 +161,10 @@ let run_test_cluster builder temp_wallet working_dir eff =
                 do response = tc.execute_tx cluster temp_wallet transaction gas_budget sender additional_signers
                 log <| System <| TxExecuted { transaction, response }
                 loop <| f <| inner response
+            | GetObject id ->
+                do cluster = get_cluster
+                do object = tc.get_object cluster id
+                loop <| f object
             | GetCoins coin_type owner ->
                 do cluster = get_cluster
                 do coins = tc.get_coins cluster coin_type owner
@@ -181,7 +189,9 @@ let run_test_cluster builder temp_wallet working_dir eff =
     commit_preparation,
     commit_demonstration,
     generate_keypair,
+    add_object,
     execute_tx,
+    get_object,
     get_coins,
     get_balance,
     run_test_cluster

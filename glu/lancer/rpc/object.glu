@@ -1,0 +1,16 @@
+let prim @ { RpcObjectPtr } = import! lancer.rpc.object.prim
+let { Serialize, ? } = import! std.json.ser
+let { Deserialize, ? } = import! std.json.de
+let { Result, ? } = import! std.result
+let { map, ? } = import! std.functor
+let { Show, show, ? } = import! std.show
+
+let deserialize_RpcObjectPtr : Deserialize RpcObjectPtr = {
+    deserializer = \input -> map (\o -> { value = o, input }) <| prim.deserialize_object input
+}
+
+{
+    RpcObjectPtr,
+    deserialize_RpcObjectPtr,
+    to_object = prim.to_object,
+}

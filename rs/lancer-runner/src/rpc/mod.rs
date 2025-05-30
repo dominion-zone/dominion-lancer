@@ -22,6 +22,7 @@ use sui_types::{digests::TransactionDigest, object::Authenticator};
 use crate::sui::{WDigest, WSuiAddress, types::WStructTag};
 
 pub mod coin;
+pub mod object;
 
 #[derive(Clone, Trace, Userdata, VmType)]
 #[gluon(vm_type = "lancer.rpc.prim.TransactionBlockResponsePtr")]
@@ -818,5 +819,6 @@ pub fn install_rpc(vm: &Thread) -> vm::Result<()> {
             "std.json".to_string(),
         ],
     );
+    object::install(vm)?;
     Ok(())
 }
