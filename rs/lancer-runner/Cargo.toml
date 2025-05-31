@@ -26,3 +26,4 @@ fastcrypto = { git = "https://github.com/MystenLabs/fastcrypto", rev = "69d496c7
 rand = { workspace = true}
 async-tempfile = { workspace = true}
 sui-core = { workspace = true}
+bcs.workspace = true

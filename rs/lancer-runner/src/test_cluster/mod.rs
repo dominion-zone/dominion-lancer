@@ -6,23 +6,21 @@ use gluon::{
     vm::{self, ExternModule, api::IO},
 };
 use gluon_codegen::{Trace, Userdata, VmType};
-use std::{fmt, sync::Arc};
 use std::fmt::Debug;
+use std::{fmt, sync::Arc};
 use sui_types::{
-    base_types::{ObjectID, SuiAddress},
-    crypto::{Signature, Signer, SuiKeyPair, get_key_pair_from_rng},
-    gas_model::units_types::Gas,
-    programmable_transaction_builder::ProgrammableTransactionBuilder,
-    transaction::{GasData, Transaction, TransactionData, TransactionKind},
+    base_types::{ObjectID, SuiAddress}, crypto::{get_key_pair_from_rng, Signature, Signer, SuiKeyPair}, gas_model::units_types::Gas, object::Object, programmable_transaction_builder::ProgrammableTransactionBuilder, transaction::{GasData, Transaction, TransactionData, TransactionKind}
 };
 use test_cluster::TestCluster;
 use tokio::process::Command;
 use tokio::sync::RwLock;
 
 use crate::{
-    rpc::{coin::WCoin, TransactionBlockResponsePtr, WTransactionBlockResponse},
+    rpc::{TransactionBlockResponsePtr, WTransactionBlockResponse, coin::WCoin},
     sui::{
-        object::{ObjectPtr, WObject, WObjectInfo}, types::WStructTag, WSuiAddress
+        WSuiAddress,
+        object::{ObjectPtr, WObject, WObjectInfo},
+        types::WStructTag,
     },
     temp_wallet::TempWallet,
     transaction::TransactionRef,

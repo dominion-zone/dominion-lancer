@@ -1,0 +1,7 @@
+let { Coin } = import! lancer.framework.types
+let prim @ { coin_to_bytes } = import! lancer.framework.prim
+
+{
+    Coin,
+    coin_to_bytes,
+}

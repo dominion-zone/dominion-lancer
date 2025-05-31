@@ -5015,6 +5015,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-tempfile",
+ "bcs",
  "clap",
  "fastcrypto",
  "gluon",
@@ -9432,6 +9433,23 @@ name = "snap"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b6b67fb9a61334225b5b790716f609cd58395f895b3fe8b328786812a40bc3b"
+
+[[package]]
+name = "snapshot-explorer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui?tag=testnet-v1.48.0)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/MystenLabs/sui?tag=testnet-v1.48.0)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui?tag=testnet-v1.48.0)",
+ "serde_json",
+ "sui-core",
+ "sui-json-rpc-types",
+ "sui-snapshot",
+ "sui-types 0.1.0 (git+https://github.com/MystenLabs/sui?tag=testnet-v1.48.0)",
+ "tokio",
+]
 
 [[package]]
 name = "socket2"

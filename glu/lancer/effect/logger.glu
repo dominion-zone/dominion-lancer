@@ -20,23 +20,49 @@ let log v : forall l . l -> Eff [| logger : Logger l | r |] () =
 #[inline(never)]
 let extract_logger x : forall l . [| logger : Logger l | r |] a -> Logger l r a = convert_variant! x
 
-let run_logger eff =
-    let loop ve =
+let loop ?l ve : forall r a . [Show l] -> Eff [|
+            logger : Logger l,
+            state: State (Array l),
+            lift : Lift IO
+            | r
+        |] a -> Eff [|
+            state: State (Array l),
+            lift : Lift IO
+            | r
+        |] a =
         match ve with
         | Pure value -> wrap value
         | Impure e f ->
             match extract_logger e with
             | Log v ->
                 modify <| \current_state -> array.append current_state [ v ]
+                lift <| io.println <| "Log: " ++ l.show v
                 loop <| f ()
             | rest ->
                 Impure (inject_rest rest) (loop << f)
 
+let run_logger ?l eff : forall r a . [Show l] -> Eff [|
+    logger : Logger l,
+    state: State (Array l),
+    lift : Lift IO
+    | r
+|] a -> Eff [|
+    lift : Lift IO
+    | r
+|] { value : a, logs : Array l } =
     let initial_state : Array l = []
-    do { value, state } = run_state initial_state <| loop eff
+    do { value, state } = run_state initial_state <| loop ?l eff
     wrap { value, logs = state }
 
-let exec_logger eff =
+let exec_logger ?l eff : forall r a . [Show l] -> Eff [|
+    logger : Logger l,
+    state: State (Array l),
+    lift : Lift IO
+    | r
+|] a -> Eff [|
+    lift : Lift IO
+    | r
+|] (Array l) =
     do { value, logs } = run_logger eff
     wrap logs
 

@@ -5,7 +5,16 @@ let { Reporting } = import! lancer.reporting
 let { deserialize } = import! std.json.de
 let { (<|), (<<) } = import! std.function
 let { unwrap_ok, Result } = import! std.result
-let { ObjectPtr, Object, ? } = import! lancer.sui.object
+let {
+    ObjectPtr,
+    Object,
+    ObjectData,
+    MoveObject,
+    from_inner_object,
+    object_reference,
+    object_id,
+    ?
+} = import! lancer.sui.object
 let { ObjectRef, ObjectArg, ? } = import! lancer.transaction.builder.types
 let { RpcObjectPtr, to_object, ? } = import! lancer.rpc.object
 let { wrap } = import! std.applicative
@@ -14,6 +23,9 @@ let { for } = import! std.traversable
 let { parse } = import! lancer.parse
 let { TypeTag, StructTag, ? } = import! lancer.sui.types
 let { SuiAddress, ? } = import! lancer.sui.sui_address
+let { Digest, ? } = import! lancer.sui.digest
+let { Coin, coin_to_bytes } = import! lancer.framework
+let { Owner, ? } = import! lancer.rpc.types
 
 let {
     TestCluster,
@@ -51,11 +63,10 @@ for objects <| \entry ->
     else
         wrap ()
 
-let sui_framework = unwrap_ok <| parse "0x0000000000000000000000000000000000000000000000000000000000000002"
+let sui_framework : SuiAddress = unwrap_ok <| parse "0x0000000000000000000000000000000000000000000000000000000000000002"
 
-let cetus = unwrap_ok <| parse "0xc6faf3703b0e8ba9ed06b7851134bbbe7565eb35ff823fd78432baa4cbeaa12e"
-let global_config_id = unwrap_ok <| parse "0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f"
-let global_config_initial_shared_version = 1
+let cetus : SuiAddress = unwrap_ok <| parse "0xc6faf3703b0e8ba9ed06b7851134bbbe7565eb35ff823fd78432baa4cbeaa12e"
+let global_config_id : SuiAddress = unwrap_ok <| parse "0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f"
 
 let vsui_type: StructTag = {
     address = unwrap_ok <| parse "0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55",
@@ -66,50 +77,87 @@ let vsui_type: StructTag = {
 let sui_type: StructTag = {
     address = sui_framework,
     module = "sui",
-    name = "Sui",
+    name = "SUI",
     type_params = [],
 }
-let vsui_sui_pool_id = unwrap_ok <| parse "0x6c545e78638c8c1db7a48b282bb8ca79da107993fcb185f75cedc1f5adb2f535"
-let vsui_sui_pool_initial_shared_version = 34395748
+
+let position_type: StructTag = {
+    address = cetus,
+    module = "position",
+    name = "Position",
+    type_params = [],
+}
+
+let vsui_sui_pool_id : SuiAddress = unwrap_ok <| parse "0x6c545e78638c8c1db7a48b282bb8ca79da107993fcb185f75cedc1f5adb2f535"
+
+do hacker = generate_keypair
+
+let hackers_sui_id : SuiAddress = unwrap_ok <| parse "0xd335e8aa19d6dc04273d77e364c936bad69db4905a4ab3b2733d644dd2b31e0a"
+let hackers_sui_digest : Digest = unwrap_ok <| parse "xPxJ2Mc8nAJrSJoKy3chKSjCFuhcAruh95MPoZ6s2iW"
+
+let hackers_sui_object = from_inner_object {
+    data = Move {
+        type_ = {
+            address = sui_framework,
+            module = "coin",
+            name = "Coin",
+            type_params = [Struct sui_type],
+        },
+        version = 1,
+        contents = coin_to_bytes {
+            id = {
+                id = hackers_sui_id,
+            },
+            balance = {
+                value = 100000000000,
+            }
+        },
+    },
+    owner = AddressOwner hacker,
+    previous_transaction = hackers_sui_digest,
+    storage_rebate = 0,
+}
+
+add_object hackers_sui_object
 
 initialize
 
 do pool = get_object vsui_sui_pool_id
-log <| show pool
 
 do admin = generate_keypair
-do hacker = generate_keypair
 
 commit_preparation [hacker]
 
+do hackers_sui_data = get_object hackers_sui_id
+
+log <| "Pool owner: " ++ show pool.owner
+log <| "Pool id: " ++ (show <| object_id <| from_inner_object pool)
 do r = execute_tx 500000000 hacker (
-    /*
     do global_config_arg = object_ref <| SharedObject {
         id = global_config_id,
-        initial_shared_version = global_config_initial_shared_version,
+        initial_shared_version = 1,
         mutable = False,
     }
     do pool_arg = object_ref <| SharedObject {
         id = vsui_sui_pool_id,
-        initial_shared_version = vsui_sui_pool_initial_shared_version,
+        initial_shared_version = 1,
         mutable = True,
     }
     do tick_lower_arg = u32 0
-    do tick_upper_arg = u32 1
-    move_call cetus "pool" "open_position" [ Struct vsui_type, Struct sui_type ] [
+    do tick_upper_arg = u32 2
+    do position_arg = move_call cetus "pool" "open_position" [ Struct vsui_type, Struct sui_type ] [
         global_config_arg,
         pool_arg,
         tick_lower_arg,
         tick_upper_arg
-    ]*/
-    do pool_arg = object_ref <| SharedObject {
-        id = vsui_sui_pool_id,
-        initial_shared_version = vsui_sui_pool_initial_shared_version,
-        mutable = True,
-    }
-    move_call cetus "pool" "current_tick_index" [ Struct vsui_type, Struct sui_type ] [
-        pool_arg
     ]
+    do hacker_arg = address hacker
+    move_call sui_framework "transfer" "public_transfer" [Struct position_type] [
+        position_arg,
+        hacker_arg,
+    ]
+
+    // pay [object_reference <| from_inner_object hackers_sui_data] [1000000000] [admin]
 )
 
 commit_demonstration "" Public

@@ -15,7 +15,7 @@ use gluon::{
 use gluon_codegen::{Trace, Userdata, VmType};
 use move_core_types::language_storage::StructTag;
 use sui_types::{
-    base_types::{ObjectID, ObjectInfo, ObjectType, SequenceNumber},
+    base_types::{ObjectID, ObjectInfo, ObjectType, SequenceNumber, SuiAddress},
     digests::{Digest, ObjectDigest, TransactionDigest},
     move_package::{MovePackage, TypeOrigin, UpgradeInfo},
     object::{Data as ObjectData, MoveObject, Object, ObjectInner},
@@ -514,6 +514,15 @@ impl ObjectPtr {
         object.owner = owner.0;
         Self(Arc::new(Object::from(object)))
     }
+
+    pub fn reference(&self) -> (WSuiAddress, u64, WDigest) {
+        let (id, version, digest) = self.0.compute_object_reference();
+        (
+            WSuiAddress(id.into()),
+            version.value(),
+            WDigest(Digest::new(digest.into_inner())),
+        )
+    }
 }
 
 impl From<ObjectPtr> for WObject {
@@ -747,6 +756,11 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 2,
                 "lancer.sui.object.prim.set_object_owner",
                 ObjectPtr::set_owner
+            ),
+            object_reference => primitive!(
+                1,
+                "lancer.sui.object.prim.object_reference",
+                ObjectPtr::reference
             ),
         ),
     )

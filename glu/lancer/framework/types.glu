@@ -1,0 +1,20 @@
+let { SuiAddress } = import! lancer.sui.sui_address
+
+type UID = {
+    id: SuiAddress,
+}
+
+type Balance = {
+    value: Int,
+}
+
+type Coin = {
+    id: UID,
+    balance: Balance,
+}
+
+{
+    UID,
+    Balance,
+    Coin,
+}
