@@ -1,6 +1,6 @@
 # Dominion Lancer
 
-**Dominion Lancer** is a secure and confidential platform for responsible vulnerability disclosure on the SUI blockchain. It enables white hat hackers to submit isolated exploit scripts that run inside trusted enclaves and produce verifiable evidence of bugs—without revealing sensitive details until appropriate. Protocol developers can safely validate exploits and compensate researchers through automated, on-chain workflows.
+**Dominion Lancer** is a secure and confidential platform for responsible vulnerability disclosure on the SUI blockchain. It enables white hat hackers to submit isolated exploit scripts that run inside trusted enclaves and produce verifiable evidence of bugs — without revealing sensitive details until appropriate. Protocol developers can safely validate exploits and compensate researchers through automated, on-chain workflows.
 
 ---
 
