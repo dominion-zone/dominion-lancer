@@ -58,7 +58,7 @@ Includes a complete working demonstration of the `dummy_pool` exploit scenario.
   - `input/glu/` — Contains the Gluon script implementing the scenario logic (`scenario.glu`).
 
 
-- **`examples/cetus_checked_shlw/`** *(Work in progress)* 
+- **`examples/cetus_checked_shlw/`** *(Work in progress)*  
   Demonstrates how Dominion Lancer could have been used to prevent the [Cetus incident on May 22, 2025](https://cetusprotocol.notion.site/Cetus-Incident-Report-May-22-2025-Attack-Disclosure-1ff1dbf3ac8680d7a98de6158597d416), had it been deployed at the time.
   The scenario uses a partial snapshot of the SUI blockchain from epoch 760 and a minimal token setup. The protocol is not granted any administrative privileges, relying solely on behavior available through standard user-level interactions.
 
