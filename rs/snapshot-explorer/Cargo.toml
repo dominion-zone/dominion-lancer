@@ -15,3 +15,4 @@ move-binary-format = { workspace = true }
 sui-json-rpc-types = { workspace = true }
 tokio = { workspace = true }
 serde_json = { workspace = true }
+prometheus = { version = "0.13.4" }

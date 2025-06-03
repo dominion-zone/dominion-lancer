@@ -6,12 +6,15 @@ edition = "2024"
 [dependencies]
 test-cluster = { workspace = true}
 sui-types = { workspace = true}
+sui-node = { workspace = true}
 move-core-types = { workspace = true}
 sui-move-build = { workspace = true}
 sui-framework = { workspace = true}
 sui-json-rpc-types = { workspace = true}
 sui-swarm-config = { workspace = true}
 sui-keys = { workspace = true}
+move-bytecode-utils = { workspace = true }
+move-binary-format = { workspace = true}
 tokio = { workspace = true}
 serde_json = { workspace = true}
 anyhow.workspace = true

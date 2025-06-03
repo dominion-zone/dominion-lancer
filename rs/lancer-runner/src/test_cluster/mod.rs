@@ -1,20 +1,3 @@
-use fastcrypto::bls12381::min_sig::DST_G1;
-use gluon::{
-    Thread,
-    import::add_extern_module_with_deps,
-    primitive, record,
-    vm::{self, ExternModule, api::IO},
-};
-use gluon_codegen::{Trace, Userdata, VmType};
-use std::fmt::Debug;
-use std::{fmt, sync::Arc};
-use sui_types::{
-    base_types::{ObjectID, SuiAddress}, crypto::{get_key_pair_from_rng, Signature, Signer, SuiKeyPair}, gas_model::units_types::Gas, object::Object, programmable_transaction_builder::ProgrammableTransactionBuilder, transaction::{GasData, Transaction, TransactionData, TransactionKind}
-};
-use test_cluster::TestCluster;
-use tokio::process::Command;
-use tokio::sync::RwLock;
-
 use crate::{
     rpc::{TransactionBlockResponsePtr, WTransactionBlockResponse, coin::WCoin},
     sui::{
@@ -25,7 +8,39 @@ use crate::{
     temp_wallet::TempWallet,
     transaction::TransactionRef,
 };
+use anyhow::Context;
+use fastcrypto::bls12381::min_sig::DST_G1;
+use gluon::{
+    Thread,
+    import::add_extern_module_with_deps,
+    primitive, record,
+    vm::{self, ExternModule, api::IO},
+};
+use gluon_codegen::{Trace, Userdata, VmType};
+use move_binary_format::file_format::CompiledModule;
+use move_bytecode_utils::module_cache::GetModule;
+use move_core_types::language_storage::ModuleId;
+use move_core_types::{
+    account_address::AccountAddress,
+    annotated_value::{MoveStruct, MoveStructLayout, MoveValue},
+    language_storage::StructTag,
+};
+use std::{collections::HashMap, fmt::Debug, usize};
+use std::{fmt, sync::Arc};
 use sui_keys::keystore::AccountKeystore;
+use sui_node::SuiNode;
+use sui_types::storage::BackingPackageStore;
+use sui_types::{
+    base_types::{ObjectID, SuiAddress},
+    crypto::{Signature, Signer, SuiKeyPair, get_key_pair_from_rng},
+    gas_model::units_types::Gas,
+    object::Object,
+    programmable_transaction_builder::ProgrammableTransactionBuilder,
+    transaction::{GasData, Transaction, TransactionData, TransactionKind},
+};
+use test_cluster::TestCluster;
+use tokio::process::Command;
+use tokio::sync::RwLock;
 
 pub mod builder;
 
@@ -240,6 +255,35 @@ impl WTestCluster {
             .into()
     }
 
+    pub async fn get_owned_objects_recursive(&self, owner: WSuiAddress) -> IO<Vec<ObjectPtr>> {
+        self.0
+            .fullnode_handle
+            .sui_node
+            .with_async(async |node| {
+                let roots = node
+                    .state()
+                    .get_owner_objects(owner.0, None, usize::MAX, None)?;
+                let mut result = HashMap::new();
+                for root in roots {
+                    if !result.contains_key(&root.object_id) {
+                        Box::pin(Self::get_children_recursive(
+                            node,
+                            &root.object_id,
+                            &mut result,
+                        ))
+                        .await?;
+                    }
+                }
+                Ok::<Vec<_>, anyhow::Error>(result
+                    .into_values()
+                    .map(|v| ObjectPtr(Arc::new(v)))
+                    .collect())
+            })
+            .await
+            .map_err(|e| e.to_string())
+            .into()
+    }
+
     pub async fn get_object(&self, object_id: WSuiAddress) -> IO<WObject> {
         async {
             let r = self
@@ -250,6 +294,95 @@ impl WTestCluster {
             Ok::<_, String>(WObject(Arc::new(r)))
         }
         .await
+        .into()
+    }
+
+    /*
+    async fn get_object_with_layout(
+        &self,
+        object_id: &ObjectID,
+    ) -> anyhow::Result<(Object, Option<MoveStructLayout>)> {
+        let obj = self
+            .0
+            .get_object_from_fullnode_store(object_id)
+            .await
+            .context("Failed to get object")?;
+        let layout = self.0.fullnode_handle.sui_node.with(|node| {
+            obj.get_layout(&ResolverWrapper(
+                node.state().get_backing_package_store().clone(),
+            ))
+        })?;
+        Ok((obj, layout))
+    }*/
+
+    async fn get_children_recursive(
+        node: &SuiNode,
+        object_id: &ObjectID,
+        result: &mut HashMap<ObjectID, Object>,
+    ) -> anyhow::Result<()> {
+        let object = node
+            .state()
+            .get_object(object_id)
+            .await
+            .context("Failed to get object")?;
+        result.insert(object.id(), object.clone());
+        let layout = object.get_layout(&ResolverWrapper(
+            node.state().get_backing_package_store().clone(),
+        ))?;
+        let layout = if let Some(layout) = layout {
+            layout
+        } else {
+            return Ok(());
+        };
+        let wrapped = collect_uids(&object.data.try_as_move().unwrap().to_move_struct(&layout)?);
+        for id in wrapped {
+            for (key, _) in node
+                .state()
+                .get_dynamic_fields(id.into(), None, usize::MAX)?
+            {
+                if result.contains_key(&key) {
+                    continue;
+                }
+                Box::pin(Self::get_children_recursive(node, &key, result)).await?;
+            }
+
+            for child in node
+                .state()
+                .get_owner_objects(id.into(), None, usize::MAX, None)?
+            {
+                if result.contains_key(&child.object_id) {
+                    continue;
+                }
+                Box::pin(Self::get_children_recursive(node, &child.object_id, result)).await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_object_recursive(&self, object_id: WSuiAddress) -> IO<Vec<ObjectPtr>> {
+        async {
+            let mut result = HashMap::new();
+            self.0
+                .fullnode_handle
+                .sui_node
+                .with_async(async |node| {
+                    Self::get_children_recursive(
+                        node,
+                        &ObjectID::from_address(object_id.0.into()),
+                        &mut result,
+                    )
+                    .await
+                })
+                .await?;
+            Ok::<Vec<ObjectPtr>, anyhow::Error>(
+                result
+                    .into_values()
+                    .map(|v| ObjectPtr(Arc::new(v)))
+                    .collect(),
+            )
+        }
+        .await
+        .map_err(|e| e.to_string())
         .into()
     }
 
@@ -314,11 +447,19 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 2,
                 "lancer.test_cluster.prim.get_owned_objects",
                 WTestCluster::get_owned_objects),
+            get_owned_objects_recursive => primitive!(
+                2,
+                "lancer.test_cluster.prim.get_owned_objects_recursive",
+                async fn WTestCluster::get_owned_objects_recursive),
 
             get_object => primitive!(
                 2,
                 "lancer.test_cluster.prim.get_object",
                 async fn WTestCluster::get_object),
+            get_object_recursive => primitive!(
+                2,
+                "lancer.test_cluster.prim.get_object_recursive",
+                async fn WTestCluster::get_object_recursive),
 
             get_all_live_objects => primitive!(
                 1,
@@ -347,4 +488,80 @@ pub fn install(vm: &Thread) -> vm::Result<()> {
 
     builder::install(vm)?;
     Ok(())
+}
+
+fn is_uid_tag(tag: &StructTag) -> bool {
+    tag.address == AccountAddress::from_hex_literal("0x2").unwrap()
+        && tag.module.as_str() == "object"
+        && tag.name.as_str() == "UID"
+        && tag.type_params.is_empty()
+}
+
+pub fn collect_uids(struct_: &MoveStruct) -> Vec<AccountAddress> {
+    let mut result = Vec::new();
+    collect_uids_recursive(struct_, &mut result);
+    result
+}
+
+fn collect_uids_recursive(struct_: &MoveStruct, out: &mut Vec<AccountAddress>) {
+    if is_uid_tag(&struct_.type_) {
+        if let Some((_, MoveValue::Struct(id_struct))) =
+            struct_.fields.iter().find(|(k, _)| k.as_str() == "id")
+        {
+            if let Some((_, MoveValue::Address(addr))) =
+                id_struct.fields.iter().find(|(k, _)| k.as_str() == "bytes")
+            {
+                out.push(*addr);
+                return;
+            } else {
+                panic!(
+                    "UID struct does not contain 'bytes' field: {:?}",
+                    id_struct.fields
+                );
+            }
+        } else {
+            panic!(
+                "UID struct does not contain 'id' field: {:?}",
+                struct_.fields
+            );
+        }
+    }
+
+    for (_, val) in &struct_.fields {
+        match val {
+            MoveValue::Struct(s) => collect_uids_recursive(s, out),
+            MoveValue::Vector(vs) => {
+                for item in vs {
+                    if let MoveValue::Struct(s) = item {
+                        collect_uids_recursive(s, out);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+struct ResolverWrapper(pub Arc<dyn BackingPackageStore + Send + Sync>);
+
+impl GetModule for ResolverWrapper {
+    type Error = anyhow::Error;
+
+    type Item = CompiledModule;
+
+    fn get_module_by_id(
+        &self,
+        module_id: &ModuleId,
+    ) -> anyhow::Result<Option<Self::Item>, Self::Error> {
+        Ok(self
+            .0
+            .get_package_object(&ObjectID::from(*module_id.address()))?
+            .and_then(|package| {
+                package
+                    .move_package()
+                    .serialized_module_map()
+                    .get(module_id.name().as_str())
+                    .map(|bytes| CompiledModule::deserialize_with_defaults(bytes).unwrap())
+            }))
+    }
 }

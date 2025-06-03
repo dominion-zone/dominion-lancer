@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::format;
 use std::ops::Deref;
 use std::path::Path;
@@ -16,10 +17,11 @@ use move_core_types::annotated_value::MoveValue;
 use move_core_types::identifier::IdentStr;
 use move_core_types::language_storage::ModuleId;
 use move_core_types::language_storage::StructTag;
+use prometheus::Registry;
 use std::collections::HashSet;
 use sui_core::authority::authority_store_tables::AuthorityPerpetualTables;
 use sui_core::authority::authority_store_tables::LiveObject;
-use sui_core::rpc_index::RpcIndexStore;
+use sui_core::jsonrpc_index::IndexStore;
 use sui_json_rpc_types::SuiData;
 use sui_json_rpc_types::SuiObjectData;
 use sui_json_rpc_types::SuiObjectDataOptions;
@@ -36,7 +38,7 @@ use tokio::main;
 
 pub struct Tables {
     pub perpetual: AuthorityPerpetualTables,
-    pub indices: RpcIndexStore,
+    pub indices: IndexStore,
 }
 
 impl Deref for Tables {
@@ -75,6 +77,8 @@ struct Args {
     pretty: bool,
     #[arg(long)]
     recursive: bool,
+    #[arg(long)]
+    output_path: Option<PathBuf>,
 }
 
 fn is_uid_tag(tag: &StructTag) -> bool {
@@ -84,7 +88,6 @@ fn is_uid_tag(tag: &StructTag) -> bool {
         && tag.type_params.is_empty()
 }
 
-/// Рекурсивно ищет UID и вытаскивает из них внутренний ID (Address)
 pub fn collect_uids(struct_: &MoveStruct) -> Vec<AccountAddress> {
     let mut result = Vec::new();
     collect_uids_recursive(struct_, &mut result);
@@ -133,24 +136,45 @@ fn collect_uids_recursive(struct_: &MoveStruct, out: &mut Vec<AccountAddress>) {
 impl Tables {
     pub fn new(db: &Path) -> Self {
         let perpetual = AuthorityPerpetualTables::open(&db.join("store"), None);
-        let indices = RpcIndexStore::new_without_init(db);
+        let indices =
+            IndexStore::new_without_init(db.join("indexes"), &Registry::new(), None, true);
         Tables { perpetual, indices }
     }
     async fn children_recursive(
         &self,
         obj: Object,
-        result: &mut Vec<Object>,
+        result: &mut HashMap<ObjectID, Object>,
     ) -> anyhow::Result<()> {
         if let Some(layout) = obj.get_layout(self)? {
             let wrapped = collect_uids(&obj.data.try_as_move().unwrap().to_move_struct(&layout)?);
+            println!("Found wrapped {:?}", wrapped);
             for id in wrapped {
-                for child in self.indices.owner_iter(id.into(), None, None)? {
-                    let (child, info) = child?;
+                for df in self.indices.get_dynamic_fields_iterator(id.into(), None)? {
+                    let (key, info) = df?;
+                    if result.contains_key(&key) {
+                        continue;
+                    }
+                    println!("Found dynamic field: {:?}: {:?}", key, info);
                     let child = self
                         .perpetual
-                        .get_object_by_key(&child.object_id, info.version)
+                        .get_object_by_key(&key, info.version)
+                        .context("Can not find dynamic field")?;
+                    result.insert(key, child.clone());
+                    Box::pin(self.children_recursive(child, result)).await?;
+                }
+                for child in
+                    self.indices
+                        .get_owner_objects_iterator(id.into(), ObjectID::ZERO, None)?
+                {
+                    if result.contains_key(&child.object_id) {
+                        continue;
+                    }
+                    println!("Found child: {:?}", child);
+                    let child = self
+                        .perpetual
+                        .get_object_by_key(&child.object_id, child.version)
                         .context("Can not find child")?;
-                    result.push(child.clone());
+                    result.insert(child.id(), child.clone());
                     Box::pin(self.children_recursive(child, result)).await?;
                 }
             }
@@ -167,8 +191,8 @@ async fn main() -> anyhow::Result<()> {
     let obj = perpetual_tables
         .get_object(&args.id)
         .context("Failed to get object")?;
-    let mut objects = Vec::new();
-    objects.push(obj.clone());
+    let mut objects = HashMap::new();
+    objects.insert(obj.id(), obj.clone());
     if args.recursive {
         perpetual_tables
             .children_recursive(obj.clone(), &mut objects)
@@ -176,7 +200,7 @@ async fn main() -> anyhow::Result<()> {
     }
     if args.parsed {
         let rpc_objs = objects
-            .iter()
+            .values()
             .map(|obj| {
                 let layout = obj
                     .get_layout(&perpetual_tables)?
@@ -197,6 +221,21 @@ async fn main() -> anyhow::Result<()> {
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
+        if let Some(output_path) = &args.output_path {
+            for o in rpc_objs {
+                fs::write(
+                    output_path.join(format!("{}.json", o.object_id)),
+                    (if args.pretty {
+                        serde_json::to_string_pretty(&o)?
+                    } else {
+                        serde_json::to_string(&o)?
+                    })
+                    .as_bytes(),
+                )
+                .await?;
+            }
+            return Ok(());
+        }
         if args.pretty {
             if args.recursive {
                 println!("{}", serde_json::to_string_pretty(&rpc_objs).unwrap());
@@ -211,20 +250,35 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     } else {
+        if let Some(output_path) = &args.output_path {
+            for o in objects.values() {
+                fs::write(
+                    output_path.join(format!("{}.json", o.id())),
+                    (if args.pretty {
+                        serde_json::to_string_pretty(&o)?
+                    } else {
+                        serde_json::to_string(&o)?
+                    })
+                    .as_bytes(),
+                )
+                .await?;
+            }
+            return Ok(());
+        }
         if args.pretty {
             if args.recursive {
                 println!("{}", serde_json::to_string_pretty(&objects).unwrap());
             } else {
-                println!("{}", serde_json::to_string_pretty(&objects[0]).unwrap());
+                println!("{}", serde_json::to_string_pretty(objects.iter().next().unwrap().1).unwrap());
             }
         } else {
             if args.recursive {
                 println!("{}", serde_json::to_string(&objects).unwrap());
             } else {
-                println!("{}", serde_json::to_string(&objects[0]).unwrap());
+                println!("{}", serde_json::to_string(objects.iter().next().unwrap().1).unwrap());
             }
         }
     }
 
-    return Ok(());
+    Ok(())
 }
