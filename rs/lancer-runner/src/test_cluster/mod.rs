@@ -274,10 +274,12 @@ impl WTestCluster {
                         .await?;
                     }
                 }
-                Ok::<Vec<_>, anyhow::Error>(result
-                    .into_values()
-                    .map(|v| ObjectPtr(Arc::new(v)))
-                    .collect())
+                Ok::<Vec<_>, anyhow::Error>(
+                    result
+                        .into_values()
+                        .map(|v| ObjectPtr(Arc::new(v)))
+                        .collect(),
+                )
             })
             .await
             .map_err(|e| e.to_string())
@@ -388,12 +390,12 @@ impl WTestCluster {
 
     pub fn get_all_live_objects(&self) -> IO<Vec<ObjectPtr>> {
         use sui_core::authority::authority_store_tables::LiveObject::Normal;
-        use sui_core::state_accumulator::AccumulatorStore;
+        use sui_core::global_state_hasher::GlobalStateHashStore;
 
         IO::Value(self.0.fullnode_handle.sui_node.with(|node| {
             node.state()
                 .database_for_testing()
-                .iter_live_object_set(false)
+                .iter_cached_live_object_set_for_testing(false)
                 .map(|o| match o {
                     Normal(o) => ObjectPtr(Arc::new(o)),
                     _ => unreachable!(),

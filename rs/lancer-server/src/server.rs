@@ -51,7 +51,7 @@ impl Server {
             .map(|p| p.to_path_buf())
             .unwrap_or(sui_config_dir()?.join(SUI_CLIENT_CONFIG));
         // let mut client_config: SuiClientConfig = PersistedConfig::read(&wallet_conf)?;
-        let wallet = WalletContext::new(&wallet_conf, None, None)?;
+        let wallet = WalletContext::new(&wallet_conf)?;
         let walrus_sui_client = walrus_config
             .new_contract_client_with_wallet_in_config(None)
             .await?;
