@@ -22,7 +22,7 @@ type ExecResult<T> = std::result::Result<T, String>;
 pub mod types;
 pub mod object;
 
-#[derive(Debug, Clone, VmType, PartialEq, Eq)]
+#[derive(Debug, Clone, VmType, PartialEq, Eq, Default)]
 #[gluon(vm_type = "lancer.sui.prim.digest.Digest")]
 pub struct WDigest(pub Digest);
 
@@ -133,6 +133,7 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
         record!(
             digest => record!(
                 type Digest => WDigest,
+                zero => WDigest(Digest::default()),
                 from_string => primitive!(1, "lancer.sui.prim.digest_.from_string", WDigest::from_str),
                 to_string => primitive!(1, "lancer.sui.prim.digest.to_string", WDigest::to_string),
                 eq => primitive!(2, "lancer.sui.prim.digest.eq", |a: WDigest, b: WDigest| a == b),

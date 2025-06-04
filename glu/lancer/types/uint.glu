@@ -1,5 +1,5 @@
-let prim @ { UInt, add, sub, zero, one, mul, eq, cmp, show_uint } = import! "lancer.types.uint.prim"
-
+let prim @ { UInt, add, sub, zero, one, mul, eq, cmp, show_uint, from_str } = import! "lancer.types.uint.prim"
+let { Parse } = import! lancer.parse
 
 let { Semigroup } = import! std.semigroup
 let { Monoid } = import! std.monoid
@@ -45,12 +45,15 @@ let show : Show UInt = {
     show = show_uint,
 }
 
+let parse: Parse UInt = { parse = from_str }
+
 {
     additive,
     multiplicative,
     eq,
     ord,
     show,
+    parse,
     ..
     prim
 }

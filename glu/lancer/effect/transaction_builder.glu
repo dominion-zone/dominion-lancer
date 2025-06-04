@@ -36,6 +36,7 @@ type TransactionBuilder r a =
     | PublishImmutable : forall x . Eff [| compiler: Compiler | r |] x -> TransactionBuilder r ()
     | MoveCall : SuiAddress -> String -> String -> Array TypeTag -> Array Argument -> TransactionBuilder r Argument
     | Pay : Array ObjectRef -> Array Int -> Array SuiAddress -> TransactionBuilder r ()
+    | SplitCoin : Argument -> Array Argument -> TransactionBuilder r Argument
     .. r
 
 let u8 value : Byte -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
@@ -80,6 +81,10 @@ let move_call package module function type_args args
 let pay coins amounts recipients
     : Array ObjectRef -> Array Int -> Array SuiAddress -> Eff [| transaction_builder : TransactionBuilder | r |] () =
     Impure (convert_effect! transaction_builder (Pay coins amounts recipients)) Pure
+
+let split_coin coin amounts
+    : Argument -> Array Argument -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
+    Impure (convert_effect! transaction_builder (SplitCoin coin amounts)) Pure
 
 #[inline(never)]
 let extract_transaction_builder x : [| transaction_builder : TransactionBuilder | r |] a -> TransactionBuilder r a = convert_variant! x
@@ -142,6 +147,12 @@ let run_transaction_builder working_dir eff =
             | Pay coins amounts recipients ->
                 tb.pay builder coins amounts recipients
                 loop <| f ()
+            | SplitCoin coin amounts ->
+                if coin == GasCoin then
+                    lift <| io.throw "GasCoin is not allowed in split_coin"
+                else
+                    do arg = tb.split_coin builder coin amounts
+                    loop <| f arg
             | rest ->
                 Impure (inject_rest rest) (loop << f)
     loop eff
@@ -161,6 +172,8 @@ let run_transaction_builder working_dir eff =
     publish_upgradeable,
     publish_immutable,
     move_call,
+    nest_result = tb.nest_result,
     pay,
+    split_coin,
     run_transaction_builder
 }

@@ -1,6 +1,7 @@
 let { Digest, ? } = import! lancer.sui.digest
 let { SuiAddress, ? } = import! lancer.sui.sui_address
 let { ? } = import! std.byte
+let { error } = import! std.prim
 
 type SequenceNumber = Int
 type ObjectID = SuiAddress
@@ -46,6 +47,11 @@ type CallArg =
     // an object
     | Object ObjectArg
 
+let nest_result arg idx : Argument -> Int -> Argument =
+    match arg with
+    | Result i -> NestedResult i idx
+    | _ -> error <| "nest_result: expected Result, got " ++ show arg
+
 {
     Argument,
     ObjectRef,
@@ -56,4 +62,5 @@ type CallArg =
     show_ObjectRef,
 
     eq_Argument,
+    nest_result
 }

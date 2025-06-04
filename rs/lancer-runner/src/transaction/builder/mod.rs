@@ -18,7 +18,7 @@ use serde::Serialize;
 use std::error::Error as StdError;
 use sui_types::{
     Identifier, base_types::SequenceNumber, digests::ObjectDigest,
-    programmable_transaction_builder::ProgrammableTransactionBuilder,
+    programmable_transaction_builder::ProgrammableTransactionBuilder, transaction::Command,
 };
 use tokio::sync::RwLock;
 
@@ -161,6 +161,24 @@ impl WTransactionBuilder {
         .into()
     }
 
+    pub async fn split_coin(&self, coin: WArgument, amounts: Vec<WArgument>) -> IO<WArgument> {
+        async {
+            let r = self
+                .0
+                .write()
+                .await
+                .as_mut()
+                .ok_or("Already built".to_string())?
+                .command(Command::SplitCoins(
+                    coin.0,
+                    amounts.into_iter().map(|a| a.0).collect(),
+                ));
+            Ok::<_, String>(WArgument(r))
+        }
+        .await
+        .into()
+    }
+
     pub async fn pay(
         &self,
         coins: Vec<(WSuiAddress, u64, WDigest)>,
@@ -241,6 +259,7 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
                 async fn WTransactionBuilder::publish_immutable),
             move_call => primitive!(6, "lancer.transaction.builder.prim.move_call", async fn WTransactionBuilder::move_call),
             pay => primitive!(4, "lancer.transaction.builder.prim.pay", async fn WTransactionBuilder::pay),
+            split_coin => primitive!(3, "lancer.transaction.builder.prim.split_coin", async fn WTransactionBuilder::split_coin),
             finish => primitive!(1, "lancer.transaction.builder.prim.finish", async fn WTransactionBuilder::finish),
         ),
     )

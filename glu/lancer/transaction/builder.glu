@@ -40,6 +40,9 @@ let move_call builder package module function type_args args
 let pay builder coins amounts recipients
     : TransactionBuilder -> Array ObjectRef -> Array Int -> Array SuiAddress -> Eff [| lift : Lift IO | r |] () =
     lift <| prim.pay builder coins amounts recipients
+let split_coin builder coin amounts
+    : TransactionBuilder -> Argument -> Array Argument -> Eff [| lift : Lift IO | r |] Argument =
+    lift <| prim.split_coin builder coin amounts
 let finish builder : TransactionBuilder -> Eff [| lift : Lift IO | r |] Transaction =
     lift <| prim.finish builder
 
@@ -59,7 +62,9 @@ let finish builder : TransactionBuilder -> Eff [| lift : Lift IO | r |] Transact
     publish_immutable,
     move_call,
     pay,
+    split_coin,
     finish,
+    nest_result = types.nest_result,
     ..
     types
 }

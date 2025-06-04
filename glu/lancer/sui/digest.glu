@@ -30,4 +30,5 @@ let serialize : Serialize Digest = {
     parse,
     eq,
     serialize,
+    zero = digest.zero,
 }
