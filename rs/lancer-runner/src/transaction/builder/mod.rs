@@ -1,22 +1,31 @@
 use std::{fmt, str::FromStr};
 
+use anyhow::Context;
 use argument::WArgument;
 use gluon::{
     Thread,
     import::add_extern_module_with_deps,
     primitive, record,
-    vm::{self, ExternModule, api::IO},
+    vm::{
+        self, ExternModule,
+        api::{IO, UserdataValue},
+    },
 };
 use gluon_codegen::{Trace, Userdata, VmType};
+use move_core_types::u256::U256;
 use object_arg::WObjectArg;
 use serde::Serialize;
+use std::error::Error as StdError;
 use sui_types::{
     Identifier, base_types::SequenceNumber, digests::ObjectDigest,
     programmable_transaction_builder::ProgrammableTransactionBuilder,
 };
 use tokio::sync::RwLock;
 
-use crate::sui::{WDigest, WSuiAddress, types::WTypeTag};
+use crate::{
+    sui::{WDigest, WSuiAddress, types::WTypeTag},
+    types::uint::UInt,
+};
 
 use super::TransactionRef;
 
@@ -50,6 +59,25 @@ impl WTransactionBuilder {
         .into()
     }
 
+    pub async fn uint<T: TryFrom<UInt, Error: Into<anyhow::Error>> + Serialize>(
+        &self,
+        value: UserdataValue<UInt>,
+    ) -> IO<WArgument> {
+        async {
+            let r = self
+                .0
+                .write()
+                .await
+                .as_mut()
+                .context("Already built")?
+                .pure::<T>(value.0.try_into().map_err(Into::into)?)?;
+            Ok::<_, anyhow::Error>(WArgument(r))
+        }
+        .await
+        .map_err(|e| e.to_string())
+        .into()
+    }
+
     pub async fn object_ref(&self, arg: WObjectArg) -> IO<WArgument> {
         async {
             let r = self
@@ -57,12 +85,12 @@ impl WTransactionBuilder {
                 .write()
                 .await
                 .as_mut()
-                .ok_or("Already built".to_string())?
-                .obj(arg.0)
-                .map_err(|e| e.to_string())?;
-            Ok::<_, String>(WArgument(r))
+                .context("Already built")?
+                .obj(arg.0)?;
+            Ok::<_, anyhow::Error>(WArgument(r))
         }
         .await
+        .map_err(|e| e.to_string())
         .into()
     }
 
@@ -197,9 +225,9 @@ fn load(vm: &Thread) -> vm::Result<vm::ExternModule> {
             u8 => primitive!(2, "lancer.transaction.builder.prim.u8", async fn WTransactionBuilder::pure::<u8>),
             u16 => primitive!(2, "lancer.transaction.builder.prim.u16", async fn WTransactionBuilder::pure::<u16>),
             u32 => primitive!(2, "lancer.transaction.builder.prim.u32", async fn WTransactionBuilder::pure::<u32>),
-            u64 => primitive!(2, "lancer.transaction.builder.prim.u64", async fn WTransactionBuilder::pure::<u64>),
-            // u128 => primitive!(2, "lancer.transaction.builder.prim.u128", async fn WBuilder::pure::<u128>),
-            // u256 => primitive!(2, "lancer.transaction.builder.prim.u256", async fn WBuilder::pure::<u256>),
+            u64 => primitive!(2, "lancer.transaction.builder.prim.u64", async fn WTransactionBuilder::uint::<u64>),
+            u128 => primitive!(2, "lancer.transaction.builder.prim.u128", async fn WTransactionBuilder::uint::<u128>),
+            u256 => primitive!(2, "lancer.transaction.builder.prim.u256", async fn WTransactionBuilder::uint::<U256>),
             bool => primitive!(2, "lancer.transaction.builder.prim.bool", async fn WTransactionBuilder::pure::<bool>),
             address => primitive!(2, "lancer.transaction.builder.prim.address", async fn WTransactionBuilder::pure::<WSuiAddress>),
             object_ref => primitive!(2, "lancer.transaction.builder.prim.object_ref", async fn WTransactionBuilder::object_ref),

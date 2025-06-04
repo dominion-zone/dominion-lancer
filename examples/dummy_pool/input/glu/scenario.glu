@@ -14,6 +14,7 @@ let { unwrap_ok, ? } = import! std.result
 let { parse } = import! lancer.parse
 let { assert } = import! std.assert
 let { ObjectPtr, ? } = import! lancer.sui.object
+let { from_int } = import! lancer.types.uint
 
 let {
     TestCluster,
@@ -121,7 +122,7 @@ do r = execute_tx 500000000 admin (
         initial_shared_version = state_version,
         mutable = True,
     }
-    do price = u64 10000
+    do price = u64 <| unwrap_ok <| from_int 10000
     move_call package_id "dummy_pool" "create_vault" [ some_coin_type ] [
         state_arg,
         price
@@ -194,7 +195,7 @@ do r = execute_tx 500000000 hacker (
         initial_shared_version = state_version,
         mutable = True,
     }
-    do price = u64 10000
+    do price = u64 <| unwrap_ok <| from_int 10000
     move_call package_id "dummy_pool" "create_vault" [ U64 ] [
         state_arg,
         price
@@ -253,9 +254,9 @@ do r = execute_tx 500000000 hacker (
 log <| "Executing stealing funds"
 
 do r = execute_tx 500000000 hacker (
-    do otw = u64 0
+    do otw = u64 <| unwrap_ok <| from_int 0
     do supply_arg = move_call sui_framework "balance" "create_supply" [U64] [otw]
-    do value = u64 10000000
+    do value = u64 <| unwrap_ok <| from_int 10000000
     do balance_arg = move_call sui_framework "balance" "increase_supply" [U64] [
         supply_arg,
         value
@@ -304,7 +305,7 @@ do r = execute_tx 500000000 hacker (
         name = "Supply",
         type_params = [U64],
     }
-    do version = u64 0
+    do version = u64 <| unwrap_ok <| from_int 0
     do versioned_arg = move_call sui_framework "versioned" "create" [supply_type] [
         version,
         supply_arg

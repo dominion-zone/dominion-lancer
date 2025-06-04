@@ -1,0 +1,56 @@
+let prim @ { UInt, add, sub, zero, one, mul, eq, cmp, show_uint } = import! "lancer.types.uint.prim"
+
+
+let { Semigroup } = import! std.semigroup
+let { Monoid } = import! std.monoid
+let { Group } = import! std.group
+let { Eq, Ord, Ordering } = import! std.cmp
+let { Num } = import! std.num
+let { Show } = import! std.show
+
+let additive =
+    let semigroup : Semigroup UInt = {
+        append = add,
+    }
+
+    let monoid : Monoid UInt = {
+        semigroup = semigroup,
+        empty = zero,
+    }
+
+    { semigroup, monoid }
+
+let multiplicative =
+    let semigroup : Semigroup UInt = {
+        append = mul,
+    }
+
+    let monoid : Monoid UInt = {
+        semigroup = semigroup,
+        empty = one,
+    }
+
+    { semigroup, monoid }
+
+let eq : Eq UInt = {
+    (==) = eq,
+}
+
+let ord : Ord UInt = {
+    eq = eq,
+    compare = cmp,
+}
+
+let show : Show UInt = {
+    show = show_uint,
+}
+
+{
+    additive,
+    multiplicative,
+    eq,
+    ord,
+    show,
+    ..
+    prim
+}

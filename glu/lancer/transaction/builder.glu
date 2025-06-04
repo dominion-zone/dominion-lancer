@@ -7,6 +7,7 @@ let effect @ { Eff, ? } = import! std.effect
 let { Lift, run_lift, lift, ? } = import! std.effect.lift
 let { (<|), (<<) } = import! std.function
 let { Coin } = import! lancer.rpc.types
+let { UInt, ? } = import! lancer.types.uint
 
 let new _ : () -> Eff [| lift : Lift IO | r |] TransactionBuilder = lift <| prim.new
 let u8 builder : TransactionBuilder -> Byte -> Eff [| lift : Lift IO | r |] Argument =
@@ -15,8 +16,12 @@ let u16 builder : TransactionBuilder -> Int -> Eff [| lift : Lift IO | r |] Argu
     lift << prim.u16 builder
 let u32 builder : TransactionBuilder -> Int -> Eff [| lift : Lift IO | r |] Argument =
     lift << prim.u32 builder
-let u64 builder : TransactionBuilder -> Int -> Eff [| lift : Lift IO | r |] Argument =
+let u64 builder : TransactionBuilder -> UInt -> Eff [| lift : Lift IO | r |] Argument =
     lift << prim.u64 builder
+let u128 builder : TransactionBuilder -> UInt -> Eff [| lift : Lift IO | r |] Argument =
+    lift << prim.u128 builder
+let u256 builder : TransactionBuilder -> UInt -> Eff [| lift : Lift IO | r |] Argument =
+    lift << prim.u256 builder
 let bool builder : TransactionBuilder -> Bool -> Eff [| lift : Lift IO | r |] Argument =
     lift << prim.bool builder
 let address builder : TransactionBuilder -> SuiAddress -> Eff [| lift : Lift IO | r |] Argument =
@@ -45,6 +50,8 @@ let finish builder : TransactionBuilder -> Eff [| lift : Lift IO | r |] Transact
     u16,
     u32,
     u64,
+    u128,
+    u256,
     bool,
     address,
     object_ref,

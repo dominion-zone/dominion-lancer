@@ -55,6 +55,8 @@ bcs = "0.1.6"
 tokio-vsock = { version = "0.7.1" }
 serde_bytes = "0.11.17"
 chrono = "0.4.41"
+num-bigint-dig = "0.8.4"
+num-traits = "0.2.19"
 
 [profile.release]
 opt-level = "s"

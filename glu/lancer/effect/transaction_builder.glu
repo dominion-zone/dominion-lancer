@@ -19,12 +19,16 @@ let { for } = import! std.traversable
 let { Compiler, run_compiler } = import! lancer.effect.compiler
 let { Logger, log, ? } = import! lancer.effect.logger
 let { Log, ? } = import! lancer.report
+let { UInt, ? } = import! lancer.types.uint
+
 
 type TransactionBuilder r a =
     | U8 : Byte -> TransactionBuilder r Argument
     | U16 : Int -> TransactionBuilder r Argument
     | U32 : Int -> TransactionBuilder r Argument
-    | U64 : Int -> TransactionBuilder r Argument
+    | U64 : UInt -> TransactionBuilder r Argument
+    | U128 : UInt -> TransactionBuilder r Argument
+    | U256 : UInt -> TransactionBuilder r Argument
     | Bool : Bool -> TransactionBuilder r Argument
     | Address : SuiAddress -> TransactionBuilder r Argument
     | ObjectRef : ObjectArg -> TransactionBuilder r Argument
@@ -43,8 +47,14 @@ let u16 value : Int -> Eff [| transaction_builder : TransactionBuilder | r |] Ar
 let u32 value : Int -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
     Impure (convert_effect! transaction_builder (U32 value)) Pure
 
-let u64 value : Int -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
+let u64 value : UInt -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
     Impure (convert_effect! transaction_builder (U64 value)) Pure
+
+let u128 value : UInt -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
+    Impure (convert_effect! transaction_builder (U128 value)) Pure
+
+let u256 value : UInt -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
+    Impure (convert_effect! transaction_builder (U256 value)) Pure
 
 let bool value : Bool -> Eff [| transaction_builder : TransactionBuilder | r |] Argument =
     Impure (convert_effect! transaction_builder (Bool value)) Pure
@@ -99,6 +109,12 @@ let run_transaction_builder working_dir eff =
             | U64 value ->
                 do arg = tb.u64 builder value
                 loop <| f arg
+            | U128 value ->
+                do arg = tb.u128 builder value
+                loop <| f arg
+            | U256 value ->
+                do arg = tb.u256 builder value
+                loop <| f arg
             | Bool value ->
                 do arg = tb.bool builder value
                 loop <| f arg
@@ -137,6 +153,8 @@ let run_transaction_builder working_dir eff =
     u16,
     u32,
     u64,
+    u128,
+    u256,
     bool,
     address,
     object_ref,

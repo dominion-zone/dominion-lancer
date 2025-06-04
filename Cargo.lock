@@ -5023,6 +5023,8 @@ dependencies = [
  "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui?tag=testnet-v1.48.0)",
  "move-bytecode-utils 0.1.0 (git+https://github.com/MystenLabs/sui?tag=testnet-v1.48.0)",
  "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui?tag=testnet-v1.48.0)",
+ "num-bigint-dig",
+ "num-traits",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -6782,6 +6784,7 @@ dependencies = [
  "num-iter",
  "num-traits",
  "rand 0.8.5",
+ "serde",
  "smallvec",
  "zeroize",
 ]

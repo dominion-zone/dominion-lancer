@@ -19,7 +19,7 @@ pub mod test_cluster;
 pub mod transaction;
 pub mod temp_file;
 pub mod framework;
-
+pub mod types;
 /*
 pub struct PreparationDump {
     pub sql: String,
@@ -317,6 +317,7 @@ fn load_lancer(vm: &Thread) -> vm::Result<vm::ExternModule> {
 }
 
 pub fn install_lancer(vm: &Thread) -> vm::Result<()> {
+    types::install(vm)?;
     install(vm)?;
     install_compiler(vm)?;
     transaction::install(vm)?;
